@@ -12,5 +12,6 @@ We can't change the programs on an on-chip card in unauthorized ways.
 The system is a nail to the coffin of honest authority and nail to the coffin of blockchain. Potential is HUGE!
 
 Foundations:
-[1]: https://github.com/akels/DemocracyCredit/blob/master/docs/src/evote.md
-[2]: https://discourse.julialang.org/t/a-utopia-for-democratically-funded-projects/28516/13
+
+https://github.com/akels/DemocracyCredit/blob/master/docs/src/evote.md
+https://discourse.julialang.org/t/a-utopia-for-democratically-funded-projects/28516/13
