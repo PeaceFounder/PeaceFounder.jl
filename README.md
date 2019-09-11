@@ -14,4 +14,5 @@ The system is a nail to the coffin of honest authority and nail to the coffin of
 Foundations:
 
 https://github.com/akels/DemocracyCredit/blob/master/docs/src/evote.md
+
 https://discourse.julialang.org/t/a-utopia-for-democratically-funded-projects/28516/13
