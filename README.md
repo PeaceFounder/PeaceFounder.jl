@@ -1,4 +1,4 @@
-# DemocracyCredit 
+# PeaceFounder 
 
 [![DOI](https://zenodo.org/badge/206911554.svg)](https://zenodo.org/badge/latestdoi/206911554)
 
