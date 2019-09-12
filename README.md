@@ -1,5 +1,7 @@
 # PeaceFounder 
 
+![](logo.svg)
+
 [![DOI](https://zenodo.org/badge/206911554.svg)](https://zenodo.org/badge/latestdoi/206911554)
 
 Electronic voting is considered unsafe for a good reason - no one had shown a trustworthy design. Two different branches had emerged to solve the problem. The first one as used on Estonia relies on the honesty of authority which set's up the system and so excludes people from the process. Other ends are blockchain solutions which, apart from being environmentally unfriendly establishes trust on the basis that people have the most significant economic power to protect the network. The latter certainly is not true!
