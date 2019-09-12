@@ -1,4 +1,3 @@
-# PeaceFounder 
 
 ![](logo.svg)
 
