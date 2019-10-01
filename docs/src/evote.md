@@ -24,7 +24,7 @@ The citizen has a device with display and numpad, which interfaces the ID card. 
 
 The public ledger contains signatures. On the other ledger, we have public keys which must have been used for a valid vote. So the steps are as follows:
 
--   For each signature, a valid public key is found from the ledger by looping through all of them.
+-   For each signature it is checked if a valid public key is provided which can be found in anonymous public key ledger.
 -   The valid signatures are published to a centralized public ledger with a corresponding public key.
 -   Then - count. A protocol for changing the vote can be implemented.
 
