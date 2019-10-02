@@ -1,4 +1,4 @@
-# Electronic voting based on assimetric cryptography
+# Electronic voting based on asymmetric cryptography
 
 I am a theoretical physicist (a PhD candidate) and try to learn about cryptography as a hobby. One of the interesting aspects I had found is that many respectable scientists say that electronic voting is not safe, and so I started to follow the arguments which they use. For example, submitting the trust to authority to do their job honestly or sacrificing anonymity. Or impossibility to deal with anonymous bribers on the internet. However, a formal proof for that did not exist, so was interested if I could design a better e-voting system which would be anonymous, transparent and had a mechanism to fight bribery and coercion.
 
