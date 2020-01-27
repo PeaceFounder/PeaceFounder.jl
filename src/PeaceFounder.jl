@@ -3,8 +3,8 @@ module PeaceFounder
 using Sockets
 import Serialization
 import PeaceVote
-import PeaceVote: Certificate, Voter, Member
-import PeaceVote: Certificate, Ticket, Braid, Vote, voters!
+using PeaceVote: Server, Voter, Member
+using PeaceVote: Certificate, Ticket, Braid, Vote, voters!
 
 ###
 
@@ -198,7 +198,7 @@ end
 ### config specifies the ports. tp specifies which ballotboxes one needs to connect with.
 ### instead of sign I need to have a signer type which looks through what needs to be served
 
-function BraidChain(datadir,config::BraidChainConfig,ballotserver::Function,unwrap::Function,verify::Function,id::Function,signer) #,sign::Function) 
+function BraidChain(datadir,config::BraidChainConfig,ballotserver::Function,unwrap::Function,verify::Function,id::Function,signer::Server) #,sign::Function) 
     
     mkpath(datadir)
     mkpath(datadir * "members")
