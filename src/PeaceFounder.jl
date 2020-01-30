@@ -66,6 +66,7 @@ struct BraidChainConfig
     maintainer ## https://git-scm.com/book/en/v2/Git-Tools-Signing-Your-Work. The main part perhaps would be to issue corrections to the braidchain. For example invalidate braid, because someone had stolen the key. 
     registratorport
     votingport
+    proposalport
     #mixerport 
     # ftpport ### this one has as passive role as 
     #braider::Braider
@@ -188,6 +189,7 @@ end
 struct BraidChain
     registrator
     voterecorder
+    proposalreceiver
     braider
     members
     voters
@@ -203,6 +205,7 @@ function BraidChain(datadir,config::BraidChainConfig,ballotserver::Function,unwr
     mkpath(datadir * "members")
     mkpath(datadir * "braids")
     mkpath(datadir * "votes")
+    mkpath(datadir * "proposals")
 
     ### Loading stuff ###
     
@@ -216,6 +219,8 @@ function BraidChain(datadir,config::BraidChainConfig,ballotserver::Function,unwr
     
     registrator = Registrator(config.registratorport,PeaceVote.unwrap,x -> x in config.membersca)
     voterecorder = Registrator(config.votingport,unwrap,x -> x in voters)
+    proposalreceiver = Registrator(config.proposalport,unwrap,x -> x in members)
+    
 
     braider = ballotserver(config.braider,voters,signer)
 
@@ -245,9 +250,16 @@ function BraidChain(datadir,config::BraidChainConfig,ballotserver::Function,unwr
             uuid = hash(vote)
             save("$datadir/votes/$uuid",vote)
         end
+
+        @async while true
+            proposal = take!(proposalreceiver.messages)
+            uuid = hash(proposal)
+            save("$datadir/proposals/$uuid",proposal)
+        end
+
     end
 
-    BraidChain(registrator,voterecorder,braider,members,voters,daemon)
+    BraidChain(registrator,voterecorder,proposalreceiver,braider,members,voters,daemon)
 end
 
 ### User methods
@@ -269,6 +281,11 @@ end
 function vote(sc::BraidChainConfig,msg,signer::Voter)
     socket = connect(sc.votingport)
     Serialization.serialize(socket,(msg,signer.sign(msg)))
+end
+
+function propose(sc::BraidChainConfig,msg,options,signature)
+    socket = connect(sc.proposalport)
+    Serialization.serialize(socket,((msg,options),signature))
 end
 
 end # module
