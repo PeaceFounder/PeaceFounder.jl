@@ -110,8 +110,8 @@ function loadtickets!(date,messages,datadir)
         cert = Serialization.deserialize(datadir * fname)
 
         memberid, signerid = PeaceVote.unwrap(cert)
-        
-        ticket = PeaceVote.Ticket(memberid.id)
+        uuid,cid = signerid
+        ticket = PeaceVote.Ticket(uuid,cid,memberid.id)
         push!(date,time)
         push!(messages,ticket)
     end
@@ -123,7 +123,7 @@ function loadbraids!(date,messages,datadir,verify,id)
         ballot = Serialization.deserialize(datadir * fname)
 
         input,output = inout(fname,ballot...,verify,id)
-        braid = PeaceVote.Braid(fname,input,output)
+        braid = PeaceVote.Braid(fname,nothing,input,output) # bcid yet to be implemented. A function for a common message could be nice for the SynchronicBallot.
 
         push!(date,time)
         push!(messages,braid)
@@ -136,7 +136,7 @@ function loadvotes!(date,messages,datadir,verify,id)
         msg,signature = Serialization.deserialize(datadir * fname)
 
         @assert verify(msg,signature) "Vote $fname invalid."
-        vote = Vote(fname,id(signature))
+        vote = Vote(fname,id(signature),msg)
 
         push!(date,time)
         push!(messages,vote)
@@ -235,7 +235,7 @@ function BraidChain(datadir,config::BraidChainConfig,ballotserver::Function,unwr
             uuid = hash(ballot) ### no need for it to be cryptographical
 
             input,output = inout(uuid,ballot...,verify,id) # I could construct a Braid
-            braid = PeaceVote.Braid(hash(ballot),input,output)
+            braid = PeaceVote.Braid(hash(ballot),nothing,input,output)
             PeaceVote.voters!(voters,braid)
 
             save("$datadir/braids/$uuid",ballot) # ballot
