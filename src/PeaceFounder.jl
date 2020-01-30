@@ -110,8 +110,7 @@ function loadtickets!(date,messages,datadir)
         cert = Serialization.deserialize(datadir * fname)
 
         memberid, signerid = PeaceVote.unwrap(cert)
-        uuid,cid = signerid
-        ticket = PeaceVote.Ticket(uuid,cid,memberid.id)
+        ticket = PeaceVote.Ticket(signerid...,memberid.id)
         push!(date,time)
         push!(messages,ticket)
     end
@@ -215,7 +214,7 @@ function BraidChain(datadir,config::BraidChainConfig,ballotserver::Function,unwr
 
     ### Starting server apps ###
     
-    registrator = Registrator(config.registratorport,PeaceVote.unwrap,x -> x in config.membersca) 
+    registrator = Registrator(config.registratorport,PeaceVote.unwrap,x -> x in config.membersca)
     voterecorder = Registrator(config.votingport,unwrap,x -> x in voters)
 
     braider = ballotserver(config.braider,voters,signer)
