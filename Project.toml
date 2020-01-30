@@ -10,3 +10,4 @@ Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"
 
 [compat]
 julia = "1"
+PeaceVote = "^0.1.1"
