@@ -3,8 +3,8 @@ module PeaceFounder
 using Sockets
 import Serialization
 import PeaceVote
-using PeaceVote: Voter, Signer
-using PeaceVote: Certificate, Ticket, Braid, Vote, voters!
+using PeaceVote: Signer
+using PeaceVote: Certificate, Ticket, Braid, Proposal, Vote, voters!
 
 ###
 
@@ -63,7 +63,7 @@ end
 ### Contains all necessary information to take part in the braidchain. 
 struct BraidChainConfig
     membersca ## certificate authorithy which can register the member
-    maintainer ## https://git-scm.com/book/en/v2/Git-Tools-Signing-Your-Work. The main part perhaps would be to issue corrections to the braidchain. For example invalidate braid, because someone had stolen the key. 
+    maintainer ## https://git-scm.com/book/en/v2/Git-Tools-Signing-Your-Work. The main part perhaps would be to issue corrections to the braidchain. For example invalidate braid, because someone had stolen anonymous identity. 
     registratorport
     votingport
     proposalport
@@ -143,6 +143,19 @@ function loadvotes!(date,messages,datadir,verify,id)
     end
 end
 
+function loadproposals!(date,messages,datadir,verify,id)
+    for fname in readdir(datadir)
+        time = mtime(datadir * fname)
+        (msg,options),signature = Serialization.deserialize(datadir * fname)
+
+        @assert verify((msg,options),signature) "Proposal $fname invalid."
+        proposal = Proposal(fname,id(signature),msg,options)
+
+        push!(date,time)
+        push!(messages,proposal)
+    end
+end
+
 function loaddata(datadir,verify,id)
     date = []
     messages = []
@@ -150,6 +163,7 @@ function loaddata(datadir,verify,id)
     loadtickets!(date,messages,datadir * "members/")
     loadbraids!(date,messages,datadir * "braids/",verify,id)
     loadvotes!(date,messages,datadir * "votes/",verify,id)
+    loadproposals!(date,messages,datadir * "proposals/",verify,id)
 
     sp = sortperm(date)
 
@@ -215,10 +229,13 @@ function BraidChain(datadir,config::BraidChainConfig,ballotserver::Function,unwr
     voters = Set()
     voters!(voters,messages)
 
+    allvoters = Set()
+    voters!(allvoters,messages)
+
     ### Starting server apps ###
     
     registrator = Registrator(config.registratorport,PeaceVote.unwrap,x -> x in config.membersca)
-    voterecorder = Registrator(config.votingport,unwrap,x -> x in voters)
+    voterecorder = Registrator(config.votingport,unwrap,x -> x in allvoters)
     proposalreceiver = Registrator(config.proposalport,unwrap,x -> x in members)
     
 
@@ -230,6 +247,8 @@ function BraidChain(datadir,config::BraidChainConfig,ballotserver::Function,unwr
             
             push!(members,cert.data.id)
             push!(voters,cert.data.id)
+
+            push!(allvoters,cert.data.id)
             
             save("$datadir/members/$(cert.data.id)",cert)
         end
@@ -241,6 +260,8 @@ function BraidChain(datadir,config::BraidChainConfig,ballotserver::Function,unwr
             input,output = inout(uuid,ballot...,verify,id) # I could construct a Braid
             braid = PeaceVote.Braid(hash(ballot),nothing,input,output)
             PeaceVote.voters!(voters,braid)
+
+            PeaceVote.addvoters!(allvoters,braid)
 
             save("$datadir/braids/$uuid",ballot) # ballot
         end
@@ -278,7 +299,7 @@ function register(sc::BraidChainConfig,certificate::Certificate)
     return Serialization.deserialize(socket)
 end
 
-function vote(sc::BraidChainConfig,msg,signer::Voter)
+function vote(sc::BraidChainConfig,msg,signer::Signer)
     socket = connect(sc.votingport)
     Serialization.serialize(socket,(msg,signer.sign(msg)))
 end
