@@ -1,7 +1,7 @@
 name = "PeaceFounder"
 uuid = "916f7771-afe2-4319-943d-0e770c333432"
 authors = ["akels <akels14@gmail.com>"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
 PeaceVote = "129db535-0459-46ad-8d3d-b1fb8f318c74"
