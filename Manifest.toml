@@ -55,6 +55,12 @@ uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 [[Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
 
+[[Synchronizers]]
+deps = ["Sockets"]
+git-tree-sha1 = "4e81c0b37259743429f31dd757b63b8ca3900a87"
+uuid = "9279c0cf-0ddb-4a8a-93c9-19d312620a08"
+version = "0.1.0"
+
 [[UUIDs]]
 deps = ["Random", "SHA"]
 uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"

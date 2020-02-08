@@ -6,6 +6,7 @@ import PeaceVote
 using PeaceVote: Signer
 using PeaceVote: Certificate, Ticket, Braid, Proposal, Vote, voters!
 
+using Synchronizers: Record, Ledger
 ###
 
 import Base.sync_varname
@@ -36,29 +37,17 @@ end
 
 ### System definitions (part of PeaceFounder).
 
-function save(fname,x) 
-    @assert !isfile(fname) "File $fname already exists."
-    Serialization.serialize(fname,x)
-end
-
 #const CONFIG_DIR = dirname(dirname(@__FILE__))
 # For simplicituy I could make entries a dictionaries.
-struct RouteRecords
-    ballotmixers ### the server which mixes stuff
-    onionnodes ### for users to be able to deliver the messages anonymously
-    relays ### for being able to reach the member with in the community 
-end
+# struct RouteRecords
+#     ballotmixers ### the server which mixes stuff
+#     onionnodes ### for users to be able to deliver the messages anonymously
+#     relays ### for being able to reach the member with in the community 
+# end
 
 # RouteRecords(fname) = Serialization.deserialize(fname)
 # RouteRecords() = RouteRecords(dirname(dirname(@__FILE__)) * "/routerecords.config")
 # save(x::RouteRecords) = save(dirname(dirname(@__FILE__)) * "/routerecords.config",x)
-
-# struct Braider
-#     port
-#     N
-# #    gateid 
-# #    mixerid
-# end
 
 ### Contains all necessary information to take part in the braidchain. 
 struct BraidChainConfig
@@ -67,16 +56,10 @@ struct BraidChainConfig
     registratorport
     votingport
     proposalport
-    #mixerport 
-    # ftpport ### this one has as passive role as 
-    #braider::Braider
     braider ### each of theese things do have their own configureation under them. Could contain multiple ones which are accordingly started if necesary. More like a configuration here.
 end
 
-
 ### Conviniance methods for loading data
-
-### Sign can be 
 
 function inout(uuid,msgs,signatures,verify,id)
     input = Set()
@@ -92,82 +75,55 @@ function inout(uuid,msgs,signatures,verify,id)
     return input,output
 end
 
-function loadmembers(datadir,sc::BraidChainConfig)
+### Now I need to test that I can read this thing.
+function braidchain(ledger::Ledger,verify::Function,id::Function)
+    messages = []
+    for record in ledger.records
+        if dirname(record.fname)=="members"
+
+            cert = Serialization.deserialize(IOBuffer(record.data))
+            memberid, signerid = PeaceVote.unwrap(cert)
+            ticket = PeaceVote.Ticket(signerid...,memberid.id)
+            push!(messages,ticket)
+
+        elseif dirname(record.fname)=="braids"
+
+            ballot = Serialization.deserialize(IOBuffer(record.data))
+            input,output = inout(basename(record.fname),ballot...,verify,id)
+            braid = PeaceVote.Braid(basename(record.fname),nothing,input,output) 
+            push!(messages,braid)
+
+        elseif dirname(record.fname)=="votes"
+
+            msg,signature = Serialization.deserialize(IOBuffer(record.data))
+            @assert verify(msg,signature) "Invalid vote."
+            vote = Vote(basename(record.fname),id(signature),msg)
+            push!(messages,vote)
+
+        elseif dirname(record.fname)=="proposals"
+
+            (msg,options),signature = Serialization.deserialize(IOBuffer(record.data))
+            @assert verify((msg,options),signature) "Invalid proposal."
+            proposal = Proposal(basename(record.fname),id(signature),msg,options)
+            push!(messages,proposal)
+
+        end
+    end
+    return messages
+end
+
+braidchain(datadir::AbstractString,verify::Function,id::Function) = braidchain(Ledger(datadir),verify,id)
+
+### This function probably belongs to PeaceVote
+function loadmembers(braidchain,ca)
     members = Set()
-    for fname in readdir(datadir)
-        time = mtime(datadir * fname)
-        cert = Serialization.deserialize(datadir * fname)
-        
-        memberid, signerid = PeaceVote.unwrap(cert)
-        @assert signerid!=nothing && signerid in sc.membersca "certificate $fname is not valid"
-        push!(members,memberid)
+    for item in braidchain
+        if typeof(item)==Ticket
+            @assert (item.uuid,item.cid) in ca "certificate for $(item.id) is not valid"
+            push!(members,item.id)
+        end
     end
     return members
-end
-
-function loadtickets!(date,messages,datadir)
-    for fname in readdir(datadir)
-        time = mtime(datadir * fname)
-        cert = Serialization.deserialize(datadir * fname)
-
-        memberid, signerid = PeaceVote.unwrap(cert)
-        ticket = PeaceVote.Ticket(signerid...,memberid.id)
-        push!(date,time)
-        push!(messages,ticket)
-    end
-end
-
-function loadbraids!(date,messages,datadir,verify,id)
-    for fname in readdir(datadir)
-        time = mtime(datadir * fname)
-        ballot = Serialization.deserialize(datadir * fname)
-
-        input,output = inout(fname,ballot...,verify,id)
-        braid = PeaceVote.Braid(fname,nothing,input,output) # bcid yet to be implemented. A function for a common message could be nice for the SynchronicBallot.
-
-        push!(date,time)
-        push!(messages,braid)
-    end
-end
-
-function loadvotes!(date,messages,datadir,verify,id)
-    for fname in readdir(datadir)
-        time = mtime(datadir * fname)
-        msg,signature = Serialization.deserialize(datadir * fname)
-
-        @assert verify(msg,signature) "Vote $fname invalid."
-        vote = Vote(fname,id(signature),msg)
-
-        push!(date,time)
-        push!(messages,vote)
-    end
-end
-
-function loadproposals!(date,messages,datadir,verify,id)
-    for fname in readdir(datadir)
-        time = mtime(datadir * fname)
-        (msg,options),signature = Serialization.deserialize(datadir * fname)
-
-        @assert verify((msg,options),signature) "Proposal $fname invalid."
-        proposal = Proposal(fname,id(signature),msg,options)
-
-        push!(date,time)
-        push!(messages,proposal)
-    end
-end
-
-function loaddata(datadir,verify,id)
-    date = []
-    messages = []
-    
-    loadtickets!(date,messages,datadir * "members/")
-    loadbraids!(date,messages,datadir * "braids/",verify,id)
-    loadvotes!(date,messages,datadir * "votes/",verify,id)
-    loadproposals!(date,messages,datadir * "proposals/",verify,id)
-
-    sp = sortperm(date)
-
-    return messages[sp]
 end
 
 ### Server daemons
@@ -213,18 +169,21 @@ end
 ### config specifies the ports. tp specifies which ballotboxes one needs to connect with.
 ### instead of sign I need to have a signer type which looks through what needs to be served
 
-function BraidChain(datadir,config::BraidChainConfig,ballotserver::Function,unwrap::Function,verify::Function,id::Function,signer::Signer) #,sign::Function) 
-    
-    mkpath(datadir)
-    mkpath(datadir * "members")
-    mkpath(datadir * "braids")
-    mkpath(datadir * "votes")
-    mkpath(datadir * "proposals")
+function binary(x)
+    io = IOBuffer()
+    Serialization.serialize(io,x)
+    return take!(io)
+end
 
-    ### Loading stuff ###
-    
-    members = loadmembers(datadir * "members/",config)
-    messages = loaddata(datadir,verify,id)
+import Synchronizers.Record
+Record(fname::AbstractString,x) = Record(fname,binary(x))
+
+# I could substitute datadir with Ledger and then give serving ability to the Community!
+function BraidChain(ledger::Ledger,config::BraidChainConfig,ballotserver::Function,unwrap::Function,verify::Function,id::Function,signer::Signer) #,sign::Function) 
+
+    messages = braidchain(ledger,verify,id)
+
+    members = loadmembers(messages,config.membersca)
     
     voters = Set()
     voters!(voters,messages)
@@ -237,7 +196,6 @@ function BraidChain(datadir,config::BraidChainConfig,ballotserver::Function,unwr
     registrator = Registrator(config.registratorport,PeaceVote.unwrap,x -> x in config.membersca)
     voterecorder = Registrator(config.votingport,unwrap,x -> x in allvoters)
     proposalreceiver = Registrator(config.proposalport,unwrap,x -> x in members)
-    
 
     braider = ballotserver(config.braider,voters,signer)
 
@@ -250,7 +208,8 @@ function BraidChain(datadir,config::BraidChainConfig,ballotserver::Function,unwr
 
             push!(allvoters,cert.data.id)
             
-            save("$datadir/members/$(cert.data.id)",cert)
+            record = Record("members/$(cert.data.id)",cert)
+            push!(ledger,record)
         end
 
         @async while true
@@ -263,19 +222,24 @@ function BraidChain(datadir,config::BraidChainConfig,ballotserver::Function,unwr
 
             PeaceVote.addvoters!(allvoters,braid)
 
-            save("$datadir/braids/$uuid",ballot) # ballot
+            record = Record("braids/$uuid",ballot)
+            push!(ledger,record)
         end
 
         @async while true
             vote = take!(voterecorder.messages)
             uuid = hash(vote)
-            save("$datadir/votes/$uuid",vote)
+
+            record = Record("votes/$uuid",vote)
+            push!(ledger,record)
         end
 
         @async while true
             proposal = take!(proposalreceiver.messages)
             uuid = hash(proposal)
-            save("$datadir/proposals/$uuid",proposal)
+            
+            record = Record("proposals/$uuid",proposal)
+            push!(ledger,record)
         end
 
     end
