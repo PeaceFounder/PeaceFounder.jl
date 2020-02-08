@@ -11,4 +11,5 @@ Synchronizers = "9279c0cf-0ddb-4a8a-93c9-19d312620a08"
 
 [compat]
 PeaceVote = "^0.1.1"
+Synchronizers = "^0.1"
 julia = "1"
