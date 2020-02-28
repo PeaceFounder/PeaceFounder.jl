@@ -39,24 +39,27 @@ mixerserver = PeaceFounder.Mixer(1999,notary,mixer)
 
 ### 
 server = PeaceVote.Signer(uuid,notary,"server")
-config = PeaceFounder.BraiderConfig(1998,1999,3,server.id,(uuid,mixer.id))
 
-#userids = Set()
+MIXER_ID = mixer.invoke.id
+SERVER_ID = server.invoke.id
+
+config = PeaceFounder.BraiderConfig(1998,1999,3,SERVER_ID,(uuid,MIXER_ID))
+
 braider = PeaceFounder.Braider(config,notary,server)
 
 for i in 1:3
     account = "account$i"
     member = Signer(deme,account * "/member")
-    push!(braider.voters,member.id)
+    push!(braider.voters,member.invoke.id)
 end
 
-### Users do:
+# ### Users do:
 
 @sync for i in 1:3
     @async begin
         account = "account$i"
         member = Signer(deme,account * "/member")
-        voter = Signer(deme,account * "/voters/$(member.id)")
+        voter = Signer(deme,account * "/voters/$(member.invoke.id)")
         braid!(config,notary,voter,member)
     end
 end

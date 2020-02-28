@@ -20,6 +20,19 @@ using Synchronizers: Synchronizer, Ledger, sync
 
 const ThisDeme = PeaceVote.DemeType(@__MODULE__)
 
+
+### To make writing invokelatest easier
+
+import Base.invokelatest
+
+const NewNotary = Union{Notary,New{Notary}}
+const NewSigner = Union{Signer,New{Signer}}
+const NewThisDeme = Union{ThisDeme,New{ThisDeme}}
+
+unbox(x) = x
+unbox(x::New{T}) where T = x.invoke
+
+
 #datadir(deme::ThisDeme) = PeaceVote.datadir(deme)
 
 

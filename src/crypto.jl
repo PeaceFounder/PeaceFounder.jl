@@ -5,6 +5,8 @@ using Serialization: serialize, deserialize
 using DiffieHellman
 
 using PeaceVote: Notary
+import PeaceVote
+
 
 ### Currently, a following cryptographic definitions are fixed
 # - Cryptographic group
@@ -36,20 +38,21 @@ end
 #G = CryptoGroups.MODP160Group()
 const G = CryptoGroups.Scep256k1Group() 
 
+# I could simply define Notary for this namespace to be a union type.
 
 sign(data::AbstractString,signer::Signer) = signer.sign(data)
-sign(data::Int,signer::Signer) = sign("$data",signer)
+sign(data::Int,signer::Signer) = PeaceVote.sign("$data",signer)
 sign(data,signer::Signer) = sign(str(data),signer)
 
 verify(data::AbstractString,signature,deme::Notary) = deme.verify(data,signature)
-verify(data::Int,signature,deme::Notary) = verify("$data",signature,deme)
+verify(data::Int,signature,deme::Notary) = PeaceVote.verify("$data",signature,deme)
 verify(data,signature,deme::Notary) = verify(str(data),signature,deme)
 
 hash(data::AbstractString,deme::Notary) = deme.hash(data)
-hash(data::Int,deme::Notary) = hash("$data",deme)
+hash(data::Int,deme::Notary) = PeaceVote.hash("$data",deme)
 hash(data,deme::Notary) = hash(str(data),deme)
 
-hash(envelopeA,envelopeB,key,deme::Notary) = hash("$envelopeA $envelopeB $key",deme)
+hash(envelopeA,envelopeB,key,deme::Notary) = PeaceVote.hash("$envelopeA $envelopeB $key",deme)
 
 #Signer() = CryptoSignatures.Signer(G)
 
