@@ -25,12 +25,10 @@ const ThisDeme = PeaceVote.DemeType(@__MODULE__)
 
 import Base.invokelatest
 
-const NewNotary = Union{Notary,New{Notary}}
-const NewSigner = Union{Signer,New{Signer}}
-const NewThisDeme = Union{ThisDeme,New{ThisDeme}}
+# const NewNotary = Union{Notary,New{Notary}}
+# const NewSigner = Union{Signer,New{Signer}}
+# const NewThisDeme = Union{ThisDeme,New{ThisDeme}}
 
-unbox(x) = x
-unbox(x::New{T}) where T = x.invoke
 
 
 #datadir(deme::ThisDeme) = PeaceVote.datadir(deme)
@@ -127,6 +125,7 @@ include("certifier.jl")
 include("braider.jl")
 include("braidchainserver.jl")
 include("systemserver.jl")
+include("invokelatest.jl")
 
 
 export serve, register, braid!, propose, vote, Signer, Signature, G, id, verify, hash, unwrap, braidchain, members, count, sync!, Ledger

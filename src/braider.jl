@@ -1,9 +1,6 @@
 using SynchronicBallot
 using SecureIO
-using PeaceVote: DemeSpec, Notary
-
-
-
+using PeaceVote: DemeSpec, Notary, New
 
 ### In future this will extend the method of synchronic ballot. Perhaps this could also be defined there.
 function Mixer(port,notary::Notary,signer::Signer)
@@ -14,7 +11,7 @@ function Mixer(port,notary::Notary,signer::Signer)
 end
 
 # SO the problem
-Mixer(port,notary::NewNotary,signer::NewSigner) = invokelatest((notary,signer)->Mixer(port,notary,signer),unbox(notary),unbox(signer))
+#Mixer(port,notary::New[Notary],signer::New[Signer]) = invokelatest((notary,signer)->Mixer(port,notary,signer),unbox(notary),unbox(signer))
 
 ### This is the level at which multiple braiders can be introduced.
 
@@ -39,11 +36,10 @@ function Braider(braider::BraiderConfig,notary::Notary,mixernotary::Notary,signe
     Braider(server,voters)
 end
 
-Braider(braider::BraiderConfig,notary::NewNotary,mixernotary::NewNotary,signer::NewSigner) = invokelatest(Braider,braider,unbox(notary),unbox(mixernotary),unbox(signer))
+#Braider(braider::BraiderConfig,notary::New[Notary],mixernotary::New[Notary],signer::New[Signer]) = invokelatest(Braider,braider,unbox(notary),unbox(mixernotary),unbox(signer))
 
-
-
-function Braider(braider::BraiderConfig,notary::NewNotary,signer::NewSigner)
+# New in this context just overloads generated function since it is not necessary.
+function Braider(braider::BraiderConfig,notary::New[Notary],signer::New[Signer])
     mixeruuid = braider.mixerid[1]
 
     mixerdemespec = DemeSpec(mixeruuid)
@@ -53,14 +49,14 @@ function Braider(braider::BraiderConfig,notary::NewNotary,signer::NewSigner)
 end
 
 
-function Braider(deme::ThisDeme,signer::NewSigner)
+function Braider(deme::ThisDeme,signer::New[Signer])
     systemconfig = SystemConfig(deme) ### This is where the config file is verified
     braider = systemconfig.braider
     notary = deme.notary
     Braider(braider,notary,signer)
 end
 
-Braider(deme::New{ThisDeme},signer::NewSigner) = invokelatest(Braider,unbox(deme),unbox(signer))
+#Braider(deme::New{ThisDeme},signer::New[Signer]) = invokelatest(Braider,unbox(deme),unbox(signer))
 
 
 import PeaceVote.braid!
@@ -75,10 +71,12 @@ function braid!(config::BraiderConfig,notary::Notary,mixernotary::Notary,voter::
     SynchronicBallot.vote(config.port,membergate,membermixer,voter.id,x->sign(x,signer))
 end
 
-braid!(config::BraiderConfig,notary::NewNotary,mixernotary::NewNotary,voter::NewSigner,signer::NewSigner) = invokelatest(braid!,config,unbox(notary),unbox(mixernotary),unbox(voter),unbox(signer))
+#braid!(config::BraiderConfig,notary::New[Notary],mixernotary::New[Notary],voter::New[Signer],signer::New[Signer]) = invokelatest(braid!,config,unbox(notary),unbox(mixernotary),unbox(voter),unbox(signer))
 
+
+### This is the method which one would need to type in manually so it would not call invokelatest before necessary. 
 ### Here one could use PeaceFounder to send stuff anonymously.
-function braid!(config::BraiderConfig,notary::NewNotary,voter::NewSigner,signer::NewSigner)
+function braid!(config::BraiderConfig,notary::New[Notary],voter::New[Signer],signer::New[Signer])
     
     mixeruuid = config.mixerid[1]
 
@@ -98,4 +96,9 @@ function braid!(deme::ThisDeme,voter::Signer,signer::Signer)
 end
 
 ### This method would be called by the test
-braid!(deme::NewThisDeme,voter::NewSigner,signer::NewSigner) = invokelatest(braid!,unbox(deme),unbox(voter),unbox(signer))
+#braid!(deme::New[ThisDeme],voter::New[Signer],signer::New[Signer]) = invokelatest(braid!,unbox(deme),unbox(voter),unbox(signer))
+
+
+### The method for not needing to write boilerplate methods
+
+### One defines the methods which accepts uninvoked arguments. Hopefully typed method with unions would superseede the untyped method.

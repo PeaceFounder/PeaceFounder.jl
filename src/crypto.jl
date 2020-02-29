@@ -52,7 +52,7 @@ hash(data::AbstractString,deme::Notary) = deme.hash(data)
 hash(data::Int,deme::Notary) = PeaceVote.hash("$data",deme)
 hash(data,deme::Notary) = hash(str(data),deme)
 
-hash(envelopeA,envelopeB,key,deme::Notary) = PeaceVote.hash("$envelopeA $envelopeB $key",deme)
+hash(envelopeA,envelopeB,key,deme::Notary) = hash("$envelopeA $envelopeB $key",deme)
 
 #Signer() = CryptoSignatures.Signer(G)
 
