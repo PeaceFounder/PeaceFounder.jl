@@ -1,52 +1,69 @@
-using Community
 using PeaceVote
-import PeaceFounder
+using PeaceFounder
+using PeaceCypher
 
-setnamespace(@__MODULE__)
-uuid = PeaceVote.uuid("Community")
+#setnamespace(@__MODULE__)
+#uuid = PeaceVote.uuid("Community")
 
 # Cleanup from the previous tests
-dirs = [PeaceVote.keydir(uuid), PeaceVote.datadir(uuid), PeaceVote.communitydir(uuid)]
-for dir in dirs
+#dirs = [PeaceVote.keydir(uuid), PeaceVote.datadir(uuid), PeaceVote.communitydir(uuid)]
+
+for dir in [homedir() * "/.peacevote/"]
     isdir(dir) && rm(dir,recursive=true)
 end
 
+demespec = PeaceVote.DemeSpec("PeaceDeme",:default,:PeaceCypher,:default,:PeaceCypher,:PeaceFounder)
+save(demespec) ### Necessary to connect with Mixer
+
+uuid = demespec.uuid
+### I could actually rely on DemeSpec file for creating signers
 maintainer = PeaceVote.Signer(uuid,"maintainer")
+
+#mixer = PeaceVote.Signer(uuid,"mixer")
+#mixerserver = PeaceFounder.Mixer(1999,deme,mixer)
+
 server = PeaceVote.Signer(uuid,"server")
 
-### Setting up configuration of the system
+MIXER_ID = server.id ### Self mixing
+SERVER_ID = server.id
 
-ballotconfig = Community.BallotConfig(2000,2001,3,server.id,(uuid,server.id))
-braidchainconfig = PeaceFounder.BraidChainConfig([(uuid,maintainer.id),],maintainer.id,2002,2003,2004,ballotconfig)
-systemconfig = Community.SystemConfig(2001,2005,braidchainconfig)
+certifierconfig = nothing
+braiderconfig = PeaceFounder.BraiderConfig(2000,2001,3,SERVER_ID,(uuid,MIXER_ID))
+braidchainconfig = PeaceFounder.BraidChainConfig(maintainer.id,[(uuid,maintainer.id),],server.id,2002,2003,2004)
+systemconfig = PeaceFounder.SystemConfig(2001,2005,certifierconfig,braiderconfig,braidchainconfig)
 
-Community.save(systemconfig)
+PeaceFounder.save(systemconfig,maintainer)
 
 ### Starting the server
 
-task = @async serve(server)
+system = PeaceFounder.System(demespec,server)
 
 sleep(2) # for waiting until server is ready
+
+### Initializing without a ledger. I will change that shortly. 
+deme = Deme(demespec,nothing)
 
 ### Theese are our members
 
 for i in 1:9
     account = "account$i"
-    member = PeaceVote.Member(uuid,account)
-    identification = PeaceVote.ID("$i","today",member.id)
+    keychain = PeaceVote.KeyChain(deme,account)
+    identification = PeaceVote.ID("$i","today",keychain.member.id)
     cert = PeaceVote.Certificate(identification,maintainer)
-
-    @show register(cert)
+    @show register(deme,cert)
 end
 
 # First braiding
+sleep(1)
 
 @sync for i in 1:9
     account = "account$i"
-    keychain = PeaceVote.KeyChain(uuid,account)
+    keychain = PeaceVote.KeyChain(deme,account) ### The issue is perhaps 
     @async PeaceVote.braid!(keychain)
 end
 
+
+error("STOP") ### Now I should see members and braids. 
 
 pmember = PeaceVote.Member(uuid,"account2")
 propose("Found peace for a change?",["yes","no","maybe"],pmember);

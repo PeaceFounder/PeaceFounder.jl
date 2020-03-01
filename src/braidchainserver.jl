@@ -29,10 +29,10 @@ function Registrator(port,unwrap::Function,validate::Function)
     daemon = @async while true
         socket = accept(server)
         @async begin
-            @show envelope = Serialization.deserialize(socket)
+            envelope = Serialization.deserialize(socket)
             memberid, signerid = unwrap(envelope)
 
-            if signerid!=nothing && validate(signerid)
+            if validate(signerid)
                 put!(messages,envelope)
             end
         end
@@ -48,13 +48,6 @@ struct BraidChainServer
     braider 
     members
     daemon
-end
-
-### This one is here because of expected BUG
-function globalunwrap(envelope)
-    demespec = DemeSpec(envelope.uuid)
-    notary = Notary(demespec)
-    return PeaceVote.unwrap(envelope,notary)
 end
 
 
@@ -76,7 +69,7 @@ function BraidChainServer(deme::ThisDeme,braider::Braider,signer::Signer)
 
     ### Starting server apps ###
     
-    registrator = Registrator(config.registratorport,globalunwrap,x -> x in config.membersca)
+    registrator = Registrator(config.registratorport,PeaceVote.unwrap,x -> x in config.membersca)
     voterecorder = Registrator(config.votingport,x->unwrap(x,notary),x -> x in allvoters)
     proposalreceiver = Registrator(config.proposalport,x->unwrap(x,notary),x -> x in members)
 
@@ -84,7 +77,7 @@ function BraidChainServer(deme::ThisDeme,braider::Braider,signer::Signer)
         @async while true
             cert = take!(registrator.messages)
             
-            id = cert.id.id
+            id = cert.data.id
 
             push!(members,id)
             push!(braider.voters,id)
@@ -95,10 +88,10 @@ function BraidChainServer(deme::ThisDeme,braider::Braider,signer::Signer)
         end
 
         @async while true
-            ballot = take!(braider) # ballot
-            uuid = Base.hash(ballot) ### no need for it to be cryptographical
+            ballot = take!(braider)
+            uuid = hash(ballot,deme.notary) 
 
-            input,output = inout(uuid,ballot...,verify,id) # I could construct a Braid
+            input,output = inout(uuid,ballot...,deme.notary) # I could construct a Braid
             braid = PeaceVote.Braid(uuid,nothing,input,output)
             PeaceVote.voters!(braider.voters,braid)
 

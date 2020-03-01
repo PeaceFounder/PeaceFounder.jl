@@ -1,4 +1,5 @@
-using SynchronicBallot
+import SynchronicBallot
+using SynchronicBallot: BallotBox, GateKeeper, SocketConfig
 #using SecureIO
 using PeaceVote: DemeSpec, Notary
 
@@ -65,7 +66,6 @@ function braid!(config::BraiderConfig,deme::ThisDeme,mixerdeme::Deme,voter::Sign
 end
 
 function braid!(config::BraiderConfig,deme::ThisDeme,voter::Signer,signer::Signer)
-    
     mixeruuid = config.mixerid[1]
 
     mixerdemespec = DemeSpec(mixeruuid)
@@ -76,6 +76,6 @@ end
 
 function braid!(deme::ThisDeme,voter::Signer,signer::Signer)
     systemconfig = SystemConfig(deme)
-    config = sytemconfig.braider
+    config = systemconfig.braider
     braid!(config,deme,voter,signer)
 end

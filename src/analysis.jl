@@ -6,7 +6,7 @@ using Synchronizers: Ledger
 function inout(uuid,msgs,signatures,notary::Notary)
     input = Set()
     for s in signatures
-        id = notary.verify(msgs,s)
+        id = verify(msgs,s,notary)
         @assert id!=nothing "braid with $uuid is not valid"
         push!(input,id)
     end
