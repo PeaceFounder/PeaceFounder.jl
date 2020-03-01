@@ -36,16 +36,16 @@ save(demespec)
 deme = Deme(demespec,nothing)
 server = Signer(deme,"server")
 
-SERVER_ID = server.id
+SERVER_ID = server.invoke.id
 
 # Now maintainer finishes the configuration
 
 maintainer = PeaceVote.Signer(deme,"maintainer")
-MAINTAINER_ID = maintainer.id
+MAINTAINER_ID = maintainer.invoke.id
 
 
-MIXER_ID = (deme.spec.uuid,SERVER_ID) # Self mixing 
-CA_ID = (deme.spec.uuid,SERVER_ID)
+MIXER_ID = (deme.invoke.spec.uuid,SERVER_ID) # Self mixing 
+CA_ID = (deme.invoke.spec.uuid,SERVER_ID)
 TOOKEN_CA = MAINTAINER_ID
 
 N = 3 # Number of participants per ballot/braid

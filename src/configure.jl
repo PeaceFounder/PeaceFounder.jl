@@ -1,6 +1,5 @@
 ### Perhaps much better option would be to connect to the server over ssh since when one sets up the system one needs to have a key. We could use something like `scp` to copy a maintainerid and generate a server key executed by `julia "somefile.jl"` and returned that to a standart output. 
 
-using Random
 using Sockets
 
 # One would write it in the setup file as

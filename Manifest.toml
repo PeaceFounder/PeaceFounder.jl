@@ -3,19 +3,51 @@
 [[Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
+[[BitConverter]]
+git-tree-sha1 = "5274a781a2e71cfb9a2083dfcd2ca5318716a660"
+uuid = "3a3ce9e8-98e7-11e9-0fa0-055639f146d3"
+version = "0.1.1"
+
+[[CryptoGroups]]
+deps = ["BitConverter", "ECC", "Mods", "Paillier", "Primes", "Random"]
+git-tree-sha1 = "85c8ff8078d384a7d7c1ce22cc255f698731eed7"
+uuid = "bc997328-bedd-407e-bcd3-5758e064a52d"
+version = "0.1.2"
+
 [[Dates]]
 deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
+
+[[DiffieHellman]]
+deps = ["CryptoGroups"]
+git-tree-sha1 = "3cb5247c4b8224dc74ef81f66120bc0061d9c560"
+uuid = "0e61fee8-20a4-4374-8233-5198f28d9d66"
+version = "0.3.0"
+
+[[Distributed]]
+deps = ["Random", "Serialization", "Sockets"]
+uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
+
+[[ECC]]
+deps = ["Test"]
+git-tree-sha1 = "ebff856a4057ad7dbb4648bf3d4c7f9e4bc35e97"
+uuid = "a99b485a-c5c8-540e-ab00-7a7265134077"
+version = "0.2.3"
 
 [[InteractiveUtils]]
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 
 [[LibGit2]]
+deps = ["Printf"]
 uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
 
 [[Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
+
+[[LinearAlgebra]]
+deps = ["Libdl"]
+uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
@@ -23,6 +55,23 @@ uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 [[Markdown]]
 deps = ["Base64"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
+
+[[Mods]]
+deps = ["Test"]
+git-tree-sha1 = "e31203c06840dd7e44af0181a79dfbcd83337beb"
+uuid = "7475f97c-0381-53b1-977b-4c60186c8d62"
+version = "0.1.0"
+
+[[Multiplexers]]
+git-tree-sha1 = "262b92184325959e231a93ec5acd61b29b20d237"
+uuid = "d8f48be2-8af9-45f0-b400-11a6372d221d"
+version = "0.3.1"
+
+[[Paillier]]
+deps = ["Polynomials", "Primes", "Random"]
+git-tree-sha1 = "4da59ccc00548b8765b74909f7be4be998eab061"
+uuid = "84e01822-a062-59e4-8289-aa032edeecdd"
+version = "0.2.4"
 
 [[PeaceVote]]
 deps = ["Pkg", "Serialization"]
@@ -33,6 +82,18 @@ version = "0.1.1"
 [[Pkg]]
 deps = ["Dates", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "UUIDs"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+
+[[Polynomials]]
+deps = ["LinearAlgebra", "RecipesBase"]
+git-tree-sha1 = "1185511cac8ab9d0b658b663eae34fe9a95d4332"
+uuid = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
+version = "0.6.1"
+
+[[Primes]]
+deps = ["Test"]
+git-tree-sha1 = "ff1a2323cb468ec5f201838fcbe3c232266b1f95"
+uuid = "27ebfcd6-29c5-5fa9-bf4b-fb8fc14df3ae"
+version = "0.4.0"
 
 [[Printf]]
 deps = ["Unicode"]
@@ -46,6 +107,11 @@ uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 deps = ["Serialization"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
+[[RecipesBase]]
+git-tree-sha1 = "b4ed4a7f988ea2340017916f7c9e5d7560b52cae"
+uuid = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
+version = "0.8.0"
+
 [[SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 
@@ -55,11 +121,21 @@ uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 [[Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
 
+[[SynchronicBallot]]
+deps = ["DiffieHellman", "Multiplexers", "Serialization", "Sockets"]
+git-tree-sha1 = "d789de401b9a861e574daa11cbd6bfcb74cde5af"
+uuid = "c4fd2470-c9f5-491f-b4e2-53b9059945a5"
+version = "0.2.1"
+
 [[Synchronizers]]
 deps = ["Sockets"]
 git-tree-sha1 = "4e81c0b37259743429f31dd757b63b8ca3900a87"
 uuid = "9279c0cf-0ddb-4a8a-93c9-19d312620a08"
 version = "0.1.0"
+
+[[Test]]
+deps = ["Distributed", "InteractiveUtils", "Logging", "Random"]
+uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [[UUIDs]]
 deps = ["Random", "SHA"]

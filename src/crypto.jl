@@ -1,10 +1,10 @@
 ### Cryptographic definitions
-using CryptoGroups
-using Random
+#using CryptoGroups
+#using Random
 using Serialization: serialize, deserialize
 using DiffieHellman
 
-using PeaceVote: Notary
+using PeaceVote: Notary, Cypher
 import PeaceVote
 
 
@@ -25,18 +25,18 @@ function str(x)
     return String(bytes)
 end
 
-function rngint(len::Integer)
-    max_n = ( BigInt(1) << len ) - 1
-    if len > 2
-        min_n = BigInt(1) << (len - 1)
-        return rand(min_n:max_n)
-    end
-    return rand(1:max_n)
-end
+# function rngint(len::Integer)
+#     max_n = ( BigInt(1) << len ) - 1
+#     if len > 2
+#         min_n = BigInt(1) << (len - 1)
+#         return rand(min_n:max_n)
+#     end
+#     return rand(1:max_n)
+# end
 
 
-#G = CryptoGroups.MODP160Group()
-const G = CryptoGroups.Scep256k1Group() 
+# #G = CryptoGroups.MODP160Group()
+# const G = CryptoGroups.Scep256k1Group() 
 
 # I could simply define Notary for this namespace to be a union type.
 
@@ -74,9 +74,7 @@ function unwrap(envelope,notary::Notary)
     return data, id
 end
 
-import DiffieHellman.DH
 
-
-DHsym(notary::Notary,signer::Signer) = DH(data->(data,sign(data,signer)),x->unwrap(x,notary),G,(x,y,z)->hash(x,y,z,notary),()->rngint(100))
-DHasym(notary::Notary) = DH(identity,x->unwrap(x,notary),G,(x,y,z)->hash(x,y,z,notary),()->rngint(100))
-DHasym(notary::Notary,signer::Signer) = DH(data->(data,sign(data,signer)),x->(x,nothing),G,(x,y,z)->hash(x,y,z,notary),()->rngint(100))
+DHsym(cypher::Cypher,notary::Notary,signer::Signer) = DH(data->(data,sign(data,signer)),x->unwrap(x,notary),cypher.G,(x,y,z)->hash(x,y,z,notary),cypher.rng)
+DHasym(cypher::Cypher,notary::Notary) = DH(identity,x->unwrap(x,notary),cypher.G,(x,y,z)->hash(x,y,z,notary),cypher.rng)
+DHasym(cypher::Cypher,notary::Notary,signer::Signer) = DH(data->(data,sign(data,signer)),x->(x,nothing),cypher.G,(x,y,z)->hash(x,y,z,notary),cypher.rng)

@@ -7,7 +7,7 @@ module PeaceFounder
 # - The server id will also be the uuid of the community subfolder. Need to extend PeaceVote so it woul support such generics. (keychain already has accounts. Seems only ledger would be necessary to be supported with id.)
 # - A configuration file must be created during registration. So one could execute braid! and vote commands with keychain. That also means we need an account keyword for the keychain.
 # - Test that the user can register if IP addreess, SERVER_ID and tooken is provided.
-# - 
+
 
 ### Perhaps I could have a package CommunityUtils
 
@@ -125,9 +125,8 @@ include("certifier.jl")
 include("braider.jl")
 include("braidchainserver.jl")
 include("systemserver.jl")
-include("invokelatest.jl")
 
 
-export serve, register, braid!, propose, vote, Signer, Signature, G, id, verify, hash, unwrap, braidchain, members, count, sync!, Ledger
+export register, braid!, propose, vote, braidchain, members, count, sync!, Ledger
 
 end # module

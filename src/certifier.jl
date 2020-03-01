@@ -2,7 +2,6 @@
 using PeaceVote: Certificate, Signer, AbstractID, ID
 using Sockets
 using DiffieHellman
-using SecureIO
 using Serialization
 
 struct TookenID <: AbstractID
