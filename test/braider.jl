@@ -1,6 +1,7 @@
 using PeaceVote
-using PeaceFounder
 using PeaceCypher
+using PeaceFounder.Braiders
+
 
 demespec = PeaceVote.DemeSpec("PeaceDeme",:default,:PeaceCypher,:default,:PeaceCypher,:PeaceFounder)
 save(demespec) ### Necessary to connect with Mixer
@@ -9,16 +10,16 @@ deme = Deme(demespec,nothing)
 uuid = demespec.uuid
 
 mixer = PeaceVote.Signer(deme,"mixer")
-mixerserver = PeaceFounder.Mixer(1999,deme,mixer)
+mixerserver = Mixer(1999,deme,mixer)
 
 server = PeaceVote.Signer(deme,"server")
 
 MIXER_ID = mixer.id
 SERVER_ID = server.id
 
-config = PeaceFounder.BraiderConfig(1998,1999,3,SERVER_ID,(uuid,MIXER_ID))
+config = BraiderConfig(1998,1999,3,SERVER_ID,(uuid,MIXER_ID))
 
-braider = PeaceFounder.Braider(config,deme,server)
+braider = Braider(config,deme,server)
 
 for i in 1:3
     account = "account$i"

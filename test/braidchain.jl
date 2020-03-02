@@ -1,6 +1,10 @@
 using PeaceVote
-using PeaceFounder
 using PeaceCypher
+
+
+using PeaceFounder.Braiders: BraiderConfig
+using PeaceFounder.BraidChains: BraidChainConfig
+
 
 #setnamespace(@__MODULE__)
 #uuid = PeaceVote.uuid("Community")

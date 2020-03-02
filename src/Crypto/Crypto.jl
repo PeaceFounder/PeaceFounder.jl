@@ -1,10 +1,12 @@
+module Crypto
+
 ### Cryptographic definitions
 #using CryptoGroups
 #using Random
 using Serialization: serialize, deserialize
 using DiffieHellman
 
-using PeaceVote: Notary, Cypher
+using PeaceVote: Notary, Cypher, Signer
 import PeaceVote
 
 
@@ -40,6 +42,8 @@ end
 
 # I could simply define Notary for this namespace to be a union type.
 
+import Base.sign
+
 sign(data::AbstractString,signer::Signer) = signer.sign(data)
 sign(data::Int,signer::Signer) = PeaceVote.sign("$data",signer)
 sign(data,signer::Signer) = sign(str(data),signer)
@@ -47,6 +51,8 @@ sign(data,signer::Signer) = sign(str(data),signer)
 verify(data::AbstractString,signature,deme::Notary) = deme.verify(data,signature)
 verify(data::Int,signature,deme::Notary) = PeaceVote.verify("$data",signature,deme)
 verify(data,signature,deme::Notary) = verify(str(data),signature,deme)
+
+import Base.hash
 
 hash(data::AbstractString,deme::Notary) = deme.hash(data)
 hash(data::Int,deme::Notary) = PeaceVote.hash("$data",deme)
@@ -78,3 +84,8 @@ end
 DHsym(cypher::Cypher,notary::Notary,signer::Signer) = DH(data->(data,sign(data,signer)),x->unwrap(x,notary),cypher.G,(x,y,z)->hash(x,y,z,notary),cypher.rng)
 DHasym(cypher::Cypher,notary::Notary) = DH(identity,x->unwrap(x,notary),cypher.G,(x,y,z)->hash(x,y,z,notary),cypher.rng)
 DHasym(cypher::Cypher,notary::Notary,signer::Signer) = DH(data->(data,sign(data,signer)),x->(x,nothing),cypher.G,(x,y,z)->hash(x,y,z,notary),cypher.rng)
+
+
+export sign, verify, hash, unwrap, DHsym, DHasym
+
+end 

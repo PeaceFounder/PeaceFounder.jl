@@ -1,7 +1,26 @@
+module Braiders
+
+using ..Crypto
+
 import SynchronicBallot
 using SynchronicBallot: BallotBox, GateKeeper, SocketConfig
 #using SecureIO
-using PeaceVote: DemeSpec, Notary
+using PeaceVote: DemeSpec, Notary, Cypher, Signer, Deme
+
+
+struct BraiderConfig
+    port # braiderport
+    ballotport # mixerport
+    N
+    gateid # braiderid
+    mixerid
+end
+
+
+#include("crypto.jl") ### I can make a module Utils so to import thoose things here
+
+
+const ThisDeme = Deme
 
 # I could substitute a sortperm to avoid this dependancy
 using Random: randperm
@@ -79,3 +98,10 @@ function braid!(deme::ThisDeme,voter::Signer,signer::Signer)
     config = systemconfig.braider
     braid!(config,deme,voter,signer)
 end
+
+export Mixer, Braider, BraiderConfig, braid!
+
+end # module
+
+
+### The benefit would be that I would be able to expose the correct API

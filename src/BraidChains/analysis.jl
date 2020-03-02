@@ -1,6 +1,3 @@
-using PeaceVote: Proposal, Vote, Option, voters!
-
-using Synchronizers: Ledger
 
 
 function inout(uuid,msgs,signatures,notary::Notary)

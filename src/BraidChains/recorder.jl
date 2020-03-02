@@ -1,10 +1,6 @@
 ### config specifies the ports. tp specifies which ballotboxes one needs to connect with.
 ### instead of sign I need to have a signer type which looks through what needs to be served
 
-using Synchronizers: Ledger
-using PeaceVote: Certificate, Proposal, Vote, Option, voters!
-import PeaceVote
-using Serialization
 
 
 function binary(x)
@@ -41,7 +37,7 @@ function Registrator(port,unwrap::Function,validate::Function)
     Registrator(server,daemon,messages)
 end
 
-struct BraidChainServer
+struct BraidChainServer # RecorderConfig
     registrator
     voterecorder
     proposalreceiver
@@ -51,10 +47,12 @@ struct BraidChainServer
 end
 
 
-function BraidChainServer(deme::ThisDeme,braider::Braider,signer::Signer) 
+### Recorder or BraidChainRecorder
+function BraidChainServer(config::BraidChainConfig,deme::ThisDeme,braider::Braider,signer::Signer) 
     
-    systemconfig = SystemConfig(deme)
-    config = systemconfig.braidchain
+    # This part belongs to MaintainerTools
+    # systemconfig = SystemConfig(deme)
+    # config = systemconfig.braidchain
 
     notary = deme.notary
     ledger = deme.ledger
@@ -122,29 +120,41 @@ function BraidChainServer(deme::ThisDeme,braider::Braider,signer::Signer)
     BraidChainServer(registrator,voterecorder,proposalreceiver,braider,members,daemon)
 end
 
-function register(deme::ThisDeme,certificate::Certificate)
-    systemconfig = SystemConfig(deme)
-    config = systemconfig.braidchain
-    
+
+
+function register(config::BraidChainConfig,certificate::Certificate)
     socket = connect(config.registratorport)
     Serialization.serialize(socket,certificate)
     #close(socket)
 end
 
-function vote(deme::ThisDeme,msg,signer::Signer)
-    systemconfig = SystemConfig(deme)
-    config = systemconfig.braidchain
+# function register(deme::ThisDeme,certificate::Certificate)
+#     systemconfig = SystemConfig(deme)
+#     config = systemconfig.braidchain
+#     register(config,certificate)
+# end
 
+function vote(config::BraidChainConfig,msg,signer::Signer)
     socket = connect(config.votingport)
     Serialization.serialize(socket,(msg,sign(msg,signer)))
     #close(socket)
 end
 
-function propose(deme::ThisDeme,msg,options,signer::Signer)
-    systemconfig = SystemConfig(deme)
-    config = systemconfig.braidchain
+# function vote(deme::ThisDeme,msg,signer::Signer)
+#     systemconfig = SystemConfig(deme)
+#     config = systemconfig.braidchain
+#     vote(config,msg,signer)
+# end
 
+function propose(config::BraidChainConfig,msg,options,signer::Signer)
     socket = connect(config.proposalport)
     Serialization.serialize(socket,((msg,options),sign((msg,options),signer)))
     #close(socket)
 end
+
+
+# function propose(deme::ThisDeme,msg,options,signer::Signer)
+#     systemconfig = SystemConfig(deme)
+#     config = systemconfig.braidchain
+#     propose(config,msg,options,signer)
+# end
