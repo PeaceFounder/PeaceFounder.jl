@@ -1,3 +1,6 @@
+struct BraidChain # <: AbstractBraidChain
+    records
+end
 
 
 function inout(uuid,msgs,signatures,notary::Notary)
@@ -15,47 +18,52 @@ function inout(uuid,msgs,signatures,notary::Notary)
     return input,output
 end
 
-### Now I need to test that I can read this thing.
-function braidchain(ledger::Ledger,notary::Notary)
+#function records(rawrecords::Vector{T},notary::Notary) where T # Vector{Record} if it infers corectly
+function BraidChain(rawrecords::Vector,notary::Notary)
     messages = []
-    for record in ledger.records
-        if dirname(record.fname)=="members"
+    for record in rawrecords
+        if dirname(record)=="members"
             
-            _demespec = DemeSpec(envelope.uuid)
-            _notary = Notary(demespec) ### Each time one would need to construct a new notary object which is quite daunting! Better would be to use a dictionary for a chache
-            cert = Serialization.deserialize(IOBuffer(record.data))
-            memberid, signerid = PeaceVote.unwrap(cert,_notary) 
-            ticket = PeaceVote.Ticket(_demespec.uuid,signerid,memberid.id)
+            cert = loadrecord(record)           
+            memberid, signerid = PeaceVote.unwrap(cert) 
+            ticket = PeaceVote.Ticket(signerid...,memberid.id)
             push!(messages,ticket)
 
-        elseif dirname(record.fname)=="braids"
+        elseif dirname(record)=="braids"
 
-            ballot = Serialization.deserialize(IOBuffer(record.data))
-            input,output = inout(basename(record.fname),ballot...,notary)
-            braid = PeaceVote.Braid(basename(record.fname),nothing,input,output) 
+            ballot = loadrecord(record)
+            input,output = inout(basename(record),ballot...,notary)
+            braid = PeaceVote.Braid(basename(record),nothing,input,output) 
             push!(messages,braid)
 
-        elseif dirname(record.fname)=="votes"
+        elseif dirname(record)=="votes"
 
-            msg,signature = Serialization.deserialize(IOBuffer(record.data))
-            id = notary.verify(msg,signature)
+            msg,signature = loadrecord(record)
+            id = verify(msg,signature,notary)
             @assert id!=nothing "Invalid vote."
-            vote = Vote(basename(record.fname),id,msg)
+            vote = Vote(basename(record),id,msg)
             push!(messages,vote)
 
-        elseif dirname(record.fname)=="proposals"
+        elseif dirname(record)=="proposals"
 
-            data,signature = Serialization.deserialize(IOBuffer(record.data))
-            id = notary.verify(data,signature)
+            pdata,signature = loadrecord(record)
+            id = verify(pdata,signature,notary)
             @assert id!=nothing "Invalid proposal."
-            proposal = Proposal(basename(record.fname),id,data...)
+            proposal = Proposal(basename(record),id,pdata...)
             push!(messages,proposal)
+
         end
     end
-    return messages
+    return BraidChain(messages)
 end
 
-braidchain(deme::ThisDeme) = braidchain(deme.ledger,deme.notary)
+BraidChain(ledger,notary::Notary) = BraidChain(records(ledger),notary)
+BraidChain(deme::Deme) = BraidChain(deme.ledger,deme.notary)
+
+#rawrecords(braidchain::BraidChain) = rawrecords(braidchain.ledger)
+
+#records(braidchain::BraidChain,notary::Notary) = records(rawrecords(braidchain),notary::Notary)
+#records(deme::Deme) = records(deme.braidchain,deme.notary)
 
 #braidchain(datadir::AbstractString,verify::Function,id::Function) = braidchain(Ledger(datadir),verify,id)
 
@@ -67,9 +75,10 @@ braidchain(deme::ThisDeme) = braidchain(deme.ledger,deme.notary)
 
 #members(braidchain) = PeaceFounder.loadmembers(braidchain,BraidChainConfig().membersca)
 
+### I could make this outside. I could impplement a method rawrecords and records (makes sense because I have the recorder!)
 
 import Base.count
-function count(proposal::Proposal,messages::Vector) 
+function count(proposal::Proposal,messages::Vector) ### Here I could have 
     #voters = PeaceVote.voters(proposal,messages) # I need a index
 
     index = findfirst(item -> item==proposal,messages)
@@ -89,3 +98,5 @@ function count(proposal::Proposal,messages::Vector)
     
     return tally
 end
+
+count(proposal::Proposal,braidchain::BraidChain) = count(proposal,braidchain.records)

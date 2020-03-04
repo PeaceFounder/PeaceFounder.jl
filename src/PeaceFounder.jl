@@ -23,10 +23,14 @@ const ThisDeme = PeaceVote.DemeType(@__MODULE__)
 include("Crypto/Crypto.jl")
 include("Braiders/Braiders.jl")
 include("Certifiers/Certifiers.jl") 
+include("DataFormat/DataFormat.jl") 
+include("Ledgers/Ledgers.jl") 
 include("BraidChains/BraidChains.jl") 
 include("MaintainerTools/MaintainerTools.jl") ### A thing which maintainer would use to set up the server, DemeSpec file, some interactivity, logging and etc. 
 
 
+### Not sure if thoose generics should belong to PeaceVote
+#function load end 
 
 
 braid!(deme::ThisDeme,voter::Signer,signer::Signer) = Braiders.braid!(deme,voter,signer)

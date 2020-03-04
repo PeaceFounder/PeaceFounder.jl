@@ -6,7 +6,7 @@ using Synchronizers: Ledger
 
 using ..Braiders: BraiderConfig
 using ..Certifiers: CertifierConfig
-using ..BraidChains: BraidChainConfig
+using ..BraidChains: RecorderConfig
 
 const ThisDeme = Deme
 
@@ -15,7 +15,7 @@ struct SystemConfig
     syncport
     certifier::Union{CertifierConfig,Nothing}
     braider::BraiderConfig
-    braidchain::BraidChainConfig
+    braidchain::RecorderConfig
 end
 
 ### The configuration is stored in the ledger which can be transfered publically. One only needs to check that the configuration is signed by the server. So in the end one first downloads the ledger and then checks whether the configuration makes sense with serverid

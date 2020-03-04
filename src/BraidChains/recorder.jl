@@ -1,16 +1,7 @@
 ### config specifies the ports. tp specifies which ballotboxes one needs to connect with.
 ### instead of sign I need to have a signer type which looks through what needs to be served
 
-
-
-function binary(x)
-    io = IOBuffer()
-    Serialization.serialize(io,x)
-    return take!(io)
-end
-
-import Synchronizers.Record
-Record(fname::AbstractString,x) = Record(fname,binary(x))
+# The data format then also could be implemented outside BraidChains module!
 
 struct Registrator
     server
@@ -25,7 +16,7 @@ function Registrator(port,unwrap::Function,validate::Function)
     daemon = @async while true
         socket = accept(server)
         @async begin
-            envelope = Serialization.deserialize(socket)
+            envelope = deserialize(socket)
             memberid, signerid = unwrap(envelope)
 
             if validate(signerid)
@@ -37,7 +28,7 @@ function Registrator(port,unwrap::Function,validate::Function)
     Registrator(server,daemon,messages)
 end
 
-struct BraidChainServer # RecorderConfig
+struct Recorder # RecorderConfig
     registrator
     voterecorder
     proposalreceiver
@@ -48,16 +39,17 @@ end
 
 
 ### Recorder or BraidChainRecorder
-function BraidChainServer(config::BraidChainConfig,deme::ThisDeme,braider::Braider,signer::Signer) 
+function Recorder(config::RecorderConfig,deme::ThisDeme,braider::Braider,signer::Signer) 
     
     # This part belongs to MaintainerTools
     # systemconfig = SystemConfig(deme)
     # config = systemconfig.braidchain
 
     notary = deme.notary
-    ledger = deme.ledger
-
-    messages = braidchain(deme)
+    ledger = deme.ledger 
+    
+    
+    messages = BraidChain(deme).records
 
     members = PeaceVote.members(messages,config.membersca)
     voters!(braider.voters,messages) ### I could update the braider here
@@ -80,9 +72,10 @@ function BraidChainServer(config::BraidChainConfig,deme::ThisDeme,braider::Braid
             push!(members,id)
             push!(braider.voters,id)
             push!(allvoters,id)
-            
-            record = Record("members/$id",cert)
-            push!(ledger,record)
+
+
+            record!(ledger,"members/$id",cert) # I could make a function record!
+            #push!(ledger,record)
         end
 
         @async while true
@@ -95,36 +88,36 @@ function BraidChainServer(config::BraidChainConfig,deme::ThisDeme,braider::Braid
 
             PeaceVote.addvoters!(allvoters,braid)
 
-            record = Record("braids/$uuid",ballot)
-            push!(ledger,record)
+            record!(ledger,"braids/$uuid",ballot)
+            #push!(ledger,record)
         end
 
         @async while true
             vote = take!(voterecorder.messages)
-            uuid = Base.hash(vote)
+            uuid = hash(vote,deme.notary)
 
-            record = Record("votes/$uuid",vote)
-            push!(ledger,record)
+            record!(ledger,"votes/$uuid",vote)
+            #push!(ledger,record)
         end
 
         @async while true
             proposal = take!(proposalreceiver.messages)
-            uuid = Base.hash(proposal)
+            uuid = hash(proposal,deme.notary)
             
-            record = Record("proposals/$uuid",proposal)
-            push!(ledger,record)
+            record!(ledger,"proposals/$uuid",proposal)
+            #push!(ledger,record)
         end
 
     end
 
-    BraidChainServer(registrator,voterecorder,proposalreceiver,braider,members,daemon)
+    Recorder(registrator,voterecorder,proposalreceiver,braider,members,daemon)
 end
 
 
 
-function register(config::BraidChainConfig,certificate::Certificate)
+function register(config::RecorderConfig,certificate::Certificate)
     socket = connect(config.registratorport)
-    Serialization.serialize(socket,certificate)
+    serialize(socket,certificate)
     #close(socket)
 end
 
@@ -134,9 +127,9 @@ end
 #     register(config,certificate)
 # end
 
-function vote(config::BraidChainConfig,msg,signer::Signer)
+function vote(config::RecorderConfig,msg,signer::Signer)
     socket = connect(config.votingport)
-    Serialization.serialize(socket,(msg,sign(msg,signer)))
+    serialize(socket,(msg,sign(msg,signer)))
     #close(socket)
 end
 
@@ -146,9 +139,9 @@ end
 #     vote(config,msg,signer)
 # end
 
-function propose(config::BraidChainConfig,msg,options,signer::Signer)
+function propose(config::RecorderConfig,msg,options,signer::Signer)
     socket = connect(config.proposalport)
-    Serialization.serialize(socket,((msg,options),sign((msg,options),signer)))
+    serialize(socket,((msg,options),sign((msg,options),signer)))
     #close(socket)
 end
 

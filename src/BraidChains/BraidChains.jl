@@ -2,19 +2,25 @@ module BraidChains
 
 ### I could define ledger here and delegate the constructor at PeaceFounder level.
 using Sockets
-using Serialization
-using Synchronizers: Ledger # I can use AbstractLedger from PeaceVote. On the other hand at the present stage I could leave such a raw dependencies until I gte everything up and running.
-
 
 import PeaceVote
 using PeaceVote: Proposal, Vote, Option, voters!, Certificate, Notary, Deme, Signer
+using PeaceVote: record!, records, loadrecord
+
 using ..Braiders: Braider
 using ..Crypto
-
+using ..DataFormat ### 
 
 const ThisDeme = Deme
 
-struct BraidChainConfig
+### The type should be defined here
+# struct BraidChain
+#     ledger::Ledger 
+#     port # can be nothing but then one needs to have 
+#     #cache
+# end
+
+struct RecorderConfig
     maintainerid # The one which signs the config file
     membersca ### One needs to explicitly add the certifier server id here. That's because 
     serverid
@@ -23,13 +29,12 @@ struct BraidChainConfig
     proposalport
 end
 
-
 include("../debug.jl")
 
 #include("ledger.jl")
 include("analysis.jl")
 include("recorder.jl")
 
-export register, vote, propose, count, braidchain, BraidChainConfig, BraidChainServer
+export register, vote, propose, count, BraidChain, RecorderConfig, Recorder
 
 end

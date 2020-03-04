@@ -1,9 +1,10 @@
-using PeaceVote: Notary, Cypher, DemeSpec, Deme, Signer, ID, Certificate, datadir, save
+using PeaceVote: Notary, Cypher, DemeSpec, Deme, Signer, ID, Certificate, datadir, save, proposals, Option
 using PeaceCypher
 
 using PeaceFounder.Braiders
 using PeaceFounder.BraidChains
-import Synchronizers # temporary dependancy
+#import Synchronizers # temporary dependancy
+using PeaceFounder.Ledgers
 
 for dir in [homedir() * "/.peacevote/"]
     isdir(dir) && rm(dir,recursive=true)
@@ -19,7 +20,11 @@ maintainer = Signer(uuid,"maintainer")
 
 notary = Notary(demespec)
 cypher = Cypher(demespec)
-ledger = Synchronizers.Ledger(datadir(uuid))
+#ledger = Synchronizers.Ledger(datadir(uuid))
+ledger = Ledger(uuid) 
+# Not yet convinced for the necessity of the abstraction. To synchronize the sync! command would read the port from the config file. If that does not work the app will ask for the port.
+#braidchain = BraidChain(ledger,nothing) 
+
 deme = Deme(demespec,notary,cypher,ledger)
 
 # Somewhere far far away
@@ -32,10 +37,10 @@ MIXER_ID = mixer.id
 SERVER_ID = server.id
 
 braiderconfig = BraiderConfig(2000,2001,3,SERVER_ID,(uuid,MIXER_ID))
-recorderconfig = BraidChainConfig(maintainer.id,[(uuid,maintainer.id),],server.id,2002,2003,2004)
+recorderconfig = RecorderConfig(maintainer.id,[(uuid,maintainer.id),],server.id,2002,2003,2004)
 
 braider = Braider(braiderconfig,deme,server)
-recorder = BraidChainServer(recorderconfig,deme,braider,server)
+recorder = Recorder(recorderconfig,deme,braider,server)
 
 for i in 1:3
     account = "account$i"
@@ -54,5 +59,21 @@ end
     end
 end
 
+pmember = Signer(deme,"account2" * "/member")
+propose(recorderconfig,"Found peace for a change?",["yes","no","maybe"],pmember);
 
+sleep(1)
+
+messages = BraidChain(deme).records
+proposal = proposals(messages)[1]
+
+for i in 1:3
+    account = "account$i"
+
+    member = Signer(deme,account * "/member")
+    voter = Signer(deme,account * "/voters/$(member.id)")
+
+    option = Option(proposal,rand(1:3))
+    vote(recorderconfig,option,voter)
+end
 
