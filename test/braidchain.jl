@@ -1,108 +1,68 @@
-using PeaceVote
+using PeaceVote: Notary, Cypher, DemeSpec, Deme, Signer, ID, Certificate, datadir, save, proposals, Option
 using PeaceCypher
 
-
-using PeaceFounder.Braiders: BraiderConfig
-using PeaceFounder.BraidChains: BraidChainConfig
-
-
-#setnamespace(@__MODULE__)
-#uuid = PeaceVote.uuid("Community")
-
-# Cleanup from the previous tests
-#dirs = [PeaceVote.keydir(uuid), PeaceVote.datadir(uuid), PeaceVote.communitydir(uuid)]
+using PeaceFounder.Braiders
+using PeaceFounder.BraidChains
+import PeaceFounder
 
 for dir in [homedir() * "/.peacevote/"]
     isdir(dir) && rm(dir,recursive=true)
 end
 
-demespec = PeaceVote.DemeSpec("PeaceDeme",:default,:PeaceCypher,:default,:PeaceCypher,:PeaceFounder)
+demespec = DemeSpec("PeaceDeme",:default,:PeaceCypher,:default,:PeaceCypher,:PeaceFounder)
 save(demespec) ### Necessary to connect with Mixer
-
 uuid = demespec.uuid
-### I could actually rely on DemeSpec file for creating signers
-maintainer = PeaceVote.Signer(uuid,"maintainer")
+deme = Deme(demespec)
 
-#mixer = PeaceVote.Signer(uuid,"mixer")
-#mixerserver = PeaceFounder.Mixer(1999,deme,mixer)
+maintainer = Signer(uuid,"maintainer")
 
-server = PeaceVote.Signer(uuid,"server")
+# Somewhere far far away
+mixer = Signer(deme,"mixer")
+mixerserver = Mixer(2001,deme,mixer)
 
-MIXER_ID = server.id ### Self mixing
+server = Signer(deme,"server")
+
+MIXER_ID = mixer.id
 SERVER_ID = server.id
 
-certifierconfig = nothing
-braiderconfig = PeaceFounder.BraiderConfig(2000,2001,3,SERVER_ID,(uuid,MIXER_ID))
-braidchainconfig = PeaceFounder.BraidChainConfig(maintainer.id,[(uuid,maintainer.id),],server.id,2002,2003,2004)
-systemconfig = PeaceFounder.SystemConfig(2001,2005,certifierconfig,braiderconfig,braidchainconfig)
+braiderconfig = BraiderConfig(2000,2001,3,SERVER_ID,(uuid,MIXER_ID))
+recorderconfig = RecorderConfig(maintainer.id,[(uuid,maintainer.id),],server.id,2002,2003,2004)
 
-PeaceFounder.save(systemconfig,maintainer)
+braider = Braider(braiderconfig,deme,server)
+recorder = Recorder(recorderconfig,deme,braider,server)
 
-### Starting the server
-
-system = PeaceFounder.System(demespec,server)
-
-sleep(2) # for waiting until server is ready
-
-### Initializing without a ledger. I will change that shortly. 
-deme = Deme(demespec,nothing)
-
-### Theese are our members
-
-for i in 1:9
+for i in 1:3
     account = "account$i"
-    keychain = PeaceVote.KeyChain(deme,account)
-    identification = PeaceVote.ID("$i","today",keychain.member.id)
-    cert = PeaceVote.Certificate(identification,maintainer)
-    @show register(deme,cert)
+    member = Signer(deme,account * "/member")
+    identification = ID("$i","today",member.id)
+    cert = Certificate(identification,maintainer)
+    @show register(recorderconfig,cert)
 end
 
-# First braiding
-sleep(1)
-
-@sync for i in 1:9
-    account = "account$i"
-    keychain = PeaceVote.KeyChain(deme,account) ### The issue is perhaps 
-    @async PeaceVote.braid!(keychain)
+@sync for i in 1:3
+    @async begin
+        account = "account$i"
+        member = Signer(deme,account * "/member")
+        voter = Signer(deme,account * "/voters/$(member.id)")
+        braid!(braiderconfig,deme,voter,member)
+    end
 end
 
-
-error("STOP") ### Now I should see members and braids. 
-
-pmember = PeaceVote.Member(uuid,"account2")
-propose("Found peace for a change?",["yes","no","maybe"],pmember);
-
-# Second braiding
-
-@sync for i in 1:9
-    account = "account$i"
-    keychain = PeaceVote.KeyChain(uuid,account)
-    @async PeaceVote.braid!(keychain)
-end
-
-# Now someone sends the proposal
-
-pmember = PeaceVote.Member(uuid,"account1")
-propose("Let's vote for a real change",["yes","no"],pmember);
+pmember = Signer(deme,"account2" * "/member")
+propose(recorderconfig,"Found peace for a change?",["yes","no","maybe"],pmember);
 
 sleep(1)
 
-messages = braidchain()
-proposals = PeaceVote.proposals(messages)
+messages = BraidChain(deme).records
+proposal = proposals(messages)[1]
 
-# Voting
-
-for i in 1:9
+for i in 1:3
     account = "account$i"
-    keychain = PeaceVote.KeyChain(uuid,account)
 
-    # Notice that this is after braiding 
-    ### We need to also update the registrator
-    voter = PeaceVote.Voter(keychain,proposals[1],messages)
-    option = PeaceVote.Option(proposals[1],rand(1:3))
-    vote(option,voter)
+    member = Signer(deme,account * "/member")
+    voter = Signer(deme,account * "/voters/$(member.id)")
 
-    voter = PeaceVote.Voter(keychain,proposals[2],messages)
-    option = PeaceVote.Option(proposals[2],rand(1:2))
-    vote(option,voter)
+    option = Option(proposal,rand(1:3))
+    vote(recorderconfig,option,voter)
 end
+

@@ -77,26 +77,26 @@ BraidChain(deme::Deme) = BraidChain(deme.ledger,deme.notary)
 
 ### I could make this outside. I could impplement a method rawrecords and records (makes sense because I have the recorder!)
 
-import Base.count
-function count(proposal::Proposal,messages::Vector) ### Here I could have 
-    #voters = PeaceVote.voters(proposal,messages) # I need a index
+# import Base.count
+# function count(proposal::Proposal,messages::Vector) ### Here I could have 
+#     #voters = PeaceVote.voters(proposal,messages) # I need a index
 
-    index = findfirst(item -> item==proposal,messages)
-    voters = Set()
-    voters!(voters,messages[1:index])
+#     index = findfirst(item -> item==proposal,messages)
+#     voters = Set()
+#     voters!(voters,messages[1:index])
 
-    ispvote(msg) = typeof(msg)==Vote && msg.id in voters && typeof(msg.msg)==Option && msg.msg.pid==proposal.uuid
+#     ispvote(msg) = typeof(msg)==Vote && msg.id in voters && typeof(msg.msg)==Option && msg.msg.pid==proposal.uuid
 
-    tally = zeros(Int,length(proposal.options))
+#     tally = zeros(Int,length(proposal.options))
 
-    for msg in messages[end:-1:index]
-        if ispvote(msg)
-            tally[msg.msg.vote] += 1
-            pop!(voters,msg.id)
-        end
-    end
+#     for msg in messages[end:-1:index]
+#         if ispvote(msg)
+#             tally[msg.msg.vote] += 1
+#             pop!(voters,msg.id)
+#         end
+#     end
     
-    return tally
-end
+#     return tally
+# end
 
-count(proposal::Proposal,braidchain::BraidChain) = count(proposal,braidchain.records)
+# count(proposal::Proposal,braidchain::BraidChain) = count(proposal,braidchain.records)

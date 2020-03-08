@@ -6,7 +6,7 @@ using PeaceFounder.Braiders
 demespec = PeaceVote.DemeSpec("PeaceDeme",:default,:PeaceCypher,:default,:PeaceCypher,:PeaceFounder)
 save(demespec) ### Necessary to connect with Mixer
 
-deme = Deme(demespec,nothing)
+deme = Deme(demespec)
 uuid = demespec.uuid
 
 mixer = PeaceVote.Signer(deme,"mixer")

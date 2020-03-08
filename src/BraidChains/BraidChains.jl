@@ -10,6 +10,7 @@ using PeaceVote: record!, records, loadrecord
 using ..Braiders: Braider
 using ..Crypto
 using ..DataFormat ### 
+using ..Types: RecorderConfig
 
 const ThisDeme = Deme
 
@@ -20,14 +21,6 @@ const ThisDeme = Deme
 #     #cache
 # end
 
-struct RecorderConfig
-    maintainerid # The one which signs the config file
-    membersca ### One needs to explicitly add the certifier server id here. That's because 
-    serverid
-    registratorport ### The port to which the certificate of membership is delivered
-    votingport
-    proposalport
-end
 
 include("../debug.jl")
 

@@ -7,15 +7,7 @@ using SynchronicBallot: BallotBox, GateKeeper, SocketConfig
 #using SecureIO
 using PeaceVote: DemeSpec, Notary, Cypher, Signer, Deme
 
-
-struct BraiderConfig
-    port # braiderport
-    ballotport # mixerport
-    N
-    gateid # braiderid
-    mixerid
-end
-
+using ..Types: BraiderConfig
 
 #include("crypto.jl") ### I can make a module Utils so to import thoose things here
 
@@ -61,7 +53,7 @@ function Braider(braider::BraiderConfig,deme::ThisDeme,signer::Signer)
     mixeruuid = braider.mixerid[1]
 
     mixerdemespec = DemeSpec(mixeruuid)
-    mixerdeme = Deme(mixerdemespec,nothing)
+    mixerdeme = Deme(mixerdemespec,ledger=false)
     
     Braider(braider,deme,mixerdeme,signer)
 end
@@ -88,7 +80,7 @@ function braid!(config::BraiderConfig,deme::ThisDeme,voter::Signer,signer::Signe
     mixeruuid = config.mixerid[1]
 
     mixerdemespec = DemeSpec(mixeruuid)
-    mixerdeme = Deme(mixerdemespec,nothing) 
+    mixerdeme = Deme(mixerdemespec,ledger=false) 
 
     braid!(config,deme,mixerdeme,voter,signer)
 end

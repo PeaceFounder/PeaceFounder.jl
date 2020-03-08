@@ -44,6 +44,23 @@ basename(record::Record) = basename(record.fname)
 
 loadrecord(record::Record) = loadbinary(record.data)
 
+
+serve(port,ledger::Ledger) = Synchronizers.serve(port,ledger.ledger)
+
+# import Synchronizers.Ledger
+# Ledger(serverid::BigInt) = Ledger(datadir() * "/$serverid/")
+
+# sync!(ledger::Ledger,syncport) = sync(Synchronizer(syncport,ledger))
+
+# function sync!(ledger::Ledger)
+#     serverid = parse(BigInt,basename(dirname(ledger.dir)))
+#     config = SystemConfig(serverid)
+#     sync!(ledger,config.syncport)
+# end
+
+
+
+
 export Ledger, record!, loadrecord, dirname, basename
 
 end

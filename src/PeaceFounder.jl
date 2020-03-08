@@ -10,34 +10,46 @@ module PeaceFounder
 
 
 ### Perhaps I could have a package CommunityUtils
-using Synchronizers: Synchronizer, Ledger, sync
+#using Synchronizers: Synchronizer, Ledger, sync
 
 using PeaceVote
-import PeaceVote.save
-using PeaceVote: datadir
+#import PeaceVote.save
+#using PeaceVote: datadir
+using Base: UUID
 
-import PeaceVote: register, braid!, vote, propose
+using PeaceVote: Proposal
+import PeaceVote: register, braid!, vote, propose, BraidChain
+import Base.count
 
-const ThisDeme = PeaceVote.DemeType(@__MODULE__)
-
+include("Types/Types.jl")
 include("Crypto/Crypto.jl")
+include("DataFormat/DataFormat.jl") 
 include("Braiders/Braiders.jl")
 include("Certifiers/Certifiers.jl") 
-include("DataFormat/DataFormat.jl") 
 include("Ledgers/Ledgers.jl") 
 include("BraidChains/BraidChains.jl") 
+include("Analysis/Analysis.jl") 
 include("MaintainerTools/MaintainerTools.jl") ### A thing which maintainer would use to set up the server, DemeSpec file, some interactivity, logging and etc. 
 
 
-### Not sure if thoose generics should belong to PeaceVote
-#function load end 
+SystemConfig(deme::Deme) = DataFormat.deserialize(deme,Types.SystemConfig)
 
+### Theese are methods which are used from PeaceVote API
 
-braid!(deme::ThisDeme,voter::Signer,signer::Signer) = Braiders.braid!(deme,voter,signer)
+const ThisDeme = PeaceVote.DemeType(@__MODULE__)
+
+PeaceVote.Ledger(::Type{ThisDeme},uuid::UUID) = Ledgers.Ledger(uuid)
+
+BraidChain(deme::ThisDeme) = BraidChains.BraidChain(deme)
+braid!(deme::ThisDeme,voter::Signer,signer::Signer) = Braiders.braid!(SystemConfig(deme).braider,deme,voter,signer)
+register(deme::ThisDeme,cert::Certificate) = BraidChains.register(SystemConfig(deme).recorder,cert)
+propose(deme::ThisDeme,msg,options,signer::Signer) = BraidChains.propose(SystemConfig(deme).recorder,msg,options,signer)
+vote(deme::ThisDeme,option::Option,signer::Signer) = BraidChains.vote(SystemConfig(deme).recorder,option,signer)
+count(proposal::Proposal,deme::ThisDeme) = Analysis.normalcount(proposal,deme)
 
 
 include("debug.jl")
 
-export register, braid!, propose, vote, braidchain, members, count, sync!, Ledger
+export register, braid!, propose, vote, BraidChain, members, count, sync!
 
 end # module

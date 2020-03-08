@@ -1,18 +1,12 @@
 ### Could be part of PeaceVote
 module Certifiers
 
+using ..Types: CertifierConfig
 using PeaceVote: Certificate, Signer, AbstractID, ID, Deme, Notary
 using Sockets
 using DiffieHellman
 using Serialization
 
-struct CertifierConfig
-    tookenca ### authorithies who can issue tookens. Server allows to add new tookens only from them.
-    serverid ### Server receiveing tookens and the member identities. Is also the one which signs and issues the certificates.
-    tookenport
-    #hmac for keeping the tooken secret
-    certifierport 
-end
 
 const ThisDeme = Deme
 

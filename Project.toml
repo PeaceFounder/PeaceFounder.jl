@@ -4,7 +4,6 @@ authors = ["akels <akels14@gmail.com>"]
 version = "0.2.0"
 
 [deps]
-BitConverter = "3a3ce9e8-98e7-11e9-0fa0-055639f146d3"
 DiffieHellman = "0e61fee8-20a4-4374-8233-5198f28d9d66"
 PeaceVote = "129db535-0459-46ad-8d3d-b1fb8f318c74"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -14,6 +13,14 @@ SynchronicBallot = "c4fd2470-c9f5-491f-b4e2-53b9059945a5"
 Synchronizers = "9279c0cf-0ddb-4a8a-93c9-19d312620a08"
 
 [compat]
+DiffieHellman = "^0.3.0"
 PeaceVote = "^0.2.0"
+SynchronicBallot = "^0.2.1"
 Synchronizers = "^0.1"
 julia = "1"
+
+[extras]
+PeaceCypher = "7743456c-e0c5-4477-a2b6-196c240b0368"
+
+[targets]
+test = ["PeaceCypher",]

@@ -35,7 +35,4 @@ The focus thus for PeaceVote is voluntarily democracies. It is the democracies o
 
 # The design of PeaceFounder
 
-The Julia PeaceFounder is aiming to be a universal swiss knife for community maintainers. It aims to be the module from which communities take first the backend methods for the server and second the frontend methods defining how members register, propose, vote and braid. This package is successful if every line which you write for the community represents a political decision. A declarative API is a goal.
-
-
-
+The Julia PeaceFounder is aiming to be a universal swiss knife for deme maintainers. It aims to be the module from which demes take first the backend methods for the server and second the frontend methods defining how members register, propose, vote and braid. This package is successful if every line which you write for the community represents a political decision. A declarative API is a goal.
