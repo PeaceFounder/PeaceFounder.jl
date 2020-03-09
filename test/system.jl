@@ -1,4 +1,4 @@
-using PeaceFounder.MaintainerTools: System
+using PeaceFounder.MaintainerTools: System, addtooken
 using PeaceVote
 using PeaceFounder
 
@@ -36,7 +36,10 @@ end
 ### Maintainer adds a tooken
 
 tooken = 123244
-PeaceFounder.addtooken(deme,tooken,maintainer)
+addtooken(deme,tooken,maintainer)
+
+# One can send it over email with sendinvite method from MaintainerTools.
+###
 
 keychain = KeyChain(deme,"account3")
 id = ID("3","today",keychain.member.id)

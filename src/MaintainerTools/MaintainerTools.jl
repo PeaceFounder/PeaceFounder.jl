@@ -3,6 +3,8 @@ module MaintainerTools
 using PeaceVote
 using Base: UUID
 
+
+using SMTPClient
 using ..Types: SystemConfig
 using ..Certifiers: Certifier
 using ..Braiders: Mixer, Braider
@@ -10,6 +12,7 @@ using ..BraidChains: Recorder
 using ..Ledgers: serve # I could name it as ledger node or something
 using ..DataFormat
 
+import ..Certifiers
 
 using Sockets # do I need it?
 
@@ -17,8 +20,6 @@ using Sockets # do I need it?
 ### The configuration is stored in the ledger which can be transfered publically. One only needs to check that the configuration is signed by the server. So in the end one first downloads the ledger and then checks whether the configuration makes sense with serverid
 
 ### One should load system config with Deme. One thus would need to establish Ledger which thus would not require to have stuff. The constructor for Deme would be available here locally.
-
-
 
 ### Perhaps much better option would be to connect to the server over ssh since when one sets up the system one needs to have a key. We could use something like `scp` to copy a maintainerid and generate a server key executed by `julia "somefile.jl"` and returned that to a standart output. 
 
@@ -104,7 +105,6 @@ end
 # When onion sockets will become a thing the System should also be started on the participating members
 # devices or some additionall dedicated mixers.
 
-
 function System(deme::Deme,server::Signer)
 
     config = deserialize(deme,SystemConfig)
@@ -127,6 +127,70 @@ function System(deme::Deme,server::Signer)
     return System(deme,mixer,certifier,braider,recorder,synchronizer)
 end
 
+
+addtooken(deme::Deme,tooken,signer::Signer) = Certifiers.addtooken(deserialize(deme,SystemConfig).certifier,deme,tooken,signer)
+
+
+struct SMTPConfig
+    url::AbstractString
+    email::AbstractString
+    password::Union{AbstractString,Nothing}
+end
+
+function SMTPConfig()
+    println("Email:")
+    email = readline()
+
+    defaulturl = "smtps://smtp.gmail.com:465" 
+    println("SMTP url [$defaulturl]:")
+    url = readline()
+    url=="" && (url = defaulturl)
+    
+    println("Password:")
+    password = readline()
+    
+    SMTPConfig(url,email,password)
+
+end
+
+
+function sendinvite(config::SystemConfig,deme::Deme,to::AbstractString,from::SMTPConfig,maintainer::Signer)
+    ### This would register a tooken with the system 
+
+    tooken = rand(2^62:2^63-1)
+    Certifiers.addtooken(config.certifier,deme,tooken,maintainer)
+
+    port = config.syncport
+    
+    opt = SendOptions(isSSL = true, username = from.email, passwd = from.password)
+
+    body = """
+    From: $(from.email)
+    To: $to
+    Subject: Invitation to $(deme.spec.name)
+
+    --------- DemeSpec -----------
+    $(deme.spec)
+    ------------------------------    
+
+    PORT = $port
+    
+    TOOKEN = $tooken
+    """
+    
+    send(from.url, [to], from.email, IOBuffer(body), opt)  
+end
+
+
+function sendinvite(deme::Deme,to::Vector{T},smtpconfig::SMTPConfig,maintainer::Signer) where T<:AbstractString
+    config = deserialize(deme,SystemConfig)
+    for ito in to
+        sendinvite(config,deme,ito,smtpconfig,maintainer)
+    end
+end
+
+
+sendinvite(deme::Deme,to::Vector{T},maintainer::Signer) where T<:AbstractString = sendinvite(deme,to,SMTPConfig(),maintainer)
 
 export System
 

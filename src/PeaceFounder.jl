@@ -63,7 +63,6 @@ function register(deme::ThisDeme,id::ID,tooken)
     register(deme,cert)
 end
 
-addtooken(deme::ThisDeme,tooken,signer::Signer) = Certifiers.addtooken(SystemConfig(deme).certifier,deme,tooken,signer)
 
 include("debug.jl")
 
