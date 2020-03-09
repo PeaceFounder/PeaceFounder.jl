@@ -23,4 +23,4 @@ julia = "1"
 PeaceCypher = "7743456c-e0c5-4477-a2b6-196c240b0368"
 
 [targets]
-test = ["PeaceCypher",]
+test = ["PeaceCypher"]

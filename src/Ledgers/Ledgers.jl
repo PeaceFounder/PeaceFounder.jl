@@ -50,7 +50,7 @@ serve(port,ledger::Ledger) = Synchronizers.serve(port,ledger.ledger)
 # import Synchronizers.Ledger
 # Ledger(serverid::BigInt) = Ledger(datadir() * "/$serverid/")
 
-# sync!(ledger::Ledger,syncport) = sync(Synchronizer(syncport,ledger))
+sync!(ledger::Ledger,syncport) = Synchronizers.sync(Synchronizers.Synchronizer(syncport,ledger.ledger))
 
 # function sync!(ledger::Ledger)
 #     serverid = parse(BigInt,basename(dirname(ledger.dir)))

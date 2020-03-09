@@ -4,10 +4,12 @@ using PeaceVote
 using Base: UUID
 
 using ..Types: SystemConfig
+using ..Certifiers: Certifier
 using ..Braiders: Mixer, Braider
 using ..BraidChains: Recorder
 using ..Ledgers: serve # I could name it as ledger node or something
 using ..DataFormat
+
 
 using Sockets # do I need it?
 
@@ -108,8 +110,13 @@ function System(deme::Deme,server::Signer)
     config = deserialize(deme,SystemConfig)
     #config = SystemConfig(deme)
     
+    if config.certifier==nothing
+        certifier = nothing
+    else
+        certifier = Certifier(config.certifier,deme,server)
+    end
+    
     mixer = Mixer(config.mixerport,deme,server)
-    certifier = nothing # Certifier(config.certifier,server)
     synchronizer = @async serve(config.syncport,deme.ledger)
 
     braider = Braider(config.braider,deme,server)
@@ -119,7 +126,6 @@ function System(deme::Deme,server::Signer)
 
     return System(deme,mixer,certifier,braider,recorder,synchronizer)
 end
-
 
 
 export System

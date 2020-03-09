@@ -10,7 +10,7 @@ save(demespec) ### Necessary to connect with Mixer
 uuid = demespec.uuid
 deme = Deme(demespec)
 
-maintainer = Signer(uuid,"maintainer")
+maintainer = Signer(deme,"maintainer")
 server = Signer(deme,"server")
 
 MIXER_ID = server.id
@@ -23,12 +23,12 @@ REGISTRATOR_PORT = 3002
 VOTING_PORT = 3003
 PROPOSAL_PORT = 3004
 SYNC_PORT = 3005
-#TOOKEN_PORT = 3006
-#CERTIFIER_PORT = 3007
+TOOKEN_PORT = 3006
+CERTIFIER_PORT = 3007
 
 braiderconfig = BraiderConfig(BRAIDER_PORT,MIXER_PORT,3,SERVER_ID,(uuid,MIXER_ID))
-recorderconfig = RecorderConfig(MAINTAINER_ID,[(uuid,MAINTAINER_ID),],server.id,REGISTRATOR_PORT,VOTING_PORT,PROPOSAL_PORT)
-certifierconfig = nothing
+recorderconfig = RecorderConfig(MAINTAINER_ID,[(uuid,MAINTAINER_ID),(uuid,SERVER_ID)],server.id,REGISTRATOR_PORT,VOTING_PORT,PROPOSAL_PORT)
+certifierconfig = CertifierConfig(MAINTAINER_ID,SERVER_ID,TOOKEN_PORT,CERTIFIER_PORT)
 systemconfig = SystemConfig(MIXER_PORT,SYNC_PORT,certifierconfig,braiderconfig,recorderconfig)
 
 serialize(deme,systemconfig,maintainer)

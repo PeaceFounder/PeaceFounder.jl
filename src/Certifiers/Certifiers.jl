@@ -1,21 +1,16 @@
 ### Could be part of PeaceVote
 module Certifiers
 
+include("../debug.jl")
+
 using ..Types: CertifierConfig
+using ..Crypto
+using DiffieHellman: diffiehellman
+
 using PeaceVote: Certificate, Signer, AbstractID, ID, Deme, Notary
 using Sockets
-using DiffieHellman
 using Serialization
 
-
-const ThisDeme = Deme
-
-struct TookenID <: AbstractID
-    id::ID
-    tooken
-end
-
-unwrap(envelope::TookenID) = (envelope.id,envelope.tooken)
 
 function validate!(tookens::Set,tooken)
     if tooken in tookens
@@ -34,13 +29,12 @@ struct SecureRegistrator
     messages # a Channel
 end
 
-function SecureRegistrator(port,notary::Notary,validate::Function,signer::Signer)
-    
+function SecureRegistrator(port,deme::Deme,validate::Function,signer::Signer)
     
     server = listen(port)
     messages = Channel()
     
-    dh = DH(signer,notary)
+    dh = DHsym(deme,signer)
 
     daemon = @async while true
         socket = accept(server)
@@ -53,7 +47,7 @@ function SecureRegistrator(port,notary::Notary,validate::Function,signer::Signer
             
             @assert validate(id)
 
-            securesocket = SecureSocket(socket,key)
+            securesocket = deme.cypher.secureio(socket,key)
             message = deserialize(securesocket)
             put!(messages,message) 
         end
@@ -66,15 +60,15 @@ struct TookenCertifier
     server
     daemon
     tookens
+    tickets
 end
 
-function TookenCertifier(port,notary::Notary,signer::Signer)
+function TookenCertifier(port,deme::Deme,signer::Signer)
     tookens = Set()   
+    tickets = Dict()
 
     server = listen(port)
-    #server = listen(config.certifierport)
-    #dh = DH(wrap(signer),x->(x,nothing),G,chash,()->rngint(100))
-    dh = DH(signer)
+    dh = DHasym(deme,signer)
 
     daemon = @async while true
         socket = accept(server)
@@ -83,20 +77,22 @@ function TookenCertifier(port,notary::Notary,signer::Signer)
             send = x-> serialize(socket,x)
             get = () -> deserialize(socket)
             key, id = diffiehellman(send,get,dh)
-            securesocket = SecureSocket(socket,key)
+            securesocket = deme.cypher.secureio(socket,key)
 
-            id = deserialize(securesocket)
+            tooken,id = deserialize(securesocket)
 
-            @assert id.tooken in tookens
-            pop!(tookens,id.tooken)
+            @assert tooken in tookens
+            pop!(tookens,tooken)
 
             cert = Certificate(id,signer)
+
+            tickets[tooken] = cert
             
             serialize(securesocket,cert)
         end
     end
     
-    TookenCertifier(server,daemon,tookens)
+    TookenCertifier(server,daemon,tookens,tickets)
 end
 
 
@@ -106,68 +102,59 @@ struct Certifier
     daemon
 end
 
-function Certifier(deme::ThisDeme,signer::Signer)
+function Certifier(config::CertifierConfig,deme::Deme,signer::Signer)
     
-    systemconfig = SystemConfig(deme)
-    config = systemconfig.certifier
-    
-    tookenrecorder = SecureRegistrator(config.tookenport,deme.notary,x->x in config.tookenca,signer)
-    tookencertifier = TookenCertifier(config.certifierport,deme.notary,signer)
+    tookenrecorder = SecureRegistrator(config.tookenport,deme,x->x in config.tookenca,signer)
+    tookencertifier = TookenCertifier(config.certifierport,deme,signer)
 
     daemon = @async while true
         tooken = take!(tookenrecorder.messages)
         push!(tookencertifier.tookens,tooken)
     end
 
-    Certifier(tookenrecorder,tookencertifier,daemon)
+    return Certifier(tookenrecorder,tookencertifier,daemon)
 end
 
 
-function addtooken(deme::ThisDeme,tooken,signer::Signer)
-
-    systemconfig = SystemConfig(deme)
-    cc = systemconfig.certifier
+function addtooken(cc::CertifierConfig,deme::Deme,tooken,signer::Signer)
 
     socket = connect(cc.tookenport)
     
-    dh = DH(signer,deme.notary)
+    dh = DHsym(deme,signer)
 
     send = x-> serialize(socket,x)
-    get = () -> @show deserialize(socket)
+    get = () -> deserialize(socket)
 
-    @show key, id = diffiehellman(send,get,dh)
+    key, id = diffiehellman(send,get,dh)
 
     @assert id in cc.serverid
 
-    securesocket = SecureSocket(socket,key)
+    securesocket = deme.cypher.secureio(socket,key)
     serialize(securesocket,tooken)
 end
 
 
-function certify(deme::ThisDeme,tookenid::TookenID)
-
-    systemconfig = SystemConfig(deme)
-    cc = systemconfig.certifier
+function certify(cc::CertifierConfig,deme::Deme,id::ID,tooken)
 
     socket = connect(cc.certifierport)
 
-    dh = DH(deme.notary)
+    dh = DHasym(deme)
 
     send = x-> serialize(socket,x)
-    get = () -> @show deserialize(socket)
+    get = () -> deserialize(socket)
 
-    @show key, id = diffiehellman(send,get,dh)
+    key, keyid = diffiehellman(send,get,dh)
 
-    @assert id in cc.serverid
+    @assert keyid in cc.serverid
 
-    securesocket = SecureSocket(socket,key)
-    serialize(securesocket,tookenid)
+    securesocket = deme.cypher.secureio(socket,key)
+    serialize(securesocket,(tooken,id))
     
     cert = deserialize(securesocket)
 
     return cert
 end
 
-certify(deme::ThisDeme,id::ID,tooken) = certify(deme,TookenID(id,tooken))
+export addtooken, Certifier, certify
 
 end

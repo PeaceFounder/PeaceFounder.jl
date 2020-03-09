@@ -17,8 +17,8 @@ using PeaceVote
 #using PeaceVote: datadir
 using Base: UUID
 
-using PeaceVote: Proposal
-import PeaceVote: register, braid!, vote, propose, BraidChain
+using PeaceVote: Proposal, ID
+import PeaceVote: register, braid!, vote, propose, BraidChain, sync!
 import Base.count
 
 include("Types/Types.jl")
@@ -47,6 +47,23 @@ propose(deme::ThisDeme,msg,options,signer::Signer) = BraidChains.propose(SystemC
 vote(deme::ThisDeme,option::Option,signer::Signer) = BraidChains.vote(SystemConfig(deme).recorder,option,signer)
 count(proposal::Proposal,deme::ThisDeme) = Analysis.normalcount(proposal,deme)
 
+sync!(deme::ThisDeme,syncport) = Ledgers.sync!(deme.ledger,syncport)
+
+function sync!(deme::ThisDeme)
+    config = SystemConfig(deme)
+    sync!(deme,config.syncport)    
+end
+
+
+function register(deme::ThisDeme,id::ID,tooken)
+    config = SystemConfig(deme).certifier
+    @info "Spending tooken for certificate"
+    cert = Certifiers.certify(config,deme,id,tooken)
+    @info "Registering the certificate in the ledger"
+    register(deme,cert)
+end
+
+addtooken(deme::ThisDeme,tooken,signer::Signer) = Certifiers.addtooken(SystemConfig(deme).certifier,deme,tooken,signer)
 
 include("debug.jl")
 

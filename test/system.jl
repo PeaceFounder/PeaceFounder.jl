@@ -14,6 +14,8 @@ end
 uuid = Setup.uuid
 demespec = DemeSpec(uuid)
 deme = Deme(demespec)
+demesync = Deme(demespec)
+
 
 server = Signer(deme,"server")
 
@@ -23,13 +25,22 @@ system = System(deme,server)
 ### Now let's test the registration
 maintainer = Signer(deme,"maintainer")
 
-for i in 1:3
+for i in 1:2
     account = "account$i"
     keychain = KeyChain(deme,account)
     identification = ID("$i","today",keychain.member.id)
     cert = Certificate(identification,maintainer)
     @show register(deme,cert)
 end
+
+### Maintainer adds a tooken
+
+tooken = 123244
+PeaceFounder.addtooken(deme,tooken,maintainer)
+
+keychain = KeyChain(deme,"account3")
+id = ID("3","today",keychain.member.id)
+register(deme,id,tooken)
 
 # Now let's test braiding 
 
@@ -64,3 +75,8 @@ end
 sleep(1)
 
 @show tally = count(proposal,deme)
+
+# Let's test synchronization
+
+sync!(demesync)
+@show tally = count(proposal,demesync)

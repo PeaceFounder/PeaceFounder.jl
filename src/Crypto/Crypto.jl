@@ -6,7 +6,7 @@ module Crypto
 using Serialization: serialize, deserialize
 using DiffieHellman
 
-using PeaceVote: Notary, Cypher, Signer
+using PeaceVote: Notary, Cypher, Signer, Deme
 import PeaceVote
 
 
@@ -85,6 +85,11 @@ DHsym(cypher::Cypher,notary::Notary,signer::Signer) = DH(data->(data,sign(data,s
 DHasym(cypher::Cypher,notary::Notary) = DH(identity,x->unwrap(x,notary),cypher.G,(x,y,z)->hash(x,y,z,notary),cypher.rng)
 DHasym(cypher::Cypher,notary::Notary,signer::Signer) = DH(data->(data,sign(data,signer)),x->(x,nothing),cypher.G,(x,y,z)->hash(x,y,z,notary),cypher.rng)
 
+
+
+DHsym(deme::Deme,signer::Signer) = DHsym(deme.cypher,deme.notary,signer)
+DHasym(deme::Deme) = DHasym(deme.cypher,deme.notary)
+DHasym(deme::Deme,signer::Signer) = DHasym(deme.cypher,deme.notary,signer)
 
 export sign, verify, hash, unwrap, DHsym, DHasym
 
