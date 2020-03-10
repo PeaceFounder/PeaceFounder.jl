@@ -16,9 +16,9 @@ Synchronizers = "9279c0cf-0ddb-4a8a-93c9-19d312620a08"
 [compat]
 DiffieHellman = "^0.3.0"
 PeaceVote = "^0.2.0"
+SMTPClient = "^0.3"
 SynchronicBallot = "^0.2.1"
 Synchronizers = "^0.1"
-SMTPClient = "^0.3"
 julia = "1"
 
 [extras]
