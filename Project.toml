@@ -1,11 +1,12 @@
 name = "PeaceFounder"
 uuid = "916f7771-afe2-4319-943d-0e770c333432"
 authors = ["akels <akels14@gmail.com>"]
-version = "0.2.1"
+version = "0.2.2"
 
 [deps]
 DiffieHellman = "0e61fee8-20a4-4374-8233-5198f28d9d66"
 PeaceVote = "129db535-0459-46ad-8d3d-b1fb8f318c74"
+Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SMTPClient = "c35d69d1-b747-5018-a192-25bc5e63c83d"
 Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
@@ -15,7 +16,7 @@ Synchronizers = "9279c0cf-0ddb-4a8a-93c9-19d312620a08"
 
 [compat]
 DiffieHellman = "^0.3.0"
-PeaceVote = "^0.2"
+PeaceVote = "^0.2.2"
 SMTPClient = "^0.3"
 SynchronicBallot = "^0.2"
 Synchronizers = "^0.1"

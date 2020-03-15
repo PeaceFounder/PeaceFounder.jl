@@ -4,6 +4,7 @@ using PeaceCypher
 using PeaceFounder.Braiders
 using PeaceFounder.BraidChains
 import PeaceFounder
+using PeaceFounder.Types: Port, BraiderConfig, RecorderConfig
 
 for dir in [homedir() * "/.peacevote/"]
     isdir(dir) && rm(dir,recursive=true)
@@ -18,15 +19,15 @@ maintainer = Signer(uuid,"maintainer")
 
 # Somewhere far far away
 mixer = Signer(deme,"mixer")
-mixerserver = Mixer(2001,deme,mixer)
+mixerserver = Mixer(Port(2001),deme,mixer)
 
 server = Signer(deme,"server")
 
 MIXER_ID = mixer.id
 SERVER_ID = server.id
 
-braiderconfig = BraiderConfig(2000,2001,3,SERVER_ID,(uuid,MIXER_ID))
-recorderconfig = RecorderConfig(maintainer.id,[(uuid,maintainer.id),],server.id,2002,2003,2004)
+braiderconfig = BraiderConfig(Port(2000),Port(2001),3,SERVER_ID,(uuid,MIXER_ID))
+recorderconfig = RecorderConfig([(uuid,maintainer.id),],server.id,Port(2002),Port(2003),Port(2004))
 
 braider = Braider(braiderconfig,deme,server)
 recorder = Recorder(recorderconfig,deme,braider,server)

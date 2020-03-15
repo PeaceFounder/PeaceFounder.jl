@@ -1,7 +1,9 @@
 module DataFormat
 
+using Pkg.TOML
+
 using Base: UUID
-using ..Types: SystemConfig
+import ..Types: SystemConfig, Sealed, CertifierConfig, BraiderConfig, RecorderConfig, Port, AddressRecord, ip
 using PeaceVote: Notary, DemeSpec, Deme, datadir, Signer
 using ..Crypto
 #using ...PeaceFounder: SystemConfig
@@ -24,26 +26,39 @@ loadbinary(data) = Serialization.deserialize(IOBuffer(data))
 serialize(io::IO,x) = Serialization.serialize(io,x)
 deserialize(io::IO) = Serialization.deserialize(io)
 
-configfname(uuid::UUID) = datadir(uuid) * "/PeaceFounder" # In future could be PeaceFounder.toml
+configfname(uuid::UUID) = datadir(uuid) * "/PeaceFounder.toml" # In future could be PeaceFounder.toml
 
-function deserialize(deme::Deme,::Type{SystemConfig})
-    fname = configfname(deme.spec.uuid)
-    @assert isfile(fname) "Config file not found!"
-    config, signature = Serialization.deserialize(fname)
-    id = verify(config,signature,deme.notary) 
-    @assert id==deme.spec.maintainer
-    return config
-end
 
-### I could call this thing serialize
-# serialize(fname::AbstractString,config::SystemConfig,signer::Signer)
-# I could use AbstractLedger type with record! method. Passing deme would also be desirable as one could check that the signer of the config file is in the demespec. 
+include("systemconfig.jl")
+
+### Signer could acompine a Sealed, unsealed type. 
+
 function serialize(deme::Deme,config::SystemConfig,signer::Signer)
     @assert deme.spec.maintainer==signer.id
     fname = configfname(deme.spec.uuid)
     mkpath(dirname(fname))
-    signature = sign(config,signer)
-    Serialization.serialize(fname,(config,signature))
+    
+    sealedconfig = Sealed{SystemConfig}(config,signer)
+    
+    dict = Dict(sealedconfig)
+    
+    open(fname, "w") do io
+        TOML.print(io, dict)
+    end
+end
+
+
+function deserialize(deme::Deme,::Type{SystemConfig})
+    fname = configfname(deme.spec.uuid)
+    @assert isfile(fname) "Config file not found!"
+
+    dict = TOML.parsefile(fname)
+    sc = Sealed{SystemConfig}(dict,deme.notary)
+
+    id = deme.notary.verify("$(sc.data)",sc.signature) 
+
+    @assert id==deme.spec.maintainer
+    return sc.data
 end
 
 

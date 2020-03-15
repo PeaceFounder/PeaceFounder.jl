@@ -1,6 +1,6 @@
 using PeaceFounder.Certifiers
 using PeaceCypher
-using PeaceFounder.Types: CertifierConfig
+using PeaceFounder.Types: CertifierConfig, Port
 using PeaceVote: Signer, DemeSpec, Deme
 using PeaceVote: ID
 
@@ -12,8 +12,8 @@ server = Signer(deme,"server")
 
 MAINTAINER_ID = maintainer.id
 SERVER_ID = server.id
-TOOKEN_PORT = 2006
-CERTIFIER_PORT = 2007
+TOOKEN_PORT = Port(2006)
+CERTIFIER_PORT = Port(2007)
 
 config = CertifierConfig(MAINTAINER_ID,SERVER_ID,TOOKEN_PORT,CERTIFIER_PORT)
 

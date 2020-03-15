@@ -1,6 +1,7 @@
 using PeaceVote
 using PeaceCypher
 using PeaceFounder.Braiders
+using PeaceFounder.Types: Port, BraiderConfig
 
 
 demespec = PeaceVote.DemeSpec("PeaceDeme",:default,:PeaceCypher,:default,:PeaceCypher,:PeaceFounder)
@@ -17,7 +18,7 @@ server = PeaceVote.Signer(deme,"server")
 MIXER_ID = mixer.id
 SERVER_ID = server.id
 
-config = BraiderConfig(1998,1999,3,SERVER_ID,(uuid,MIXER_ID))
+config = BraiderConfig(Port(1998),Port(1999),3,SERVER_ID,(uuid,MIXER_ID))
 
 braider = Braider(config,deme,server)
 
