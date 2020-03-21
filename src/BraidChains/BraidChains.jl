@@ -4,13 +4,16 @@ module BraidChains
 using Sockets
 
 import PeaceVote
-using PeaceVote: Proposal, Vote, Option, voters!, Certificate, Notary, Deme, Signer
+
+using PeaceVote: voters!, Certificate, Intent, Contract, Consensus, Envelope, Notary, Deme, Signer, ID, DemeID, AbstractID, AbstractVote, AbstractProposal
 using PeaceVote: record!, records, loadrecord
+#using PeaceVote: verify
+
 
 using ..Braiders: Braider
 using ..Crypto
 using ..DataFormat ### 
-using ..Types: RecorderConfig
+using ..Types: RecorderConfig, PFID, Proposal, Vote
 
 const ThisDeme = Deme
 

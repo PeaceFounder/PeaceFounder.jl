@@ -1,10 +1,10 @@
-using PeaceVote: Notary, Cypher, DemeSpec, Deme, Signer, ID, Certificate, datadir, save, proposals, Option
+using PeaceVote: Notary, Cypher, DemeSpec, Deme, Signer, Certificate, datadir, save, proposals, DemeID, ID
 using PeaceCypher
 
 using PeaceFounder.Braiders
 using PeaceFounder.BraidChains
 import PeaceFounder
-using PeaceFounder.Types: Port, BraiderConfig, RecorderConfig
+using PeaceFounder.Types: Port, BraiderConfig, RecorderConfig, PFID, Proposal, Vote
 
 for dir in [homedir() * "/.peacevote/"]
     isdir(dir) && rm(dir,recursive=true)
@@ -26,8 +26,8 @@ server = Signer(deme,"server")
 MIXER_ID = mixer.id
 SERVER_ID = server.id
 
-braiderconfig = BraiderConfig(Port(2000),Port(2001),3,SERVER_ID,(uuid,MIXER_ID))
-recorderconfig = RecorderConfig([(uuid,maintainer.id),],server.id,Port(2002),Port(2003),Port(2004))
+braiderconfig = BraiderConfig(Port(2000),Port(2001),3,SERVER_ID,DemeID(uuid,MIXER_ID))
+recorderconfig = RecorderConfig([maintainer.id,],server.id,Port(2002),Port(2003),Port(2004))
 
 braider = Braider(braiderconfig,deme,server)
 recorder = Recorder(recorderconfig,deme,braider,server)
@@ -35,35 +35,41 @@ recorder = Recorder(recorderconfig,deme,braider,server)
 for i in 1:3
     account = "account$i"
     member = Signer(deme,account * "/member")
-    identification = ID("$i","today",member.id)
+    identification = PFID("$i","today",member.id)
     cert = Certificate(identification,maintainer)
     @show register(recorderconfig,cert)
 end
+
+pmember = Signer(deme,"account2" * "/member")
+proposal = Proposal("Found peace for a change?",["yes","no","maybe"])
+propose(recorderconfig,proposal,pmember);
 
 @sync for i in 1:3
     @async begin
         account = "account$i"
         member = Signer(deme,account * "/member")
-        voter = Signer(deme,account * "/voters/$(member.id)")
+        @show "/voters/$(member.id)"
+        voter = Signer(deme,account * "/voters/$(string(member.id))")
         braid!(braiderconfig,deme,voter,member)
     end
 end
 
-pmember = Signer(deme,"account2" * "/member")
-propose(recorderconfig,"Found peace for a change?",["yes","no","maybe"],pmember);
+
+### Now I can work on reading in parsing the ledger to a BraidChain
 
 sleep(1)
 
 messages = BraidChain(deme).records
-proposal = proposals(messages)[1]
+index = proposals(messages)[1]
+proposal = messages[index]
 
 for i in 1:3
     account = "account$i"
 
     member = Signer(deme,account * "/member")
-    voter = Signer(deme,account * "/voters/$(member.id)")
+    voter = Signer(deme,account * "/voters/$(string(member.id))")
 
-    option = Option(proposal,rand(1:3))
+    option = Vote(index,rand(1:length(proposal.document.options)))
     vote(recorderconfig,option,voter)
 end
 

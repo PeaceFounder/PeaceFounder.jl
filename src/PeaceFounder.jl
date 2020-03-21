@@ -17,7 +17,7 @@ using PeaceVote
 #using PeaceVote: datadir
 using Base: UUID
 
-using PeaceVote: Proposal, ID
+using PeaceVote: AbstractProposal, AbstractID, AbstractVote
 import PeaceVote: register, braid!, vote, propose, BraidChain, sync!
 import Base.count
 
@@ -42,10 +42,10 @@ PeaceVote.Ledger(::Type{ThisDeme},uuid::UUID) = Ledgers.Ledger(uuid)
 
 BraidChain(deme::ThisDeme) = BraidChains.BraidChain(deme)
 braid!(deme::ThisDeme,voter::Signer,signer::Signer) = Braiders.braid!(SystemConfig(deme).braider,deme,voter,signer)
-register(deme::ThisDeme,cert::Certificate) = BraidChains.register(SystemConfig(deme).recorder,cert)
-propose(deme::ThisDeme,msg,options,signer::Signer) = BraidChains.propose(SystemConfig(deme).recorder,msg,options,signer)
-vote(deme::ThisDeme,option::Option,signer::Signer) = BraidChains.vote(SystemConfig(deme).recorder,option,signer)
-count(proposal::Proposal,deme::ThisDeme) = Analysis.normalcount(proposal,deme)
+register(deme::ThisDeme,cert::Certificate{T}) where T<:AbstractID = BraidChains.register(SystemConfig(deme).recorder,cert)
+propose(deme::ThisDeme,proposal::AbstractProposal,signer::Signer) = BraidChains.propose(SystemConfig(deme).recorder,proposal,signer)
+vote(deme::ThisDeme,option::AbstractVote,signer::Signer) = BraidChains.vote(SystemConfig(deme).recorder,option,signer)
+count(index::Int,proposal::AbstractProposal,deme::ThisDeme) = Analysis.normalcount(index,proposal,deme)
 
 sync!(deme::ThisDeme,syncport) = Ledgers.sync!(deme.ledger,syncport)
 
@@ -55,7 +55,7 @@ function sync!(deme::ThisDeme)
 end
 
 
-function register(deme::ThisDeme,id::ID,tooken)
+function register(deme::ThisDeme,id::AbstractID,tooken)
     config = SystemConfig(deme).certifier
     @info "Spending tooken for certificate"
     cert = Certifiers.certify(config,deme,id,tooken)

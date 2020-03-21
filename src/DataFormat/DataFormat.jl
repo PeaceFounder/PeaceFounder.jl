@@ -3,8 +3,8 @@ module DataFormat
 using Pkg.TOML
 
 using Base: UUID
-import ..Types: SystemConfig, Sealed, CertifierConfig, BraiderConfig, RecorderConfig, Port, AddressRecord, ip
-using PeaceVote: Notary, DemeSpec, Deme, datadir, Signer
+import ..Types: SystemConfig, CertifierConfig, BraiderConfig, RecorderConfig, Port, AddressRecord, ip
+using PeaceVote: Notary, DemeSpec, Deme, datadir, Signer, Certificate, Contract, Intent, Consensus, Envelope, ID, DemeID
 using ..Crypto
 #using ...PeaceFounder: SystemConfig
 
@@ -33,12 +33,27 @@ include("systemconfig.jl")
 
 ### Signer could acompine a Sealed, unsealed type. 
 
+function Dict(config::Certificate)
+    sdict = Dict(config.signature)
+    dict = Dict(config.document)
+    dict["signature"] = sdict
+    return dict
+end
+
+### I could have a function unseal to get the config I want
+function Certificate{SystemConfig}(dict::Dict,notary::Notary)
+    systemconfig = SystemConfig(dict)
+    signature = notary.Signature(dict["signature"])
+    return Certificate(systemconfig,signature)
+end
+
+
 function serialize(deme::Deme,config::SystemConfig,signer::Signer)
     @assert deme.spec.maintainer==signer.id
     fname = configfname(deme.spec.uuid)
     mkpath(dirname(fname))
     
-    sealedconfig = Sealed{SystemConfig}(config,signer)
+    sealedconfig = Certificate(config,signer)
     
     dict = Dict(sealedconfig)
     
@@ -47,18 +62,20 @@ function serialize(deme::Deme,config::SystemConfig,signer::Signer)
     end
 end
 
+### I could add function certify(deme::Deme,::Type{SystemConfig},maintainer::Signer) to load and add signature to the TOML file.
+
 
 function deserialize(deme::Deme,::Type{SystemConfig})
     fname = configfname(deme.spec.uuid)
     @assert isfile(fname) "Config file not found!"
 
     dict = TOML.parsefile(fname)
-    sc = Sealed{SystemConfig}(dict,deme.notary)
+    sc = Certificate{SystemConfig}(dict,deme.notary)
 
-    id = deme.notary.verify("$(sc.data)",sc.signature) 
+    id = deme.notary.verify("$(sc.document)",sc.signature) 
 
     @assert id==deme.spec.maintainer
-    return sc.data
+    return sc.document
 end
 
 

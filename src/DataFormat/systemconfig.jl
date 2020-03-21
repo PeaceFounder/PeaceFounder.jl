@@ -2,15 +2,16 @@ import Base.Dict
 
 function Dict(record::AddressRecord)
     dict = Dict()
-    if record.uuid!=nothing
-        dict["uuid"] = string(record.uuid)
+
+    if typeof(record.id)==DemeID
+        dict["uuid"] = string(record.id.uuid)
     end
 
     if record.hash!=nothing
         dict["hash"] = string(record.hash,base=16)
     end
 
-    dict["id"] = string(record.id,base=16)
+    dict["id"] = string(record.id.id,base=16)
     dict["ip"] = string(record.ip)
     return dict
 end
@@ -18,10 +19,13 @@ end
 Dict(arecords::Vector{AddressRecord}) = Dict[Dict(i) for i in arecords]
 
 function AddressRecord(config::Dict)
+    localid = parse(BigInt,config["id"],base=16)
+
     if "uuid" in config.keys
         uuid = UUID(config["uuid"])
+        id = DemeID(uuid,localid)
     else
-        uuid = nothing
+        id = ID(localid)
     end
 
     if "hash" in config.keys
@@ -30,25 +34,24 @@ function AddressRecord(config::Dict)
         hash = nothing
     end
 
-    id = parse(BigInt,config["id"],base=16)
     ip = IPv4(config["ip"])
     
-    return AddressRecord(uuid,hash,id,ip)
+    return AddressRecord(id,hash,ip)
 end
 
 
 function Dict(config::CertifierConfig)
     dict = Dict()
-    dict["ca"] = string(config.tookenca,base=16)
-    dict["server"] = string(config.serverid,base=16)
+    dict["ca"] = string(config.tookenca.id,base=16)
+    dict["server"] = string(config.serverid.id,base=16)
     dict["tport"] = config.tookenport.port
     dict["cport"] = config.certifierport.port
     return dict
 end
 
 function CertifierConfig(dict::Dict,arecords::Vector{AddressRecord})
-    ca = parse(BigInt,dict["ca"],base=16)
-    server = parse(BigInt,dict["server"],base=16)
+    ca = ID(parse(BigInt,dict["ca"],base=16))
+    server = ID(parse(BigInt,dict["server"],base=16))
 
     addr = ip(arecords,server)
     tport = Port(dict["tport"],addr)
@@ -61,11 +64,11 @@ end
 function Dict(config::BraiderConfig)
     dict = Dict()
     dict["N"] = config.N
-    dict["server"] = string(config.gateid,base=16)
+    dict["server"] = string(config.gateid.id,base=16)
     dict["port"] = config.port.port
     mixer = Dict()
-    mixer["uuid"] = string(config.mixerid[1])
-    mixer["server"] = string(config.mixerid[2],base=16)
+    mixer["uuid"] = string(config.mixerid.uuid)
+    mixer["server"] = string(config.mixerid.id,base=16)
     mixer["port"] = config.ballotport.port
     dict["mixer"] = mixer
     return dict
@@ -74,28 +77,32 @@ end
 function BraiderConfig(dict::Dict,arecords::Vector{AddressRecord})
     N = dict["N"]
 
-    server = parse(BigInt,dict["server"],base=16)
+    server = ID(parse(BigInt,dict["server"],base=16))
     port = Port(dict["port"],ip(arecords,server))
 
     muuid = UUID(dict["mixer"]["uuid"])
     mserver = parse(BigInt,dict["mixer"]["server"],base=16)
-    bport = Port(dict["mixer"]["port"],ip(arecords,mserver,muuid)) ### Braider needs to know the ip address of the mixer
 
-    BraiderConfig(port,bport,N,server,(muuid,mserver))
+    mid = DemeID(muuid,mserver)
+    bport = Port(dict["mixer"]["port"],ip(arecords,mid)) ### Braider needs to know the ip address of the mixer
+
+    BraiderConfig(port,bport,N,server,mid)
 end
 
 function Dict(config::RecorderConfig)
     ca = Dict[]
     for mca in config.membersca
         dict = Dict()
-        dict["uuid"] = string(mca[1])
-        dict["id"] = string(mca[2],base=16)
+        dict["id"] = string(mca.id,base=16)
+        if typeof(mca)==DemeID
+            dict["uuid"] = string(mca.uuid)
+        end
         push!(ca,dict)
     end
 
     dict = Dict()
     dict["ca"] = ca
-    dict["server"] = string(config.serverid,base=16)
+    dict["server"] = string(config.serverid.id,base=16)
     dict["rport"] = config.registratorport.port
     dict["vport"] = config.votingport.port
     dict["pport"] = config.proposalport.port
@@ -104,8 +111,19 @@ function Dict(config::RecorderConfig)
 end
 
 function RecorderConfig(dict::Dict,arecords::Vector{AddressRecord})
-    ca = [(UUID(i["uuid"]),parse(BigInt,i["id"],base=16)) for i in dict["ca"]]
-    server = parse(BigInt,dict["server"],base=16)
+    
+    ca = Union{ID,DemeID}[]
+    for i in dict["ca"]
+        localid = parse(BigInt,i["id"],base=16)
+        if haskey(i,"uuid")
+            uuid = UUID(i["uuid"])
+            push!(ca,DemeID(uuid,localid))
+        else
+            push!(ca,ID(localid))
+        end
+    end
+
+    server = ID(parse(BigInt,dict["server"],base=16))
 
     addr = ip(arecords,server)
     rport = Port(dict["rport"],addr)
@@ -119,7 +137,7 @@ function Dict(config::SystemConfig)
     dict = Dict()
     dict["mport"] = config.mixerport.port
     dict["sport"] = config.syncport.port
-    dict["server"] = string(config.serverid,base=16)
+    dict["server"] = string(config.serverid.id,base=16)
     dict["certifier"] = Dict(config.certifier)
     dict["braider"] = Dict(config.braider)
     dict["recorder"] = Dict(config.recorder)
@@ -136,7 +154,7 @@ function SystemConfig(dict::Dict)
         arecords = AddressRecord[]
     end
 
-    server = parse(BigInt,dict["server"],base=16)
+    server = ID(parse(BigInt,dict["server"],base=16))
     addr = ip(arecords,server)
     mport = Port(dict["mport"],addr)
     sport = Port(dict["sport"],addr)
@@ -148,22 +166,8 @@ function SystemConfig(dict::Dict)
     SystemConfig(mport,sport,server,certifier,braider,recorder,arecords)
 end
 
-function Sealed{SystemConfig}(config::SystemConfig,maintainer::Signer)
-    signature = maintainer.sign("$config")
-    return Sealed(config,signature)
-end
+# function Sealed{SystemConfig}(config::SystemConfig,maintainer::Signer)
+#     signature = maintainer.sign("$config")
+#     return Sealed(config,signature)
+# end
 
-function Dict(config::Sealed{SystemConfig})
-    sdict = Dict(config.signature)
-    dict = Dict(config.data)
-    dict["signature"] = sdict
-
-    return dict
-end
-
-### I could have a function unseal to get the config I want
-function Sealed{SystemConfig}(dict::Dict,notary::Notary)
-    systemconfig = SystemConfig(dict)
-    signature = notary.Signature(dict["signature"])
-    return Sealed(systemconfig,signature)
-end

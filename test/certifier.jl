@@ -1,8 +1,7 @@
 using PeaceFounder.Certifiers
 using PeaceCypher
-using PeaceFounder.Types: CertifierConfig, Port
+using PeaceFounder.Types: CertifierConfig, Port, PFID
 using PeaceVote: Signer, DemeSpec, Deme
-using PeaceVote: ID
 
 demespec = DemeSpec("PeaceDeme",:default,:PeaceCypher,:default,:PeaceCypher,:PeaceFounder)
 deme = Deme(demespec)
@@ -28,6 +27,6 @@ addtooken(config,deme,tooken,maintainer)
 # Now the maintainer shares the tooken, demespec and ledger port with new member
 
 member = Signer(deme,"memeber")
-id = ID("Person X","Date X",member.id)
+id = PFID("Person X","Date X",member.id)
 
 @show cert = certify(config,deme,id,tooken)

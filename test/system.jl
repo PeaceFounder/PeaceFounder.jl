@@ -1,6 +1,7 @@
 using PeaceFounder.MaintainerTools: System, addtooken
-using PeaceVote
+using PeaceFounder.Types: PFID, Vote, Proposal
 using PeaceFounder
+using PeaceVote
 
 ### Perhaps I could just run julia in a process
 for dir in [homedir() * "/.peacevote/"]
@@ -28,7 +29,7 @@ maintainer = Signer(deme,"maintainer")
 for i in 1:2
     account = "account$i"
     keychain = KeyChain(deme,account)
-    identification = ID("$i","today",keychain.member.id)
+    identification = PFID("$i","today",keychain.member.id)
     cert = Certificate(identification,maintainer)
     @show register(deme,cert)
 end
@@ -42,7 +43,7 @@ addtooken(deme,tooken,maintainer)
 ###
 
 keychain = KeyChain(deme,"account3")
-id = ID("3","today",keychain.member.id)
+id = PFID("3","today",keychain.member.id)
 register(deme,id,tooken)
 
 # Now let's test braiding 
@@ -58,28 +59,32 @@ end
 # Proposing
 
 keychain = KeyChain(deme,"account2")
-propose("Found peace for a change?",["yes","no","maybe"],keychain)
+proposal = Proposal("Found peace for a change?",["yes","no","maybe"])
+propose(proposal,keychain)
 
 sleep(1)
 
 messages = BraidChain(deme).records
-proposal = proposals(messages)[1]
+index = proposals(messages)[1]
+proposal = messages[index]
+
 
 # Now we can vote
 
 for i in 1:3
     account = "account$i"
     keychain = KeyChain(deme,account)
-    option = Option(proposal,rand(1:3))
+    
+    option = Vote(index,rand(1:length(proposal.document.options)))
     vote(option,keychain)
 end
 
 # Now let's count 
 sleep(1)
 
-@show tally = count(proposal,deme)
+@show tally = count(index,proposal.document,deme)
 
 # Let's test synchronization
 
 sync!(demesync)
-@show tally = count(proposal,demesync)
+@show tally = count(index,proposal.document,demesync)

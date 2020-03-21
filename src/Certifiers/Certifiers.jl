@@ -7,7 +7,7 @@ using ..Types: CertifierConfig
 using ..Crypto
 using DiffieHellman: diffiehellman
 
-using PeaceVote: Certificate, Signer, AbstractID, ID, Deme, Notary
+using PeaceVote: Certificate, Signer, AbstractID, Deme, Notary
 using Sockets
 using Serialization
 
@@ -134,7 +134,7 @@ function addtooken(cc::CertifierConfig,deme::Deme,tooken,signer::Signer)
 end
 
 
-function certify(cc::CertifierConfig,deme::Deme,id::ID,tooken)
+function certify(cc::CertifierConfig,deme::Deme,id::AbstractID,tooken)
 
     socket = connect(cc.certifierport)
 

@@ -141,7 +141,7 @@ uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
 
 [[SynchronicBallot]]
 deps = ["DiffieHellman", "Multiplexers", "Serialization", "Sockets"]
-git-tree-sha1 = "d789de401b9a861e574daa11cbd6bfcb74cde5af"
+path = "../SynchronicBallot"
 uuid = "c4fd2470-c9f5-491f-b4e2-53b9059945a5"
 version = "0.2.1"
 

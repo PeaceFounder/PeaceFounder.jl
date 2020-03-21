@@ -1,8 +1,8 @@
 ### I could use this file to set up the system for the test.
 
-using PeaceVote: DemeSpec, Deme, Signer, save
+using PeaceVote: DemeSpec, Deme, Signer, save, DemeID
 using PeaceCypher
-using PeaceFounder.Types: BraiderConfig, RecorderConfig, CertifierConfig, SystemConfig, AddressRecord, Port, Sealed
+using PeaceFounder.Types: BraiderConfig, RecorderConfig, CertifierConfig, SystemConfig, AddressRecord, Port
 using PeaceFounder.DataFormat
 
 demespec = DemeSpec("PeaceDeme",:default,:PeaceCypher,:default,:PeaceCypher,:PeaceFounder)
@@ -26,10 +26,10 @@ SYNC_PORT = Port(3005)
 TOOKEN_PORT = Port(3006)
 CERTIFIER_PORT = Port(3007)
 
-braiderconfig = BraiderConfig(BRAIDER_PORT,MIXER_PORT,3,SERVER_ID,(uuid,MIXER_ID))
-recorderconfig = RecorderConfig([(uuid,MAINTAINER_ID),(uuid,SERVER_ID)],server.id,REGISTRATOR_PORT,VOTING_PORT,PROPOSAL_PORT)
+braiderconfig = BraiderConfig(BRAIDER_PORT,MIXER_PORT,3,SERVER_ID,DemeID(uuid,MIXER_ID))
+recorderconfig = RecorderConfig([MAINTAINER_ID,SERVER_ID],server.id,REGISTRATOR_PORT,VOTING_PORT,PROPOSAL_PORT)
 certifierconfig = CertifierConfig(MAINTAINER_ID,SERVER_ID,TOOKEN_PORT,CERTIFIER_PORT)
 systemconfig = SystemConfig(MIXER_PORT,SYNC_PORT,SERVER_ID,certifierconfig,braiderconfig,recorderconfig,AddressRecord[])
 
 serialize(deme,systemconfig,maintainer)
-
+deserialize(deme,SystemConfig)
