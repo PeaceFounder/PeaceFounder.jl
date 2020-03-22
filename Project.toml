@@ -1,7 +1,7 @@
 name = "PeaceFounder"
 uuid = "916f7771-afe2-4319-943d-0e770c333432"
 authors = ["akels <akels14@gmail.com>"]
-version = "0.2.3"
+version = "0.2.2"
 
 [deps]
 DiffieHellman = "0e61fee8-20a4-4374-8233-5198f28d9d66"
