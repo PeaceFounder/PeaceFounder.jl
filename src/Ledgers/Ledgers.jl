@@ -6,7 +6,7 @@ using ..DataFormat
 
 using Base: UUID
 using PeaceVote: AbstractLedger, datadir
-import PeaceVote: record!, records, loadrecord
+import PeaceVote: record!, records
 
 import Synchronizers
 using Synchronizers: Record
@@ -31,8 +31,8 @@ Ledger(uuid::UUID) = Ledger(datadir(uuid))
 
 
 
-import Synchronizers.Record
-Record(fname::AbstractString,x) = Record(fname,binary(x))
+#import Synchronizers.Record
+#Record(fname::AbstractString,x) = Record(fname,binary(x))
 
 ### Theese ones one can define as AbstractLedger interface (for simplicity one imports them from PeaceFounder until better names comes in.
 record!(ledger::Ledger,fname::AbstractString,data) = push!(ledger.ledger,Record(fname,data))
@@ -42,7 +42,8 @@ import Base: dirname, basename
 dirname(record::Record) = dirname(record.fname)
 basename(record::Record) = basename(record.fname)
 
-loadrecord(record::Record) = loadbinary(record.data)
+
+# This was a bad idea
 
 
 serve(port,ledger::Ledger) = Synchronizers.serve(port,ledger.ledger)
@@ -61,6 +62,6 @@ sync!(ledger::Ledger,syncport) = Synchronizers.sync(Synchronizers.Synchronizer(s
 
 
 
-export Ledger, record!, loadrecord, dirname, basename
+export Ledger, record!, dirname, basename
 
 end

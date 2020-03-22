@@ -38,6 +38,14 @@ struct Recorder # RecorderConfig
     daemon
 end
 
+function binary(x)
+    io = IOBuffer()
+    serialize(io,x)
+    return take!(io)
+end
+
+#import PeaceVote: record!
+#record!(ledger::AbstractLedger,fname::AbstractString,
 
 extverify(x::Certificate{T},notary::Notary) where T <: AbstractID = PeaceVote.verify(x,notary)
 extverify(x::Envelope{Certificate{T}},notary::Notary) where T <: AbstractID = PeaceVote.verify(x)
@@ -78,7 +86,7 @@ function Recorder(config::RecorderConfig,deme::ThisDeme,braider::Braider,signer:
             push!(allvoters,id)
 
 
-            record!(ledger,"members/$(id.id)",cert) # I could make a function record!
+            record!(ledger,"members/$(id.id)",binary(cert)) # I could make a function record!
             #push!(ledger,record)
         end
 
@@ -100,7 +108,7 @@ function Recorder(config::RecorderConfig,deme::ThisDeme,braider::Braider,signer:
             #PeaceVote.addvoters!(allvoters,braid)
             PeaceVote.addvoters!(allvoters,input,output)
 
-            record!(ledger,"braids/$uuid",braid)
+            record!(ledger,"braids/$uuid",binary(braid))
             #push!(ledger,record)
         end
 
@@ -108,15 +116,15 @@ function Recorder(config::RecorderConfig,deme::ThisDeme,braider::Braider,signer:
             vote = take!(voterecorder.messages)
             uuid = hash(vote,deme.notary)
 
-            record!(ledger,"votes/$uuid",vote)
+            record!(ledger,"votes/$uuid",binary(vote))
             #push!(ledger,record)
         end
 
         @async while true
-            @show proposal = take!(proposalreceiver.messages)
+            proposal = take!(proposalreceiver.messages)
             uuid = hash(proposal,deme.notary)
             
-            record!(ledger,"proposals/$uuid",proposal)
+            record!(ledger,"proposals/$uuid",binary(proposal))
             #push!(ledger,record)
         end
 

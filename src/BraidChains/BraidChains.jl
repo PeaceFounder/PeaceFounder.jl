@@ -13,7 +13,7 @@ using PeaceVote: record!, records, loadrecord
 using ..Braiders: Braider
 using ..Crypto
 using ..DataFormat ### 
-using ..Types: RecorderConfig, PFID, Proposal, Vote
+using ..Types: RecorderConfig, PFID, Proposal, Vote, Braid
 
 const ThisDeme = Deme
 

@@ -48,7 +48,6 @@ propose(recorderconfig,proposal,pmember);
     @async begin
         account = "account$i"
         member = Signer(deme,account * "/member")
-        @show "/voters/$(member.id)"
         voter = Signer(deme,account * "/voters/$(string(member.id))")
         braid!(braiderconfig,deme,voter,member)
     end

@@ -19,7 +19,8 @@ import PeaceVote
 function PeaceVote.Consensus(braid::Contract{Braid},notary::Notary)
     refs = ID[]
     for s in braid.signatures
-        id = verify(braid.document.ids,s,notary) ### Should be notary.verify("$(braid.document)",s) 
+        signature = notary.Signature(s)
+        id = verify(braid.document.ids,signature,notary) ### Should be notary.verify("$(braid.document)",s) 
         push!(refs,id)
     end
     return PeaceVote.Consensus(braid.document,refs)
@@ -51,7 +52,7 @@ import Base.take!
 function take!(braider::Braider) 
     msgs,signatures = take!(braider.server.ballots)
     braid = Braid(nothing,nothing,msgs)
-    signedbraid = Contract(braid,signatures)
+    signedbraid = Contract(braid,Dict{String,Any}[Dict(s) for s in signatures])
     return signedbraid
 end
 

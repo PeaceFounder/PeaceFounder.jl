@@ -1,7 +1,6 @@
 ### Let's look into theese two types
 
 
-
 # struct Proposal <: AbstractProposal
 #     uuid ### just so one could find it
 #     id ### the person issueing the proposal
@@ -29,25 +28,25 @@ function BraidChain(rawrecords::Vector,notary::Notary)
     for record in rawrecords
         if dirname(record)=="members"
 
-            cert = loadrecord(record)
+            cert = deserialize(IOBuffer(record.data),Certificate{PFID})
             id = Intent(cert,notary)
             push!(messages,id)
 
         elseif dirname(record)=="braids"
 
-            contr = loadrecord(record)
+            contr = deserialize(IOBuffer(record.data),Contract{Braid})
             braid = Consensus(contr,notary)
             push!(messages,braid)
 
         elseif dirname(record)=="votes"
 
-            cert = loadrecord(record)
+            cert = deserialize(IOBuffer(record.data),Certificate{Vote})
             vote = Intent(cert,notary)
             push!(messages,vote)
 
         elseif dirname(record)=="proposals"
 
-            cert = loadrecord(record)
+            cert = deserialize(IOBuffer(record.data),Certificate{Proposal})
             proposal = Intent(cert,notary)
             push!(messages,proposal)
 

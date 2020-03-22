@@ -3,35 +3,25 @@ module DataFormat
 using Pkg.TOML
 
 using Base: UUID
-import ..Types: SystemConfig, CertifierConfig, BraiderConfig, RecorderConfig, Port, AddressRecord, ip
+import ..Types: SystemConfig, CertifierConfig, BraiderConfig, RecorderConfig, Port, AddressRecord, ip, PFID, Vote, Proposal, Braid
 using PeaceVote: Notary, DemeSpec, Deme, datadir, Signer, Certificate, Contract, Intent, Consensus, Envelope, ID, DemeID
 using ..Crypto
-#using ...PeaceFounder: SystemConfig
-
-#const PeaceFounder = parentmodule(@__MODULE__)
-#using PeaceFounder: SystemConfig
 
 import Serialization
-
-function binary(x)
-    io = IOBuffer()
-    Serialization.serialize(io,x)
-    return take!(io)
-end
-
-loadbinary(data) = Serialization.deserialize(IOBuffer(data))
 
 
 ### Until the file fomrat is designed.
 serialize(io::IO,x) = Serialization.serialize(io,x)
 deserialize(io::IO) = Serialization.deserialize(io)
+deserialize(io::IO,::Type) = deserialize(io)
+
 
 configfname(uuid::UUID) = datadir(uuid) * "/PeaceFounder.toml" # In future could be PeaceFounder.toml
 
 
+include("chaintypes.jl")
 include("systemconfig.jl")
 
-### Signer could acompine a Sealed, unsealed type. 
 
 function Dict(config::Certificate)
     sdict = Dict(config.signature)
@@ -40,11 +30,53 @@ function Dict(config::Certificate)
     return dict
 end
 
-### I could have a function unseal to get the config I want
-function Certificate{SystemConfig}(dict::Dict,notary::Notary)
-    systemconfig = SystemConfig(dict)
-    signature = notary.Signature(dict["signature"])
-    return Certificate(systemconfig,signature)
+function Certificate{T}(dict::Dict) where T <: Union{SystemConfig,PFID,Proposal,Vote}
+    document = T(dict)
+    signature = dict["signature"]
+    return Certificate(document,signature)
+end
+
+function Dict(contract::Contract)
+    dict = Dict(contract.document)
+
+    signatures = Dict[]
+    for s in contract.signatures
+        push!(signatures,Dict(s))
+    end
+    dict["signatures"] = signatures
+    
+    return dict
+end
+
+function Contract{Braid}(dict::Dict)
+    braid = Braid(dict)
+    signatures = dict["signatures"]
+    
+    return Contract(braid,signatures)
+end
+
+
+function serialize(io::IOBuffer,x::Certificate{T}) where T<:Union{PFID,Proposal,Vote}
+    dict = Dict(x)
+    TOML.print(io, dict)
+end
+
+function deserialize(io::IOBuffer,::Type{Certificate{T}}) where T<:Union{PFID,Proposal,Vote}
+    str = String(take!(io))
+    dict = TOML.parse(str)
+    return Certificate{T}(dict)
+end
+
+
+function serialize(io::IOBuffer,x::Contract{Braid}) 
+    dict = Dict(x)
+    TOML.print(io, dict)
+end
+
+function deserialize(io::IOBuffer,::Type{Contract{Braid}})
+    str = String(take!(io))
+    dict = TOML.parse(str)
+    return Contract{Braid}(dict)
 end
 
 
@@ -70,12 +102,13 @@ function deserialize(deme::Deme,::Type{SystemConfig})
     @assert isfile(fname) "Config file not found!"
 
     dict = TOML.parsefile(fname)
-    sc = Certificate{SystemConfig}(dict,deme.notary)
+    sc = Certificate{SystemConfig}(dict)
 
-    id = deme.notary.verify("$(sc.document)",sc.signature) 
+    intent = Intent(sc,deme.notary)
+    #id = deme.notary.verify("$(sc.document)",sc.signature) 
 
-    @assert id==deme.spec.maintainer
-    return sc.document
+    @assert intent.reference==deme.spec.maintainer
+    return intent.document
 end
 
 
