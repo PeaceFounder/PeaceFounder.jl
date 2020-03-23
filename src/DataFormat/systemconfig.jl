@@ -1,5 +1,3 @@
-import Base.Dict
-
 function Dict(record::AddressRecord)
     dict = Dict()
 
@@ -165,9 +163,4 @@ function SystemConfig(dict::Dict)
 
     SystemConfig(mport,sport,server,certifier,braider,recorder,arecords)
 end
-
-# function Sealed{SystemConfig}(config::SystemConfig,maintainer::Signer)
-#     signature = maintainer.sign("$config")
-#     return Sealed(config,signature)
-# end
 

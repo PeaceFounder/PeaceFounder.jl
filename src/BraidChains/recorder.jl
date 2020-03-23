@@ -9,14 +9,34 @@ struct Registrator
     messages # a Channel
 end
 
-function Registrator(port,verify::Function,validate::Function)
+# function Registrator(port,verify::Function,validate::Function)
+#     server = listen(port)
+#     messages = Channel()
+    
+#     daemon = @async while true
+#         socket = accept(server)
+#         @async begin
+#             envelope = deserialize(socket)
+#             signerid = verify(envelope)
+#             #memberid, signerid = unwrap(envelope)
+
+#             if validate(signerid)
+#                 put!(messages,envelope)
+#             end
+#         end
+#     end
+    
+#     Registrator(server,daemon,messages)
+# end
+
+function Registrator(port,type::Type,verify::Function,validate::Function)
     server = listen(port)
     messages = Channel()
     
     daemon = @async while true
         socket = accept(server)
         @async begin
-            envelope = deserialize(socket)
+            envelope = deserialize(socket,type)
             signerid = verify(envelope)
             #memberid, signerid = unwrap(envelope)
 
@@ -28,6 +48,7 @@ function Registrator(port,verify::Function,validate::Function)
     
     Registrator(server,daemon,messages)
 end
+
 
 struct Recorder # RecorderConfig
     registrator
@@ -71,9 +92,9 @@ function Recorder(config::RecorderConfig,deme::ThisDeme,braider::Braider,signer:
 
     ### Starting server apps ###
     ### With envelope type now I can easally add external certifiers
-    registrator = Registrator(config.registratorport,x->extverify(x,notary),x -> x in config.membersca)
-    voterecorder = Registrator(config.votingport,x->PeaceVote.verify(x,notary),x -> x in allvoters)
-    proposalreceiver = Registrator(config.proposalport,x->PeaceVote.verify(x,notary),x -> x in members)
+    registrator = Registrator(config.registratorport,Certificate{PFID},x->extverify(x,notary),x -> x in config.membersca)
+    voterecorder = Registrator(config.votingport,Certificate{Vote},x->PeaceVote.verify(x,notary),x -> x in allvoters)
+    proposalreceiver = Registrator(config.proposalport,Certificate{Proposal},x->PeaceVote.verify(x,notary),x -> x in members)
 
     daemon = @async @sync begin
         @async while true

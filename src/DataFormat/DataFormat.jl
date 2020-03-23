@@ -6,22 +6,9 @@ using Base: UUID
 import ..Types: SystemConfig, CertifierConfig, BraiderConfig, RecorderConfig, Port, AddressRecord, ip, PFID, Vote, Proposal, Braid
 using PeaceVote: Notary, DemeSpec, Deme, datadir, Signer, Certificate, Contract, Intent, Consensus, Envelope, ID, DemeID
 using ..Crypto
-
-import Serialization
-
-
-### Until the file fomrat is designed.
-serialize(io::IO,x) = Serialization.serialize(io,x)
-deserialize(io::IO) = Serialization.deserialize(io)
-deserialize(io::IO,::Type) = deserialize(io)
-
+import Base.Dict
 
 configfname(uuid::UUID) = datadir(uuid) * "/PeaceFounder.toml" # In future could be PeaceFounder.toml
-
-
-include("chaintypes.jl")
-include("systemconfig.jl")
-
 
 function Dict(config::Certificate)
     sdict = Dict(config.signature)
@@ -56,61 +43,9 @@ function Contract{Braid}(dict::Dict)
 end
 
 
-function serialize(io::IOBuffer,x::Certificate{T}) where T<:Union{PFID,Proposal,Vote}
-    dict = Dict(x)
-    TOML.print(io, dict)
-end
-
-function deserialize(io::IOBuffer,::Type{Certificate{T}}) where T<:Union{PFID,Proposal,Vote}
-    str = String(take!(io))
-    dict = TOML.parse(str)
-    return Certificate{T}(dict)
-end
-
-
-function serialize(io::IOBuffer,x::Contract{Braid}) 
-    dict = Dict(x)
-    TOML.print(io, dict)
-end
-
-function deserialize(io::IOBuffer,::Type{Contract{Braid}})
-    str = String(take!(io))
-    dict = TOML.parse(str)
-    return Contract{Braid}(dict)
-end
-
-
-function serialize(deme::Deme,config::SystemConfig,signer::Signer)
-    @assert deme.spec.maintainer==signer.id
-    fname = configfname(deme.spec.uuid)
-    mkpath(dirname(fname))
-    
-    sealedconfig = Certificate(config,signer)
-    
-    dict = Dict(sealedconfig)
-    
-    open(fname, "w") do io
-        TOML.print(io, dict)
-    end
-end
-
-### I could add function certify(deme::Deme,::Type{SystemConfig},maintainer::Signer) to load and add signature to the TOML file.
-
-
-function deserialize(deme::Deme,::Type{SystemConfig})
-    fname = configfname(deme.spec.uuid)
-    @assert isfile(fname) "Config file not found!"
-
-    dict = TOML.parsefile(fname)
-    sc = Certificate{SystemConfig}(dict)
-
-    intent = Intent(sc,deme.notary)
-    #id = deme.notary.verify("$(sc.document)",sc.signature) 
-
-    @assert intent.reference==deme.spec.maintainer
-    return intent.document
-end
-
+include("chaintypes.jl")
+include("systemconfig.jl")
+include("serialization.jl")
 
 export binary, loadbinary, serialize, deserialize
 
