@@ -1,7 +1,7 @@
 name = "PeaceFounder"
 uuid = "916f7771-afe2-4319-943d-0e770c333432"
 authors = ["akels <akels14@gmail.com>"]
-version = "0.2.3"
+version = "0.2.2"
 
 [deps]
 DiffieHellman = "0e61fee8-20a4-4374-8233-5198f28d9d66"
@@ -16,6 +16,7 @@ Synchronizers = "9279c0cf-0ddb-4a8a-93c9-19d312620a08"
 
 [compat]
 DiffieHellman = "^0.3.0"
+SynchronicBallot = "^0.2"
 PeaceVote = "^0.2.4"
 SMTPClient = "^0.3"
 Synchronizers = "^0.1"
