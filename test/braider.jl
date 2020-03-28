@@ -18,7 +18,7 @@ server = PeaceVote.Signer(deme,"server")
 MIXER_ID = mixer.id
 SERVER_ID = server.id
 
-config = BraiderConfig(Port(1998),Port(1999),3,SERVER_ID,DemeID(uuid,MIXER_ID))
+config = BraiderConfig(Port(1998),Port(1999),UInt8(3),UInt8(64),SERVER_ID,DemeID(uuid,MIXER_ID))
 
 braider = Braider(config,deme,server)
 
@@ -43,4 +43,5 @@ end
 
 contractbraid = take!(braider)
 @show consentbraid = Consensus(contractbraid,deme.notary)
+
 

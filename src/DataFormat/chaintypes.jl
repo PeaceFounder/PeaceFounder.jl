@@ -51,6 +51,6 @@ function Dict(braid::Braid)
 end
 
 function Braid(dict::Dict)
-    ids = Any[ID(parse(BigInt,i,base=16)) for i in dict["ids"]] ### Any until I fix SynchronicBallot
+    ids = ID[ID(parse(BigInt,i,base=16)) for i in dict["ids"]] ### Any until I fix SynchronicBallot
     return Braid(nothing,nothing,ids)
 end

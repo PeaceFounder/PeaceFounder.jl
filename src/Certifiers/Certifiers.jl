@@ -40,10 +40,7 @@ function SecureRegistrator(port,deme::Deme,validate::Function,signer::Signer)
         socket = accept(server)
         @async begin
             
-            send = x-> serialize(socket,x)
-            get = () -> deserialize(socket)
-            
-            key, id = diffiehellman(send,get,dh)
+            key, id = diffiehellman(socket,dh)
             
             @assert validate(id)
 
@@ -74,9 +71,7 @@ function TookenCertifier(port,deme::Deme,signer::Signer)
         socket = accept(server)
         @async begin
             
-            send = x-> serialize(socket,x)
-            get = () -> deserialize(socket)
-            key, id = diffiehellman(send,get,dh)
+            key, id = diffiehellman(socket,dh)
             securesocket = deme.cypher.secureio(socket,key)
 
             tooken,id = deserialize(securesocket)
@@ -122,10 +117,7 @@ function addtooken(cc::CertifierConfig,deme::Deme,tooken,signer::Signer)
     
     dh = DHsym(deme,signer)
 
-    send = x-> serialize(socket,x)
-    get = () -> deserialize(socket)
-
-    key, id = diffiehellman(send,get,dh)
+    key, id = diffiehellman(socket,dh)
 
     @assert id in cc.serverid
 
@@ -140,10 +132,7 @@ function certify(cc::CertifierConfig,deme::Deme,id::AbstractID,tooken)
 
     dh = DHasym(deme)
 
-    send = x-> serialize(socket,x)
-    get = () -> deserialize(socket)
-
-    key, keyid = diffiehellman(send,get,dh)
+    key, keyid = diffiehellman(socket,dh)
 
     @assert keyid in cc.serverid
 

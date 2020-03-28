@@ -75,7 +75,8 @@ end
 struct BraiderConfig
     port::Port # braiderport
     ballotport::Port # mixerport
-    N::Int
+    N::UInt8
+    M::UInt8
     gateid::ID # braiderid
     mixerid::DemeID
 end
@@ -126,7 +127,7 @@ end
 struct Braid <: AbstractBraid
     index::Union{Nothing,Int} ### latest index of the ledger
     hash::Union{Nothing,BigInt} ### hash of the ledger up to the latest index
-    ids # Vector{ID} ### the new ids for the public keys
+    ids::Vector{ID} ### the new ids for the public keys
 end
 
 # struct Sealed{T}

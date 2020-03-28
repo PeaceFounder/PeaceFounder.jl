@@ -3,41 +3,56 @@ module Braiders
 using ..Crypto
 
 import SynchronicBallot
-using SynchronicBallot: BallotBox, GateKeeper, SocketConfig
-#using SecureIO
-using PeaceVote: DemeSpec, Notary, Cypher, Signer, Deme, Contract, ID, DemeID
+using SynchronicBallot: SocketConfig
+using PeaceVote: DemeSpec, Notary, Cypher, Signer, Deme, Contract, Certificate, ID, DemeID
 
 using ..Types: BraiderConfig, Braid
 
-#include("crypto.jl") ### I can make a module Utils so to import thoose things here
+using Pkg.TOML
 
-#### SOME TEMPORARY FIXES ######
+import ..Types: Braid
+
+function Braid(metadata::Vector{UInt8},ballot::Array{UInt8,2})
+
+    ids = ID[]
+
+    N = size(ballot,2)
+
+    for i in 1:N
+        id = ID(ballot[:,i],base=16)
+        push!(ids,id)
+    end
+    
+    braid = Braid(nothing,nothing,ids)
+
+    return braid
+end
+
+function validate(braid::Braid,id::ID,deme::Deme)
+    return id in braid.ids
+end
+
+function signbraid(metadata::Vector{UInt8},ballot::Array{UInt8,2},validate::Function,signer::Signer)
+
+    braid = Braid(metadata,ballot)
+
+    @assert validate(braid)
+
+    cert = Certificate(braid,signer)
+    
+    sdict = Dict(cert.signature)
+    io = IOBuffer()
+    TOML.print(io,sdict)
+    return take!(io)
+end
 
 const ThisDeme = Deme
 
-import PeaceVote
-function PeaceVote.Consensus(braid::Contract{Braid},notary::Notary)
-    refs = ID[]
-    for s in braid.signatures
-        signature = notary.Signature(s)
-        id = verify(braid.document.ids,signature,notary) ### Should be notary.verify("$(braid.document)",s) 
-        push!(refs,id)
-    end
-    return PeaceVote.Consensus(braid.document,refs)
-end
-
-###############################
-
-
-# I could substitute a sortperm to avoid this dependancy
-using Random: randperm
-
-### In future this will extend the method of synchronic ballot. Perhaps this could also be defined there.
 function Mixer(port,cypher::Cypher,notary::Notary,signer::Signer)
     mixergate = SocketConfig(nothing,DHasym(cypher,notary,signer),cypher.secureio)
     mixermember = SocketConfig(nothing,DHasym(cypher,notary,signer),cypher.secureio)
 
-    return BallotBox(port,mixergate,mixermember,randperm) # should be renamed to Mixer
+    return SynchronicBallot.Mixer(port,mixergate,mixermember) # should be renamed to Mixer
 end
 
 Mixer(port,deme::ThisDeme,signer::Signer) = Mixer(port,deme.cypher,deme.notary,signer)
@@ -49,23 +64,24 @@ end
 
 import Base.take!
 
+### Perhaps I also need to put metadata with the ballots channel. 
+### Because otherwise we may loose a track (a simple bugfix)
 function take!(braider::Braider) 
-    msgs,signatures = take!(braider.server.ballots)
-    braid = Braid(nothing,nothing,msgs)
-    signedbraid = Contract(braid,Dict{String,Any}[Dict(s) for s in signatures])
-    return signedbraid
+    metadata,ballot,signaturesbin = take!(braider.server.ballots)
+    braid = Braid(UInt8[],ballot)
+    signatures = Dict{String,Any}[TOML.parse(String(i)) for i in signaturesbin]
+    contract = Contract(braid,signatures)
+    return contract
 end
 
 function Braider(braider::BraiderConfig,deme::ThisDeme,mixerdeme::Deme,signer::Signer) 
 
     voters = Set()
 
-    #mixerid = ID(braider.mixerid.id) ### That may mean I need DemeID contain ID instead of BigInt. 
-
     gatemixer = SocketConfig(braider.mixerid.id,DHasym(mixerdeme.cypher,mixerdeme.notary),mixerdeme.cypher.secureio)
     gatemember =  SocketConfig(voters,DHsym(deme.cypher,deme.notary,signer),deme.cypher.secureio)
 
-    server = GateKeeper(braider.port,braider.ballotport,braider.N,gatemixer,gatemember)
+    server = SynchronicBallot.GateKeeper(braider.port,braider.ballotport,braider.N,braider.M,gatemixer,gatemember,()->UInt8[]) #() -> Vector{UInt8}(""))
     Braider(server,voters)
 end
 
@@ -94,11 +110,12 @@ function braid!(config::BraiderConfig,deme::ThisDeme,mixerdeme::Deme,voter::Sign
     membermixer = SocketConfig(config.mixerid.id,DHasym(mixerdeme.cypher,mixerdeme.notary),deme.cypher.secureio)
 
     ### I need to take out a validate function, to check the braid formed by the server 
-    # (1) That would check whether the message is in the braid
     # (2) The hash of the full ledger
     # (3) Some other metadata. Whether the same port was used by everyone to form the braid as well the same mixer and server. 
 
-    SynchronicBallot.vote(config.port,membergate,membermixer,voter.id,x->sign(x,signer))
+    idbytes = Vector{UInt8}(voter.id,base=16,length=config.M)
+
+    SynchronicBallot.vote(config.port,membergate,membermixer,idbytes,(m,b)->signbraid(m,b,braid->validate(braid,voter.id,deme),signer))
 end
 
 function braid!(config::BraiderConfig,deme::ThisDeme,voter::Signer,signer::Signer)
@@ -116,9 +133,8 @@ function braid!(deme::ThisDeme,voter::Signer,signer::Signer)
     braid!(config,deme,voter,signer)
 end
 
-export Mixer, Braider, BraiderConfig, braid!
+export Mixer, Braider, braid!
 
 end # module
 
 
-### The benefit would be that I would be able to expose the correct API

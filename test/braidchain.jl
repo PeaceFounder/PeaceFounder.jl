@@ -26,7 +26,7 @@ server = Signer(deme,"server")
 MIXER_ID = mixer.id
 SERVER_ID = server.id
 
-braiderconfig = BraiderConfig(Port(2000),Port(2001),3,SERVER_ID,DemeID(uuid,MIXER_ID))
+braiderconfig = BraiderConfig(Port(2000),Port(2001),UInt8(3),UInt8(64),SERVER_ID,DemeID(uuid,MIXER_ID))
 recorderconfig = RecorderConfig([maintainer.id,],server.id,Port(2002),Port(2003),Port(2004))
 
 braider = Braider(braiderconfig,deme,server)

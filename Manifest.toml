@@ -26,9 +26,9 @@ uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 
 [[DiffieHellman]]
 deps = ["CryptoGroups"]
-git-tree-sha1 = "3cb5247c4b8224dc74ef81f66120bc0061d9c560"
+git-tree-sha1 = "a16ae95af764fa991b031504824b40ce21551a08"
 uuid = "0e61fee8-20a4-4374-8233-5198f28d9d66"
-version = "0.3.0"
+version = "0.4.0"
 
 [[Distributed]]
 deps = ["Random", "Serialization", "Sockets"]
@@ -141,9 +141,9 @@ uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
 
 [[SynchronicBallot]]
 deps = ["DiffieHellman", "Multiplexers", "Serialization", "Sockets"]
-git-tree-sha1 = "d789de401b9a861e574daa11cbd6bfcb74cde5af"
+git-tree-sha1 = "ef7414d6b26c6e49448f6074aba3068e6da4ffa8"
 uuid = "c4fd2470-c9f5-491f-b4e2-53b9059945a5"
-version = "0.2.1"
+version = "0.3.1"
 
 [[Synchronizers]]
 deps = ["Sockets"]

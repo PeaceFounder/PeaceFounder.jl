@@ -61,7 +61,8 @@ end
 
 function Dict(config::BraiderConfig)
     dict = Dict()
-    dict["N"] = config.N
+    dict["N"] = Int(config.N)
+    dict["M"] = Int(config.M)
     dict["server"] = string(config.gateid.id,base=16)
     dict["port"] = config.port.port
     mixer = Dict()
@@ -73,7 +74,8 @@ function Dict(config::BraiderConfig)
 end
 
 function BraiderConfig(dict::Dict,arecords::Vector{AddressRecord})
-    N = dict["N"]
+    N = UInt8(dict["N"])
+    M = UInt8(dict["M"])
 
     server = ID(parse(BigInt,dict["server"],base=16))
     port = Port(dict["port"],ip(arecords,server))
@@ -84,7 +86,7 @@ function BraiderConfig(dict::Dict,arecords::Vector{AddressRecord})
     mid = DemeID(muuid,mserver)
     bport = Port(dict["mixer"]["port"],ip(arecords,mid)) ### Braider needs to know the ip address of the mixer
 
-    BraiderConfig(port,bport,N,server,mid)
+    BraiderConfig(port,bport,N,M,server,mid)
 end
 
 function Dict(config::RecorderConfig)
