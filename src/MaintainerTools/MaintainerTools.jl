@@ -5,7 +5,7 @@ using Base: UUID
 
 
 using SMTPClient
-using ..Types: SystemConfig
+using ..Types: SystemConfig, PFID
 using ..Certifiers: Certifier
 using ..Braiders: Mixer, Braider
 using ..BraidChains: Recorder
@@ -113,7 +113,7 @@ function System(deme::Deme,server::Signer)
     if config.certifier==nothing
         certifier = nothing
     else
-        certifier = Certifier(config.certifier,deme,server)
+        certifier = Certifier{PFID}(config.certifier,deme,server)
     end
     
     mixer = Mixer(config.mixerport,deme,server)

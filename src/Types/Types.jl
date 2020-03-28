@@ -130,10 +130,11 @@ struct Braid <: AbstractBraid
     ids::Vector{ID} ### the new ids for the public keys
 end
 
-# struct Sealed{T}
-#     data::T
-#     signature
-# end
+struct TookenID{T<:AbstractID} <: AbstractID
+    id::T
+    tooken::Int
+end
+
 
 ### At this point I may be able to define how the files should look like
 

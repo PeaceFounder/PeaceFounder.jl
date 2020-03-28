@@ -16,7 +16,7 @@ CERTIFIER_PORT = Port(2007)
 
 config = CertifierConfig(MAINTAINER_ID,SERVER_ID,TOOKEN_PORT,CERTIFIER_PORT)
 
-certifier = Certifier(config,deme,server)
+certifier = Certifier{PFID}(config,deme,server)
 
 sleep(1)
 

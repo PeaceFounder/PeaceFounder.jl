@@ -54,3 +54,14 @@ function Braid(dict::Dict)
     ids = ID[ID(parse(BigInt,i,base=16)) for i in dict["ids"]] ### Any until I fix SynchronicBallot
     return Braid(nothing,nothing,ids)
 end
+
+
+
+Dict(id::TookenID) = Dict("id"=>Dict(id.id),"tooken"=>id.tooken)
+
+function TookenID{T}(dict::Dict) where T <: AbstractID
+    id = T(dict["id"])
+    tooken = dict["tooken"]
+    return TookenID(id,tooken)
+end
+

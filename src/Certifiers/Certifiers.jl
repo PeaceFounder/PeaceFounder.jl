@@ -3,13 +3,14 @@ module Certifiers
 
 include("../debug.jl")
 
-using ..Types: CertifierConfig
+using ..Types: CertifierConfig, TookenID
 using ..Crypto
+using ..DataFormat: serialize, deserialize
+
 using DiffieHellman: diffiehellman
 
 using PeaceVote: Certificate, Signer, AbstractID, Deme, Notary
 using Sockets
-using Serialization
 
 
 function validate!(tookens::Set,tooken)
@@ -23,16 +24,16 @@ end
 
 ### How to send back!
 
-struct SecureRegistrator
+struct SecureRegistrator{T}
     server
     daemon
-    messages # a Channel
+    messages::Channel{T}
 end
 
-function SecureRegistrator(port,deme::Deme,validate::Function,signer::Signer)
+function SecureRegistrator{T}(port,deme::Deme,validate::Function,signer::Signer) where T<:Any
     
     server = listen(port)
-    messages = Channel()
+    messages = Channel{T}()
     
     dh = DHsym(deme,signer)
 
@@ -45,7 +46,7 @@ function SecureRegistrator(port,deme::Deme,validate::Function,signer::Signer)
             @assert validate(id)
 
             securesocket = deme.cypher.secureio(socket,key)
-            message = deserialize(securesocket)
+            message = deserialize(securesocket,T)
             put!(messages,message) 
         end
     end
@@ -53,16 +54,16 @@ function SecureRegistrator(port,deme::Deme,validate::Function,signer::Signer)
     SecureRegistrator(server,daemon,messages)
 end
 
-struct TookenCertifier
+struct TookenCertifier{T}
     server
     daemon
-    tookens
-    tickets
+    tookens::Set{Int}
+    tickets::Dict{Int,Certificate{T}}
 end
 
-function TookenCertifier(port,deme::Deme,signer::Signer)
-    tookens = Set()   
-    tickets = Dict()
+function TookenCertifier{T}(port,deme::Deme,signer::Signer) where T<:AbstractID
+    tookens = Set{Int}()   
+    tickets = Dict{Int,Certificate{T}}()
 
     server = listen(port)
     dh = DHasym(deme,signer)
@@ -74,16 +75,16 @@ function TookenCertifier(port,deme::Deme,signer::Signer)
             key, id = diffiehellman(socket,dh)
             securesocket = deme.cypher.secureio(socket,key)
 
-            tooken,id = deserialize(securesocket)
+            id = deserialize(securesocket,TookenID{T}) ### Need to implement
 
-            @assert tooken in tookens
-            pop!(tookens,tooken)
+            @assert id.tooken in tookens
+            pop!(tookens,id.tooken)
 
-            cert = Certificate(id,signer)
+            cert = Certificate(id.id,signer)
 
-            tickets[tooken] = cert
+            tickets[id.tooken] = cert
             
-            serialize(securesocket,cert)
+            serialize(securesocket,cert) ### For this one we already jnow
         end
     end
     
@@ -91,16 +92,16 @@ function TookenCertifier(port,deme::Deme,signer::Signer)
 end
 
 
-struct Certifier
-    tookenrecorder
-    tookencertifier
+struct Certifier{T<:AbstractID} 
+    tookenrecorder::SecureRegistrator{Int}
+    tookencertifier::TookenCertifier{T}
     daemon
 end
 
-function Certifier(config::CertifierConfig,deme::Deme,signer::Signer)
+function Certifier{T}(config::CertifierConfig,deme::Deme,signer::Signer) where T<:AbstractID
     
-    tookenrecorder = SecureRegistrator(config.tookenport,deme,x->x in config.tookenca,signer)
-    tookencertifier = TookenCertifier(config.certifierport,deme,signer)
+    tookenrecorder = SecureRegistrator{Int}(config.tookenport,deme,x->x in config.tookenca,signer)
+    tookencertifier = TookenCertifier{T}(config.certifierport,deme,signer)
 
     daemon = @async while true
         tooken = take!(tookenrecorder.messages)
@@ -111,7 +112,7 @@ function Certifier(config::CertifierConfig,deme::Deme,signer::Signer)
 end
 
 
-function addtooken(cc::CertifierConfig,deme::Deme,tooken,signer::Signer)
+function addtooken(cc::CertifierConfig,deme::Deme,tooken::Int,signer::Signer)
 
     socket = connect(cc.tookenport)
     
@@ -122,11 +123,12 @@ function addtooken(cc::CertifierConfig,deme::Deme,tooken,signer::Signer)
     @assert id in cc.serverid
 
     securesocket = deme.cypher.secureio(socket,key)
+
     serialize(securesocket,tooken)
 end
 
 
-function certify(cc::CertifierConfig,deme::Deme,id::AbstractID,tooken)
+function certify(cc::CertifierConfig,deme::Deme,id::T,tooken::Int) where T <: AbstractID
 
     socket = connect(cc.certifierport)
 
@@ -137,9 +139,9 @@ function certify(cc::CertifierConfig,deme::Deme,id::AbstractID,tooken)
     @assert keyid in cc.serverid
 
     securesocket = deme.cypher.secureio(socket,key)
-    serialize(securesocket,(tooken,id))
+    serialize(securesocket,TookenID(id,tooken)) 
     
-    cert = deserialize(securesocket)
+    cert = deserialize(securesocket,Certificate{T})
 
     return cert
 end

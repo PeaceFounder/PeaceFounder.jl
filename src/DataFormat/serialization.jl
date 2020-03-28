@@ -107,9 +107,46 @@ function deserialize(io::IO,x::Type{Certificate{Vote}})
     return deserialize(IOBuffer(msg),x)
 end
 
+#### The types of Certifier ####
 
-##########################################
+function serialize(io::GenericIOBuffer,x::TookenID{PFID}) 
+    dict = Dict(x)
+    TOML.print(io, dict)
+end
 
+function deserialize(io::GenericIOBuffer,::Type{TookenID{PFID}}) 
+    str = String(take!(io))
+    dict = TOML.parse(str)
+    return TookenID{PFID}(dict)
+end
+
+function serialize(io::IO,x::TookenID{PFID})
+    msg = IOBuffer()
+    serialize(msg,x)
+    stack(io,take!(msg))
+end
+
+function deserialize(io::IO,x::Type{TookenID{PFID}})
+    msg = unstack(io)
+    return deserialize(IOBuffer(msg),x)
+end
+
+
+function serialize(io::IO,x::Int)
+    bytes = reinterpret(UInt8,Int[x])
+    write(io,bytes)
+end
+
+function deserialize(io::IO,::Type{Int})
+    bytes = UInt8[]
+    for i in 1:8
+        byte = read(io,UInt8)
+        push!(bytes,byte)
+    end
+    return reinterpret(Int,bytes)[1]
+end
+
+#########
 
 function serialize(deme::Deme,config::SystemConfig,signer::Signer)
     @assert deme.spec.maintainer==signer.id
