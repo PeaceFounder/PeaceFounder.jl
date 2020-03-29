@@ -3,7 +3,6 @@ module MaintainerTools
 using PeaceVote
 using Base: UUID
 
-
 using SMTPClient
 using ..Types: SystemConfig, PFID
 using ..Certifiers: Certifier
@@ -11,6 +10,8 @@ using ..Braiders: Mixer, Braider
 using ..BraidChains: Recorder
 using ..Ledgers: serve # I could name it as ledger node or something
 using ..DataFormat
+
+using PeaceVote: ticket
 
 import ..Certifiers
 
@@ -81,13 +82,15 @@ end
 
 ### We will need some improvement here on 
 
-
-
+function certify(deme::Deme,signer::Signer)
+    @assert deme.spec.maintainer==signer.id "You are not eligible to certify PeaceFounder.toml for this deme"
+    sc = deserialize(deme.ledger,SystemConfig)
+    cert = Certificate(sc,signer)
+    serialize(deme.ledger,cert)
+end
 
 ### I might need to put this into Types. 
-
 #Port(port) = Port(getipaddr(),port)
-
 
 struct System
     deme::Deme
@@ -164,18 +167,16 @@ function sendinvite(config::SystemConfig,deme::Deme,to::AbstractString,from::SMT
     
     opt = SendOptions(isSSL = true, username = from.email, passwd = from.password)
 
+    t = ticket(deme.spec,port,tooken)
+
     body = """
     From: $(from.email)
     To: $to
     Subject: Invitation to $(deme.spec.name)
 
-    --------- DemeSpec -----------
-    $(deme.spec)
-    ------------------------------    
-
-    PORT = $port
-    
-    TOOKEN = $tooken
+    ########### Ticket #############
+    $t
+    ################################
     """
     
     send(from.url, [to], from.email, IOBuffer(body), opt)  

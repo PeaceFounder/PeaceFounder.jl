@@ -1,24 +1,10 @@
 module PeaceFounder
 
-# ToDo
-# - Add a maintainer port which would receive tookens. 
-# - Couple thoose tookens with registration. So only a memeber with it can register. Make the server to issue the certificates on the members.
-# - Write the server.jl file. Make it automatically generate the server key.
-# - The server id will also be the uuid of the community subfolder. Need to extend PeaceVote so it woul support such generics. (keychain already has accounts. Seems only ledger would be necessary to be supported with id.)
-# - A configuration file must be created during registration. So one could execute braid! and vote commands with keychain. That also means we need an account keyword for the keychain.
-# - Test that the user can register if IP addreess, SERVER_ID and tooken is provided.
-
-
-### Perhaps I could have a package CommunityUtils
-#using Synchronizers: Synchronizer, Ledger, sync
-
 using PeaceVote
-#import PeaceVote.save
-#using PeaceVote: datadir
 using Base: UUID
 
 using PeaceVote: AbstractProposal, AbstractID, AbstractVote
-import PeaceVote: register, braid!, vote, propose, BraidChain, sync!
+import PeaceVote: register, braid!, vote, propose, BraidChain, sync!, load
 import Base.count
 
 include("Types/Types.jl")
@@ -31,6 +17,7 @@ include("BraidChains/BraidChains.jl")
 include("Analysis/Analysis.jl") 
 include("MaintainerTools/MaintainerTools.jl") ### A thing which maintainer would use to set up the server, DemeSpec file, some interactivity, logging and etc. 
 
+using .Types: PFID, Port
 
 SystemConfig(deme::Deme) = DataFormat.deserialize(deme,Types.SystemConfig)
 
@@ -40,7 +27,9 @@ const ThisDeme = PeaceVote.DemeType(@__MODULE__)
 
 PeaceVote.Ledger(::Type{ThisDeme},uuid::UUID) = Ledgers.Ledger(uuid)
 
-BraidChain(deme::ThisDeme) = BraidChains.BraidChain(deme)
+load(ledger::Ledgers.Ledger) = DataFormat.load(ledger)
+
+#BraidChain(deme::ThisDeme) = BraidChains.BraidChain(deme)
 braid!(deme::ThisDeme,voter::Signer,signer::Signer) = Braiders.braid!(SystemConfig(deme).braider,deme,voter,signer)
 register(deme::ThisDeme,cert::Certificate{T}) where T<:AbstractID = BraidChains.register(SystemConfig(deme).recorder,cert)
 propose(deme::ThisDeme,proposal::AbstractProposal,signer::Signer) = BraidChains.propose(SystemConfig(deme).recorder,proposal,signer)
@@ -54,18 +43,20 @@ function sync!(deme::ThisDeme)
     sync!(deme,config.syncport)    
 end
 
+sync!(deme::ThisDeme,syncport::Dict) = sync!(deme,Port(syncport))
 
-function register(deme::ThisDeme,id::AbstractID,tooken)
+function register(deme::ThisDeme,id::PFID,tooken::Int)
     config = SystemConfig(deme).certifier
-    @info "Spending tooken for certificate"
+    @info "Spending tooken for a certificate"
     cert = Certifiers.certify(config,deme,id,tooken)
     @info "Registering the certificate in the ledger"
     register(deme,cert)
 end
 
+register(deme::ThisDeme,profile::Profile,id::ID,tooken::Int) = register(deme,PFID(profile.name,profile.date,id),tooken)
 
 include("debug.jl")
 
-export register, braid!, propose, vote, BraidChain, members, count, sync!
+export register, braid!, propose, vote, BraidChain, members, count, sync!, load
 
 end # module

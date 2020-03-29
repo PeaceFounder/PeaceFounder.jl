@@ -59,7 +59,7 @@ Mixer(port,deme::ThisDeme,signer::Signer) = Mixer(port,deme.cypher,deme.notary,s
 
 struct Braider
     server
-    voters::Set
+    voters::Set{ID}
 end
 
 import Base.take!
@@ -76,7 +76,7 @@ end
 
 function Braider(braider::BraiderConfig,deme::ThisDeme,mixerdeme::Deme,signer::Signer) 
 
-    voters = Set()
+    voters = Set{ID}()
 
     gatemixer = SocketConfig(braider.mixerid.id,DHasym(mixerdeme.cypher,mixerdeme.notary),mixerdeme.cypher.secureio)
     gatemember =  SocketConfig(voters,DHsym(deme.cypher,deme.notary,signer),deme.cypher.secureio)

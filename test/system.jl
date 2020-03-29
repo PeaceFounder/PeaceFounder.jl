@@ -2,6 +2,7 @@ using PeaceFounder.MaintainerTools: System, addtooken
 using PeaceFounder.Types: PFID, Vote, Proposal
 using PeaceFounder
 using PeaceVote
+using PeaceVote: ticket
 
 ### Perhaps I could just run julia in a process
 for dir in [homedir() * "/.peacevote/"]
@@ -26,7 +27,7 @@ system = System(deme,server)
 ### Now let's test the registration
 maintainer = Signer(deme,"maintainer")
 
-for i in 1:2
+for i in 1
     account = "account$i"
     keychain = KeyChain(deme,account)
     identification = PFID("$i","today",keychain.member.id)
@@ -42,9 +43,21 @@ addtooken(deme,tooken,maintainer)
 # One can send it over email with sendinvite method from MaintainerTools.
 ###
 
-keychain = KeyChain(deme,"account3")
-id = PFID("3","today",keychain.member.id)
+keychain = KeyChain(deme,"account2")
+id = PFID("2","today",keychain.member.id)
 register(deme,id,tooken)
+
+### A more sophisticated situation 
+
+tooken = 123223424
+addtooken(deme,tooken,maintainer)
+port = Setup.systemconfig.syncport
+tick = ticket(deme.spec,port,tooken)
+ 
+### Now the user may use it 
+profile = Profile(Dict("name"=>"3","date"=>"today"))
+register(tick,profile,account="account3")
+
 
 # Now let's test braiding 
 

@@ -166,3 +166,15 @@ function SystemConfig(dict::Dict)
     SystemConfig(mport,sport,server,certifier,braider,recorder,arecords)
 end
 
+function Dict(port::Port)
+    dict = Dict("port"=>port.port)
+    isnothing(port.ip) || (dict["ip"]=string(port.ip))
+    return dict
+end
+
+function Port(dict::Dict)
+    port = dict["port"]
+    haskey(dict,"ip") ? (ip=IPv4(dict["ip"])) : ip=nothing
+    return Port(port,ip)
+end
+

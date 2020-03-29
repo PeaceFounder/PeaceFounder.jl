@@ -148,33 +148,11 @@ end
 
 #########
 
-function serialize(deme::Deme,config::SystemConfig,signer::Signer)
-    @assert deme.spec.maintainer==signer.id
-    fname = configfname(deme.spec.uuid)
-    mkpath(dirname(fname))
-    
-    sealedconfig = Certificate(config,signer)
-    
-    dict = Dict(sealedconfig)
-    
-    open(fname, "w") do io
-        TOML.print(io, dict)
-    end
-end
-
-### I could add function certify(deme::Deme,::Type{SystemConfig},maintainer::Signer) to load and add signature to the TOML file.
-
-
 function deserialize(deme::Deme,::Type{SystemConfig})
-    fname = configfname(deme.spec.uuid)
-    @assert isfile(fname) "Config file not found!"
-
-    dict = TOML.parsefile(fname)
-    sc = Certificate{SystemConfig}(dict)
-
+    sc = deserialize(deme.ledger,Certificate{SystemConfig})
     intent = Intent(sc,deme.notary)
-    #id = deme.notary.verify("$(sc.document)",sc.signature) 
-
     @assert intent.reference==deme.spec.maintainer
     return intent.document
 end
+
+serialize(deme::Deme,config::SystemConfig) = serialize(deme.ledger,config)

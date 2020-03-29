@@ -4,6 +4,8 @@ using PeaceVote: DemeSpec, Deme, Signer, save, DemeID
 using PeaceCypher
 using PeaceFounder.Types: BraiderConfig, RecorderConfig, CertifierConfig, SystemConfig, AddressRecord, Port
 using PeaceFounder.DataFormat
+using PeaceFounder.MaintainerTools: certify
+
 
 demespec = DemeSpec("PeaceDeme",:default,:PeaceCypher,:default,:PeaceCypher,:PeaceFounder)
 save(demespec) ### Necessary to connect with Mixer
@@ -31,5 +33,9 @@ recorderconfig = RecorderConfig([MAINTAINER_ID,SERVER_ID],server.id,REGISTRATOR_
 certifierconfig = CertifierConfig(MAINTAINER_ID,SERVER_ID,TOOKEN_PORT,CERTIFIER_PORT)
 systemconfig = SystemConfig(MIXER_PORT,SYNC_PORT,SERVER_ID,certifierconfig,braiderconfig,recorderconfig,AddressRecord[])
 
-serialize(deme,systemconfig,maintainer)
+#serialize(deme,systemconfig,maintainer)
+
+serialize(deme,systemconfig)
+certify(deme,maintainer)
+
 deserialize(deme,SystemConfig)

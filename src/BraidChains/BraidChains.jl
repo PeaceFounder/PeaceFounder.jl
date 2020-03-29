@@ -5,31 +5,145 @@ using Sockets
 
 import PeaceVote
 
-using PeaceVote: voters!, Certificate, Intent, Contract, Consensus, Envelope, Notary, Deme, Signer, ID, DemeID, AbstractID, AbstractVote, AbstractProposal
-using PeaceVote: record!, records, loadrecord
-#using PeaceVote: verify
-
+using PeaceVote: voters!, Certificate, Intent, Contract, Consensus, Envelope, Notary, Deme, Signer, ID, DemeID, AbstractID, AbstractVote, AbstractProposal, AbstractLedger, BraidChain
 
 using ..Braiders: Braider
 using ..Crypto
-using ..DataFormat ### 
+using ..DataFormat ### That would include serialize and deserialize methods
 using ..Types: RecorderConfig, PFID, Proposal, Vote, Braid
 
 const ThisDeme = Deme
 
-### The type should be defined here
-# struct BraidChain
-#     ledger::Ledger 
-#     port # can be nothing but then one needs to have 
-#     #cache
-# end
-
-
 include("../debug.jl")
 
-#include("ledger.jl")
-include("analysis.jl")
-include("recorder.jl")
+
+struct Registrator{T}
+    server
+    daemon
+    messages::Channel{Certificate{T}}
+end
+
+function Registrator{T}(port,verify::Function,validate::Function) where T<:Any
+    server = listen(port)
+    messages = Channel{Certificate{T}}()
+    
+    daemon = @async while true
+        socket = accept(server)
+        @async begin
+            envelope = deserialize(socket,Certificate{T})
+            signerid = verify(envelope)
+            #memberid, signerid = unwrap(envelope)
+
+            if validate(signerid)
+                put!(messages,envelope)
+            end
+        end
+    end
+    
+    Registrator(server,daemon,messages)
+end
+
+
+struct Recorder # RecorderConfig
+    registrator::Registrator{PFID}
+    voterecorder::Registrator{Vote}
+    proposalreceiver::Registrator{Proposal}
+    braider::Braider
+    members::Set{ID}
+    daemon
+end
+
+#import PeaceVote: record!
+#record!(ledger::AbstractLedger,fname::AbstractString,
+
+extverify(x::Certificate{T},notary::Notary) where T <: AbstractID = PeaceVote.verify(x,notary)
+extverify(x::Envelope{Certificate{T}},notary::Notary) where T <: AbstractID = PeaceVote.verify(x)
+
+### Recorder or BraidChainRecorder
+function Recorder(config::RecorderConfig,deme::ThisDeme,braider::Braider,signer::Signer) 
+    
+    notary = deme.notary
+    ledger = deme.ledger 
+    
+    messages = BraidChain(deme).records
+
+    members = PeaceVote.members(messages,config.membersca)
+    voters!(braider.voters,messages) ### I could update the braider here
+
+    allvoters = Set{ID}()
+    voters!(allvoters,messages)
+
+    ### Starting server apps ###
+    ### With envelope type now I can easally add external certifiers
+    registrator = Registrator{PFID}(config.registratorport,x->extverify(x,notary),x -> x in config.membersca)
+    voterecorder = Registrator{Vote}(config.votingport,x->PeaceVote.verify(x,notary),x -> x in allvoters)
+    proposalreceiver = Registrator{Proposal}(config.proposalport,x->PeaceVote.verify(x,notary),x -> x in members)
+
+    daemon = @async @sync begin
+        @async while true
+            cert = take!(registrator.messages)
+            
+            id = cert.document.id
+
+            push!(members,id)
+            push!(braider.voters,id)
+            push!(allvoters,id)
+
+            serialize(ledger,cert)
+        end
+
+        @async while true
+            braid = take!(braider)
+            #uuid = hash(braid,deme.notary) 
+            consbraid = Consensus(braid,deme.notary)
+            
+            ### We have different types here. I could move everything to references in future.
+            input = unique(consbraid.references)
+            output = unique(consbraid.document.ids)
+            @assert length(input)==length(output)
+
+            PeaceVote.voters!(braider.voters,input,output)
+            PeaceVote.addvoters!(allvoters,input,output)
+
+            serialize(ledger,braid)
+        end
+
+        @async while true
+            vote = take!(voterecorder.messages)
+            serialize(ledger,vote)
+        end
+
+        @async while true
+            proposal = take!(proposalreceiver.messages)
+            serialize(ledger,proposal)
+        end
+    end
+
+    Recorder(registrator,voterecorder,proposalreceiver,braider,members,daemon)
+end
+
+
+
+function register(config::RecorderConfig,certificate::Certificate)
+    socket = connect(config.registratorport)
+    serialize(socket,certificate)
+    #close(socket)
+end
+
+function vote(config::RecorderConfig,msg::AbstractVote,signer::Signer)
+    socket = connect(config.votingport)
+    cert = Certificate(msg,signer)
+    serialize(socket,cert)
+    #close(socket)
+end
+
+function propose(config::RecorderConfig,proposal::AbstractProposal,signer::Signer)
+    socket = connect(config.proposalport)
+    cert = Certificate(proposal,signer)
+    serialize(socket,cert)
+    #close(socket)
+end
+
 
 export register, vote, propose, count, BraidChain, RecorderConfig, Recorder
 
