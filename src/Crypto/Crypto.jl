@@ -1,16 +1,10 @@
 module Crypto
 
-### Cryptographic definitions
-#using CryptoGroups
-#using Random
-using Serialization: serialize, deserialize
 using DiffieHellman
-
 using PeaceVote: Notary, Cypher, Signer, Deme
 import PeaceVote
 
 using Pkg.TOML
-
 
 ### Currently, a following cryptographic definitions are fixed
 # - Cryptographic group
@@ -22,12 +16,7 @@ using Pkg.TOML
 
 # Theese are Diffie-Hellman definitions. A choice could be given and specified at the config file. 
 
-function str(x)
-    io = IOBuffer()
-    serialize(io,x)
-    bytes = take!(io)
-    return String(bytes)
-end
+str(x) = "$x"
 
 # function rngint(len::Integer)
 #     max_n = ( BigInt(1) << len ) - 1
