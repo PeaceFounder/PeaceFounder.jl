@@ -1,8 +1,8 @@
 ### I could use this file to set up the system for the test.
 
-using PeaceVote: DemeSpec, Deme, Signer, save, DemeID
+using PeaceVote.DemeNet: DemeSpec, Deme, Signer, save, DemeID
 using PeaceCypher
-using PeaceFounder.Types: BraiderConfig, RecorderConfig, CertifierConfig, SystemConfig, AddressRecord, Port
+using PeaceFounder.Types: BraiderConfig, RecorderConfig, CertifierConfig, SystemConfig, AddressRecord, Port, BraidChain
 using PeaceFounder.DataFormat
 using PeaceFounder.MaintainerTools: certify
 
@@ -35,7 +35,8 @@ systemconfig = SystemConfig(MIXER_PORT,SYNC_PORT,SERVER_ID,certifierconfig,braid
 
 #serialize(deme,systemconfig,maintainer)
 
-serialize(deme,systemconfig)
-certify(deme,maintainer)
+braidchain = BraidChain(deme)
+serialize(braidchain,systemconfig)
+certify(braidchain,maintainer)
 
-deserialize(deme,SystemConfig)
+deserialize(braidchain,SystemConfig)

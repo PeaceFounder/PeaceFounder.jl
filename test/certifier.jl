@@ -1,7 +1,7 @@
 using PeaceFounder.Certifiers
 using PeaceCypher
 using PeaceFounder.Types: CertifierConfig, Port, PFID
-using PeaceVote: Signer, DemeSpec, Deme
+using PeaceVote.DemeNet: Signer, DemeSpec, Deme
 
 demespec = DemeSpec("PeaceDeme",:default,:PeaceCypher,:default,:PeaceCypher,:PeaceFounder)
 deme = Deme(demespec)

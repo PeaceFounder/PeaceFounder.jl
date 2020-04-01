@@ -1,19 +1,18 @@
 module MaintainerTools
 
-using PeaceVote
+using PeaceVote.DemeNet: Signer, Deme, ID, DemeID, Certificate
 using Base: UUID
 
 using SMTPClient
-using ..Types: SystemConfig, PFID
+using ..Types: SystemConfig, PFID, BraidChain
 using ..Certifiers: Certifier
 using ..Braiders: Mixer, Braider
 using ..BraidChains: Recorder
 using ..Ledgers: serve # I could name it as ledger node or something
 using ..DataFormat
 
-using PeaceVote: ticket
-
 import ..Certifiers
+#using PeaceVote.KeyChains: ticket ### Will be part of Recruiters.jl
 
 using Sockets # do I need it?
 
@@ -82,18 +81,18 @@ end
 
 ### We will need some improvement here on 
 
-function certify(deme::Deme,signer::Signer)
-    @assert deme.spec.maintainer==signer.id "You are not eligible to certify PeaceFounder.toml for this deme"
-    sc = deserialize(deme.ledger,SystemConfig)
+function certify(chain::BraidChain,signer::Signer)
+    @assert chain.deme.spec.maintainer==signer.id "You are not eligible to certify PeaceFounder.toml for this deme"
+    sc = deserialize(chain.ledger,SystemConfig)
     cert = Certificate(sc,signer)
-    serialize(deme.ledger,cert)
+    serialize(chain.ledger,cert)
 end
 
 ### I might need to put this into Types. 
 #Port(port) = Port(getipaddr(),port)
 
 struct System
-    deme::Deme
+    chain::BraidChain
     mixer
     certifier
     braider
@@ -108,30 +107,30 @@ end
 # When onion sockets will become a thing the System should also be started on the participating members
 # devices or some additionall dedicated mixers.
 
-function System(deme::Deme,server::Signer)
+function System(chain::BraidChain,server::Signer)
 
-    config = deserialize(deme,SystemConfig)
+    config = deserialize(chain,SystemConfig)
     #config = SystemConfig(deme)
     
     if config.certifier==nothing
         certifier = nothing
     else
-        certifier = Certifier{PFID}(config.certifier,deme,server)
+        certifier = Certifier{PFID}(config.certifier,chain.deme,server)
     end
     
-    mixer = Mixer(config.mixerport,deme,server)
-    synchronizer = @async serve(config.syncport,deme.ledger)
+    mixer = Mixer(config.mixerport,chain.deme,server)
+    synchronizer = @async serve(config.syncport,chain.ledger)
 
-    braider = Braider(config.braider,deme,server)
+    braider = Braider(config.braider,chain.deme,server)
 
     ### So this is where the bug happens
-    recorder = Recorder(config.recorder,deme,braider,server)
+    recorder = Recorder(config.recorder,chain,braider,server)
 
-    return System(deme,mixer,certifier,braider,recorder,synchronizer)
+    return System(chain,mixer,certifier,braider,recorder,synchronizer)
 end
 
 
-addtooken(deme::Deme,tooken,signer::Signer) = Certifiers.addtooken(deserialize(deme,SystemConfig).certifier,deme,tooken,signer)
+addtooken(chain::BraidChain,tooken,signer::Signer) = Certifiers.addtooken(deserialize(chain,SystemConfig).certifier,chain.deme,tooken,signer)
 
 
 struct SMTPConfig

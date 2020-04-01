@@ -3,10 +3,12 @@ module DataFormat
 using Pkg.TOML
 
 using Base: UUID
-import ..Types: SystemConfig, CertifierConfig, BraiderConfig, RecorderConfig, Port, AddressRecord, ip, PFID, Vote, Proposal, Braid, TookenID
-using PeaceVote: Notary, DemeSpec, Deme, datadir, Signer, Certificate, Contract, Intent, Consensus, Envelope, ID, DemeID, AbstractID, AbstractLedger
+import ..Types: SystemConfig, CertifierConfig, BraiderConfig, RecorderConfig, Port, AddressRecord, ip, PFID, Vote, Proposal, Braid, TookenID, AbstractLedger, BraidChain, record!, records
+using PeaceVote.DemeNet: Notary, DemeSpec, Deme, datadir, Signer, Certificate, Contract, Intent, Consensus, Envelope, ID, DemeID, AbstractID
 using ..Crypto
-using PeaceVote: record!, records, loadrecord
+
+#using PeaceVote.Plugins: record!, records #, loadrecord
+#import ..Types: load
 
 import Base.Dict
 

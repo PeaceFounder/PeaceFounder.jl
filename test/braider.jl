@@ -1,19 +1,19 @@
-using PeaceVote
+using PeaceVote.DemeNet: Signer, DemeSpec, Deme, save, Consensus, DemeID
 using PeaceCypher
 using PeaceFounder.Braiders
 using PeaceFounder.Types: Port, BraiderConfig
 
 
-demespec = PeaceVote.DemeSpec("PeaceDeme",:default,:PeaceCypher,:default,:PeaceCypher,:PeaceFounder)
+demespec = DemeSpec("PeaceDeme",:default,:PeaceCypher,:default,:PeaceCypher,:PeaceFounder)
 save(demespec) ### Necessary to connect with Mixer
 
 deme = Deme(demespec)
 uuid = demespec.uuid
 
-mixer = PeaceVote.Signer(deme,"mixer")
+mixer = Signer(deme,"mixer")
 mixerserver = Mixer(1999,deme,mixer)
 
-server = PeaceVote.Signer(deme,"server")
+server = Signer(deme,"server")
 
 MIXER_ID = mixer.id
 SERVER_ID = server.id

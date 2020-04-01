@@ -4,13 +4,14 @@ using ..Crypto
 
 import SynchronicBallot
 using SynchronicBallot: SocketConfig
-using PeaceVote: DemeSpec, Notary, Cypher, Signer, Deme, Contract, Certificate, ID, DemeID
+using PeaceVote.DemeNet: DemeSpec, Notary, Cypher, Signer, Deme, Contract, Certificate, ID, DemeID
+using PeaceVote.Plugins: AbstractChain
 
-using ..Types: BraiderConfig, Braid
+using ..Types: BraiderConfig
+import ..Types: Braid
 
 using Pkg.TOML
 
-import ..Types: Braid
 
 function Braid(metadata::Vector{UInt8},ballot::Array{UInt8,2})
 
@@ -46,8 +47,6 @@ function signbraid(metadata::Vector{UInt8},ballot::Array{UInt8,2},validate::Func
     return take!(io)
 end
 
-const ThisDeme = Deme
-
 function Mixer(port,cypher::Cypher,notary::Notary,signer::Signer)
     mixergate = SocketConfig(nothing,DHasym(cypher,notary,signer),cypher.secureio)
     mixermember = SocketConfig(nothing,DHasym(cypher,notary,signer),cypher.secureio)
@@ -55,7 +54,7 @@ function Mixer(port,cypher::Cypher,notary::Notary,signer::Signer)
     return SynchronicBallot.Mixer(port,mixergate,mixermember) # should be renamed to Mixer
 end
 
-Mixer(port,deme::ThisDeme,signer::Signer) = Mixer(port,deme.cypher,deme.notary,signer)
+Mixer(port,deme::Deme,signer::Signer) = Mixer(port,deme.cypher,deme.notary,signer)
 
 struct Braider
     server
@@ -74,7 +73,7 @@ function take!(braider::Braider)
     return contract
 end
 
-function Braider(braider::BraiderConfig,deme::ThisDeme,mixerdeme::Deme,signer::Signer) 
+function Braider(braider::BraiderConfig,deme::Deme,mixerdeme::Deme,signer::Signer) 
 
     voters = Set{ID}()
 
@@ -86,17 +85,17 @@ function Braider(braider::BraiderConfig,deme::ThisDeme,mixerdeme::Deme,signer::S
 end
 
 # New in this context just overloads generated function since it is not necessary.
-function Braider(braider::BraiderConfig,deme::ThisDeme,signer::Signer)
+function Braider(braider::BraiderConfig,deme::Deme,signer::Signer)
     mixeruuid = braider.mixerid.uuid
 
     mixerdemespec = DemeSpec(mixeruuid)
-    mixerdeme = Deme(mixerdemespec,ledger=false)
+    mixerdeme = Deme(mixerdemespec)
     
     Braider(braider,deme,mixerdeme,signer)
 end
 
 
-function Braider(deme::ThisDeme,signer::Signer)
+function Braider(deme::Deme,signer::Signer)
     systemconfig = SystemConfig(deme) ### This is where the config file is verified
     braider = systemconfig.braider
     Braider(braider,deme,signer)
@@ -104,7 +103,7 @@ end
 
 import PeaceVote.braid!
 
-function braid!(config::BraiderConfig,deme::ThisDeme,mixerdeme::Deme,voter::Signer,signer::Signer)
+function braid!(config::BraiderConfig,deme::Deme,mixerdeme::Deme,voter::Signer,signer::Signer)
     
     membergate = SocketConfig(config.gateid,DHsym(deme.cypher,deme.notary,signer),deme.cypher.secureio)
     membermixer = SocketConfig(config.mixerid.id,DHasym(mixerdeme.cypher,mixerdeme.notary),deme.cypher.secureio)
@@ -118,20 +117,20 @@ function braid!(config::BraiderConfig,deme::ThisDeme,mixerdeme::Deme,voter::Sign
     SynchronicBallot.vote(config.port,membergate,membermixer,idbytes,(m,b)->signbraid(m,b,braid->validate(braid,voter.id,deme),signer))
 end
 
-function braid!(config::BraiderConfig,deme::ThisDeme,voter::Signer,signer::Signer)
+function braid!(config::BraiderConfig,deme::Deme,voter::Signer,signer::Signer)
     mixeruuid = config.mixerid.uuid
 
     mixerdemespec = DemeSpec(mixeruuid)
-    mixerdeme = Deme(mixerdemespec,ledger=false) 
+    mixerdeme = Deme(mixerdemespec)
 
     braid!(config,deme,mixerdeme,voter,signer)
 end
 
-function braid!(deme::ThisDeme,voter::Signer,signer::Signer)
-    systemconfig = SystemConfig(deme)
-    config = systemconfig.braider
-    braid!(config,deme,voter,signer)
-end
+# function braid!(deme::AbstractChain,voter::Signer,signer::Signer)
+#     systemconfig = SystemConfig(deme)
+#     config = systemconfig.braider
+#     braid!(config,deme,voter,signer)
+# end
 
 export Mixer, Braider, braid!
 

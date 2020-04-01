@@ -1,13 +1,18 @@
 module Types
 
-using PeaceVote: Certificate, Contract, Intent, Consensus, AbstractVote, AbstractProposal, AbstractID, AbstractBraid, ID, DemeID
+using PeaceVote.DemeNet: Certificate, Contract, Intent, Consensus, AbstractID, ID, DemeID, Deme
+using PeaceVote.Plugins: AbstractVote, AbstractProposal, AbstractBraid, AbstractChain
 using Sockets
 using Base: UUID
-import Base.Dict
 
-### ToDo
+#import PeaceVote: load 
 
-# Put the dictionary stuff in the DataFormat.jl submodule as intended. 
+abstract type AbstractLedger end
+
+### This part needs to be improved
+#load(ledger::AbstractLedger) = error("Not impl") 
+record!(ledger::AbstractLedger,fname::String,bytes::Vector{UInt8}) = error("Not impl")
+records(ledger::AbstractLedger) = error("Not impl")
 
 
 ### Every module needs to depend on Port. Thus it seems to be the right place.
@@ -52,13 +57,6 @@ function ip(machines::Vector{AddressRecord},id::Union{ID,DemeID})
         end
     end
 end
-
-#ip(machines::Vector{AddressRecord},id::BigInt) = ip(machines,id,nothing)
-
-
-# On the other hand connect is used by user methods. I could thus achieve that in a simple manner. For the port one just need to 
-
-# ipaddr = ip(machines,id) or ip(machines,id,uuid)
 
 ### Let's make stuff first for SystemConfig. 
 
@@ -133,6 +131,12 @@ end
 struct TookenID{T<:AbstractID} <: AbstractID
     id::T
     tooken::Int
+end
+
+
+struct BraidChain <: AbstractChain
+    deme::Deme
+    ledger
 end
 
 

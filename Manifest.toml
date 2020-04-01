@@ -87,9 +87,9 @@ version = "0.2.4"
 
 [[PeaceVote]]
 deps = ["Pkg"]
-git-tree-sha1 = "885dd5ad7bab563a4df1ec6c25dca723fe184e35"
+git-tree-sha1 = "5a39d258f33c11a4a755b0bd6bb505fecd9aa2fa"
 uuid = "129db535-0459-46ad-8d3d-b1fb8f318c74"
-version = "0.2.6"
+version = "0.2.7"
 
 [[Pkg]]
 deps = ["Dates", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "UUIDs"]

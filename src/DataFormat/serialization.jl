@@ -148,11 +148,11 @@ end
 
 #########
 
-function deserialize(deme::Deme,::Type{SystemConfig})
-    sc = deserialize(deme.ledger,Certificate{SystemConfig})
-    intent = Intent(sc,deme.notary)
-    @assert intent.reference==deme.spec.maintainer
+function deserialize(chain::BraidChain,::Type{SystemConfig})
+    sc = deserialize(chain.ledger,Certificate{SystemConfig})
+    intent = Intent(sc,chain.deme.notary)
+    @assert intent.reference==chain.deme.spec.maintainer
     return intent.document
 end
 
-serialize(deme::Deme,config::SystemConfig) = serialize(deme.ledger,config)
+serialize(deme::BraidChain,config::SystemConfig) = serialize(deme.ledger,config)

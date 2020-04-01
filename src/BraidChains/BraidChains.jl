@@ -5,17 +5,23 @@ using Sockets
 
 import PeaceVote
 
-using PeaceVote: voters!, Certificate, Intent, Contract, Consensus, Envelope, Notary, Deme, Signer, ID, DemeID, AbstractID, AbstractVote, AbstractProposal, AbstractLedger, BraidChain
+using PeaceVote.DemeNet: Certificate, Intent, Contract, Consensus, Envelope, Notary, Deme, Signer, ID, DemeID, AbstractID, datadir, verify
+using PeaceVote.Plugins: AbstractVote, AbstractChain, AbstractProposal
+using PeaceVote.BraidChains: voters!, members, addvoters!
+
 
 using ..Braiders: Braider
 using ..Crypto
-using ..DataFormat ### That would include serialize and deserialize methods
+using ..DataFormat: serialize, deserialize, load ### That would include serialize and deserialize methods
 using ..Types: RecorderConfig, PFID, Proposal, Vote, Braid
+using ..Ledgers: Ledger
 
-const ThisDeme = Deme
+import ..Types: BraidChain
+
+BraidChain(deme::Deme) = BraidChain(deme,Ledger(deme.spec.uuid))
+
 
 include("../debug.jl")
-
 
 struct Registrator{T}
     server
@@ -56,18 +62,20 @@ end
 #import PeaceVote: record!
 #record!(ledger::AbstractLedger,fname::AbstractString,
 
-extverify(x::Certificate{T},notary::Notary) where T <: AbstractID = PeaceVote.verify(x,notary)
-extverify(x::Envelope{Certificate{T}},notary::Notary) where T <: AbstractID = PeaceVote.verify(x)
+const listmembers = members
+
+extverify(x::Certificate{T},notary::Notary) where T <: AbstractID = verify(x,notary)
+extverify(x::Envelope{Certificate{T}},notary::Notary) where T <: AbstractID = verify(x)
 
 ### Recorder or BraidChainRecorder
-function Recorder(config::RecorderConfig,deme::ThisDeme,braider::Braider,signer::Signer) 
+function Recorder(config::RecorderConfig,chain::BraidChain,braider::Braider,signer::Signer) 
     
-    notary = deme.notary
-    ledger = deme.ledger 
+    notary = chain.deme.notary
+    ledger = chain.ledger 
     
-    messages = BraidChain(deme).records
+    @show messages = load(ledger) ### Maybe a different name must be used here
 
-    members = PeaceVote.members(messages,config.membersca)
+    members = listmembers(messages,config.membersca)
     voters!(braider.voters,messages) ### I could update the braider here
 
     allvoters = Set{ID}()
@@ -76,8 +84,8 @@ function Recorder(config::RecorderConfig,deme::ThisDeme,braider::Braider,signer:
     ### Starting server apps ###
     ### With envelope type now I can easally add external certifiers
     registrator = Registrator{PFID}(config.registratorport,x->extverify(x,notary),x -> x in config.membersca)
-    voterecorder = Registrator{Vote}(config.votingport,x->PeaceVote.verify(x,notary),x -> x in allvoters)
-    proposalreceiver = Registrator{Proposal}(config.proposalport,x->PeaceVote.verify(x,notary),x -> x in members)
+    voterecorder = Registrator{Vote}(config.votingport,x->verify(x,notary),x -> x in allvoters)
+    proposalreceiver = Registrator{Proposal}(config.proposalport,x->verify(x,notary),x -> x in members)
 
     daemon = @async @sync begin
         @async while true
@@ -95,15 +103,15 @@ function Recorder(config::RecorderConfig,deme::ThisDeme,braider::Braider,signer:
         @async while true
             braid = take!(braider)
             #uuid = hash(braid,deme.notary) 
-            consbraid = Consensus(braid,deme.notary)
+            consbraid = Consensus(braid,notary)
             
             ### We have different types here. I could move everything to references in future.
             input = unique(consbraid.references)
             output = unique(consbraid.document.ids)
             @assert length(input)==length(output)
 
-            PeaceVote.voters!(braider.voters,input,output)
-            PeaceVote.addvoters!(allvoters,input,output)
+            voters!(braider.voters,input,output)
+            addvoters!(allvoters,input,output)
 
             serialize(ledger,braid)
         end

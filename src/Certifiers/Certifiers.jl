@@ -9,7 +9,7 @@ using ..DataFormat: serialize, deserialize
 
 using DiffieHellman: diffiehellman
 
-using PeaceVote: Certificate, Signer, AbstractID, Deme, Notary
+using PeaceVote.DemeNet: Certificate, Signer, AbstractID, Deme, Notary, DemeSpec, Profile
 using Sockets
 
 
@@ -145,6 +145,40 @@ function certify(cc::CertifierConfig,deme::Deme,id::T,tooken::Int) where T <: Ab
 
     return cert
 end
+
+
+function ticket(deme::DemeSpec,port,tooken::Int)
+    config = Dict("demespec"=>Dict(deme),"port"=>Dict(port),"tooken"=>tooken)
+    io = IOBuffer()
+    TOML.print(io, config)
+    return String(take!(io))
+end
+
+### To use this function one is supposed to know
+### How to create a identity
+
+function register(invite::Dict,profile::Profile; account="")
+
+    demespec = DemeSpec(invite["demespec"])
+    save(demespec)
+
+    deme = Deme(demespec)
+    if haskey(invite,"port")
+        sync!(deme,invite["port"]) 
+    end
+
+    tooken = invite["tooken"]
+    #keychain = KeyChain(deme,account)
+    member = Signer(deme,"member")
+    id = member.id
+
+    
+    register(deme,profile,id,tooken)
+end
+
+
+register(invite::AbstractString,profile::Profile; kwargs...) = register(TOML.parse(invite),profile; kwargs...)
+
 
 export addtooken, Certifier, certify
 

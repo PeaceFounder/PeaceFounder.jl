@@ -1,12 +1,14 @@
-using PeaceVote: Notary, Cypher, DemeSpec, Deme, Signer, Certificate, datadir, save, proposals, DemeID, ID
+using PeaceVote.DemeNet: Notary, Cypher, DemeSpec, Deme, Signer, Certificate, datadir, save, DemeID, ID
+using PeaceVote.BraidChains: members, proposals, attest, voters
 using PeaceCypher
 
 using PeaceFounder.Braiders
 using PeaceFounder.BraidChains
-import PeaceFounder
-using PeaceFounder.Types: Port, BraiderConfig, RecorderConfig, PFID, Proposal, Vote
+using PeaceFounder.DataFormat: load
+#import PeaceFounder
+using PeaceFounder.Types: Port, BraiderConfig, RecorderConfig, PFID, Proposal, Vote, BraidChain
 
-for dir in [homedir() * "/.peacevote/"]
+for dir in [homedir() * "/.demenet/"]
     isdir(dir) && rm(dir,recursive=true)
 end
 
@@ -15,7 +17,7 @@ save(demespec) ### Necessary to connect with Mixer
 uuid = demespec.uuid
 deme = Deme(demespec)
 
-maintainer = Signer(uuid,"maintainer")
+maintainer = Signer(deme,"maintainer")
 
 # Somewhere far far away
 mixer = Signer(deme,"mixer")
@@ -29,8 +31,10 @@ SERVER_ID = server.id
 braiderconfig = BraiderConfig(Port(2000),Port(2001),UInt8(3),UInt8(64),SERVER_ID,DemeID(uuid,MIXER_ID))
 recorderconfig = RecorderConfig([maintainer.id,],server.id,Port(2002),Port(2003),Port(2004))
 
+
 braider = Braider(braiderconfig,deme,server)
-recorder = Recorder(recorderconfig,deme,braider,server)
+braidchain = BraidChain(deme) 
+recorder = Recorder(recorderconfig,braidchain,braider,server)
 
 for i in 1:3
     account = "account$i"
@@ -58,7 +62,8 @@ end
 
 sleep(1)
 
-messages = BraidChain(deme).records
+loadedledger = load(braidchain.ledger)
+messages = attest(loadedledger,braidchain.deme.notary)
 index = proposals(messages)[1]
 proposal = messages[index]
 
