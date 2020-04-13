@@ -5,16 +5,15 @@ using Sockets
 
 import PeaceVote
 
-using PeaceVote.DemeNet: Certificate, Intent, Contract, Consensus, Envelope, Notary, Deme, Signer, ID, DemeID, AbstractID, datadir, verify
+using DemeNet: Certificate, Intent, Contract, Consensus, Envelope, Notary, Deme, Signer, ID, DemeID, AbstractID, datadir, verify, serialize, deserialize
 using PeaceVote.Plugins: AbstractVote, AbstractChain, AbstractProposal
 using PeaceVote.BraidChains: voters!, members, addvoters!
 
 
 using ..Braiders: Braider
-using ..Crypto
-using ..DataFormat: serialize, deserialize, load ### That would include serialize and deserialize methods
+#using ..DataFormat: serialize, deserialize, load ### That would include serialize and deserialize methods
 using ..Types: RecorderConfig, PFID, Proposal, Vote, Braid
-using ..Ledgers: Ledger
+using ..Ledgers: Ledger, load
 
 import ..Types: BraidChain
 
@@ -51,7 +50,7 @@ end
 
 
 struct Recorder # RecorderConfig
-    registrator::Registrator{PFID}
+    registrator::Registrator{ID}
     voterecorder::Registrator{Vote}
     proposalreceiver::Registrator{Proposal}
     braider::Braider
@@ -83,7 +82,8 @@ function Recorder(config::RecorderConfig,chain::BraidChain,braider::Braider,sign
 
     ### Starting server apps ###
     ### With envelope type now I can easally add external certifiers
-    registrator = Registrator{PFID}(config.registratorport,x->extverify(x,notary),x -> x in config.membersca)
+    #registrator = Registrator{PFID}(config.registratorport,x->extverify(x,notary),x -> x in config.membersca)
+    registrator = Registrator{ID}(config.registratorport,x->extverify(x,notary),x -> x in config.membersca)
     voterecorder = Registrator{Vote}(config.votingport,x->verify(x,notary),x -> x in allvoters)
     proposalreceiver = Registrator{Proposal}(config.proposalport,x->verify(x,notary),x -> x in members)
 
@@ -91,7 +91,8 @@ function Recorder(config::RecorderConfig,chain::BraidChain,braider::Braider,sign
         @async while true
             cert = take!(registrator.messages)
             
-            id = cert.document.id
+            #id = cert.document.id
+            id = cert.document
 
             push!(members,id)
             push!(braider.voters,id)

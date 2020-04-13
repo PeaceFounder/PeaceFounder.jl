@@ -57,11 +57,4 @@ end
 
 
 
-Dict(id::TookenID) = Dict("id"=>Dict(id.id),"tooken"=>id.tooken)
-
-function TookenID{T}(dict::Dict) where T <: AbstractID
-    id = T(dict["id"])
-    tooken = dict["tooken"]
-    return TookenID(id,tooken)
-end
 

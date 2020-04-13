@@ -1,7 +1,3 @@
-module CertifierTest
-include("certifier.jl")
-end
-
 module BraiderTest
 include("braider.jl")
 end

@@ -38,7 +38,7 @@ function AddressRecord(config::Dict)
 end
 
 
-function Dict(config::CertifierConfig)
+function Dict(config::CertifierConfig{Port})
     dict = Dict()
     dict["ca"] = string(config.tookenca.id,base=16)
     dict["server"] = string(config.serverid.id,base=16)
@@ -47,7 +47,7 @@ function Dict(config::CertifierConfig)
     return dict
 end
 
-function CertifierConfig(dict::Dict,arecords::Vector{AddressRecord})
+function CertifierConfig{Port}(dict::Dict,arecords::Vector{AddressRecord})
     ca = ID(parse(BigInt,dict["ca"],base=16))
     server = ID(parse(BigInt,dict["server"],base=16))
 
@@ -159,7 +159,7 @@ function SystemConfig(dict::Dict)
     mport = Port(dict["mport"],addr)
     sport = Port(dict["sport"],addr)
 
-    certifier = CertifierConfig(dict["certifier"],arecords)
+    certifier = CertifierConfig{Port}(dict["certifier"],arecords)
     braider = BraiderConfig(dict["braider"],arecords)
     recorder = RecorderConfig(dict["recorder"],arecords)
 
@@ -167,14 +167,27 @@ function SystemConfig(dict::Dict)
 end
 
 function Dict(port::Port)
-    dict = Dict("port"=>port.port)
-    isnothing(port.ip) || (dict["ip"]=string(port.ip))
+    dict = Dict{String,Union{String,Int}}("port"=>port.port)
+    if !isnothing(port.ip) 
+        dict["ip"] = string(port.ip)
+        dict["type"] = "$(typeof(port.ip))"
+    else
+        dict["type"] = "Int"
+    end
+
     return dict
 end
 
 function Port(dict::Dict)
     port = dict["port"]
-    haskey(dict,"ip") ? (ip=IPv4(dict["ip"])) : ip=nothing
+    type = dict["type"]
+    if type == "Int"
+        ip = nothing
+    elseif type == "IPv4"
+        ip = IPv4(dict["ip"])
+    elseif type == "IPv6"
+        ip = IPv6(dict["ip"])
+    end
     return Port(port,ip)
 end
 

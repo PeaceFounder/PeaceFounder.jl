@@ -1,10 +1,10 @@
 module Braiders
 
-using ..Crypto
+#using ..Crypto
 
 import SynchronicBallot
 using SynchronicBallot: SocketConfig
-using PeaceVote.DemeNet: DemeSpec, Notary, Cypher, Signer, Deme, Contract, Certificate, ID, DemeID
+using DemeNet: DemeSpec, Notary, Cypher, Signer, Deme, Contract, Certificate, ID, DemeID, DHsym, DHasym
 using PeaceVote.Plugins: AbstractChain
 
 using ..Types: BraiderConfig

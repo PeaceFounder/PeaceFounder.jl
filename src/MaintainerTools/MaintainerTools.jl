@@ -1,17 +1,17 @@
 module MaintainerTools
 
-using PeaceVote.DemeNet: Signer, Deme, ID, DemeID, Certificate
+using DemeNet: Signer, Deme, ID, DemeID, Certificate, serialize, deserialize
 using Base: UUID
 
-using SMTPClient
 using ..Types: SystemConfig, PFID, BraidChain
-using ..Certifiers: Certifier
 using ..Braiders: Mixer, Braider
-using ..BraidChains: Recorder
+using ..BraidChains: Recorder, register
 using ..Ledgers: serve # I could name it as ledger node or something
-using ..DataFormat
+#using ..DataFormat
 
-import ..Certifiers
+using Recruiters: Certifier
+import Recruiters
+import Recruiters: ticket
 #using PeaceVote.KeyChains: ticket ### Will be part of Recruiters.jl
 
 using Sockets # do I need it?
@@ -115,7 +115,12 @@ function System(chain::BraidChain,server::Signer)
     if config.certifier==nothing
         certifier = nothing
     else
-        certifier = Certifier{PFID}(config.certifier,chain.deme,server)
+        certifier = Certifier(config.certifier,chain.deme,server)
+        iddaemon = @async while true
+            tooken,profile,cert = take!(certifier.tookencertifier.tickets)
+            @show profile
+            register(config.recorder,cert)
+        end
     end
     
     mixer = Mixer(config.mixerport,chain.deme,server)
@@ -130,67 +135,16 @@ function System(chain::BraidChain,server::Signer)
 end
 
 
-addtooken(chain::BraidChain,tooken,signer::Signer) = Certifiers.addtooken(deserialize(chain,SystemConfig).certifier,chain.deme,tooken,signer)
+addtooken(chain::BraidChain,tooken,signer::Signer) = Recruiters.addtooken(deserialize(chain,SystemConfig).certifier,chain.deme,tooken,signer)
 
 
-struct SMTPConfig
-    url::AbstractString
-    email::AbstractString
-    password::Union{AbstractString,Nothing}
+function ticket(chain::BraidChain,tooken::Int) 
+    certifier = deserialize(chain,SystemConfig).certifier
+    cport = certifier.certifierport
+    serverid = certifier.serverid
+    ticket(chain.deme.spec,cport,serverid,tooken)
 end
 
-function SMTPConfig()
-    println("Email:")
-    email = readline()
-
-    defaulturl = "smtps://smtp.gmail.com:465" 
-    println("SMTP url [$defaulturl]:")
-    url = readline()
-    url=="" && (url = defaulturl)
-    
-    println("Password:")
-    password = readline()
-    
-    SMTPConfig(url,email,password)
-
-end
-
-
-function sendinvite(config::SystemConfig,deme::Deme,to::AbstractString,from::SMTPConfig,maintainer::Signer)
-    ### This would register a tooken with the system 
-
-    tooken = rand(2^62:2^63-1)
-    Certifiers.addtooken(config.certifier,deme,tooken,maintainer)
-
-    port = config.syncport
-    
-    opt = SendOptions(isSSL = true, username = from.email, passwd = from.password)
-
-    t = ticket(deme.spec,port,tooken)
-
-    body = """
-    From: $(from.email)
-    To: $to
-    Subject: Invitation to $(deme.spec.name)
-
-    ########### Ticket #############
-    $t
-    ################################
-    """
-    
-    send(from.url, [to], from.email, IOBuffer(body), opt)  
-end
-
-
-function sendinvite(deme::Deme,to::Vector{T},smtpconfig::SMTPConfig,maintainer::Signer) where T<:AbstractString
-    config = deserialize(deme,SystemConfig)
-    for ito in to
-        sendinvite(config,deme,ito,smtpconfig,maintainer)
-    end
-end
-
-
-sendinvite(deme::Deme,to::Vector{T},maintainer::Signer) where T<:AbstractString = sendinvite(deme,to,SMTPConfig(),maintainer)
 
 export System
 

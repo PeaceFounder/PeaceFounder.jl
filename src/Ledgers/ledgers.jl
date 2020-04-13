@@ -1,3 +1,6 @@
+
+### I could put theese things in the ledgers submodule
+
 function binary(x)
     io = IOBuffer()
     serialize(io,x)
@@ -11,7 +14,7 @@ function load(ledger::AbstractLedger)
     for record in records(ledger)
         if dirname(record)=="members"
 
-            id = deserialize(IOBuffer(record.data),Certificate{PFID})
+            id = deserialize(IOBuffer(record.data),Certificate{ID})
             push!(chain,id)
 
         elseif dirname(record)=="braids"
@@ -34,7 +37,7 @@ function load(ledger::AbstractLedger)
     return chain
 end
 
-serialize(ledger::AbstractLedger,id::Certificate{PFID}) = record!(ledger,"members/$(id.document.id.id)",binary(id))
+serialize(ledger::AbstractLedger,id::Certificate{ID}) = record!(ledger,"members/$(id.document.id)",binary(id))
 
 function serialize(ledger::AbstractLedger,vote::Certificate{Vote}) 
     pid = vote.document.pid
@@ -54,15 +57,14 @@ function serialize(ledger::AbstractLedger,braid::Contract{Braid})
     record!(ledger,"braids/$uuid",binary(braid))
 end
 
+### This is the only part which depends on TOML. I could replace TOML with serialize and deserialize methods from DemeNet
 
 function serialize(ledger::AbstractLedger,config::Certificate{SystemConfig})
     fname = ledger.dir * "/PeaceFounder.toml"
     mkpath(dirname(fname))
 
-    dict = Dict(config)
-    
     open(fname, "w") do io
-        TOML.print(io, dict)
+        serialize(io,config)
     end
 end
 
@@ -71,24 +73,26 @@ function serialize(ledger::AbstractLedger,config::SystemConfig)
     fname = ledger.dir * "/PeaceFounder.toml"
     mkpath(dirname(fname))
 
-    dict = Dict(config)
-    
     open(fname, "w") do io
-        TOML.print(io, dict)
+        serialize(io,config)
     end
 end
 
 function deserialize(ledger::AbstractLedger,type::Type{Certificate{SystemConfig}})
     fname = ledger.dir * "/PeaceFounder.toml"
     @assert isfile(fname) "Config file not found!"
-    dict = TOML.parsefile(fname)
-    return Certificate{SystemConfig}(dict)
+    
+    open(fname, "r") do io
+        return cert = deserialize(io,Certificate{SystemConfig})
+    end
 end
 
 
 function deserialize(ledger::AbstractLedger,type::Type{SystemConfig})
     fname = ledger.dir * "/PeaceFounder.toml"
     @assert isfile(fname) "Config file not found!"
-    dict = TOML.parsefile(fname)
-    return SystemConfig(dict)
+
+    open(fname, "r") do io
+        return config = deserialize(io,SystemConfig)
+    end
 end

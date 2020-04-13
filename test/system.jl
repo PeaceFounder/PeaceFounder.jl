@@ -1,10 +1,12 @@
-using PeaceVote.DemeNet: DemeSpec, Deme, Signer, Certificate
+using DemeNet: DemeSpec, Deme, Signer, Certificate, Profile
 using PeaceVote.BraidChains: members, proposals, attest, voters
 using PeaceVote: KeyChain
 
-using PeaceFounder.MaintainerTools: System, addtooken
+using PeaceFounder.MaintainerTools: System, addtooken, ticket
 using PeaceFounder.Types: PFID, Vote, Proposal, BraidChain
 using PeaceFounder
+
+import Recruiters
 
 
 ### Perhaps I could just run julia in a process
@@ -21,7 +23,6 @@ demespec = DemeSpec(uuid)
 deme = Deme(demespec)
 
 
-
 server = Signer(deme,"server")
 
 ### The ledger is with deme thus serving should not be hard
@@ -31,37 +32,21 @@ system = System(braidchain,server)
 ### Now let's test the registration
 maintainer = Signer(deme,"maintainer")
 
-for i in [1,3]
+for i in 1:2
     account = "account$i"
     keychain = KeyChain(deme,account)
-    identification = PFID("$i","today",keychain.member.id)
-    cert = Certificate(identification,maintainer)
+    cert = Certificate(keychain.member.id,maintainer)
     @show register(braidchain,cert)
 end
 
-### Maintainer adds a tooken
+### Registration with recruiters
 
 tooken = 123244
 addtooken(braidchain,tooken,maintainer)
+invite = ticket(braidchain,tooken) 
 
-# One can send it over email with sendinvite method from MaintainerTools.
-###
-
-keychain = KeyChain(deme,"account2")
-id = PFID("2","today",keychain.member.id)
-register(braidchain,id,tooken)
-
-### A more sophisticated situation 
-
-# tooken = 123223424
-# addtooken(deme,tooken,maintainer)
-# port = Setup.systemconfig.syncport
-# tick = ticket(deme.spec,port,tooken) 
- 
-# ### Now the user may use it 
-# profile = Profile(Dict("name"=>"3","date"=>"today"))
-# register(tick,profile,account="account3")
-
+profile = Profile(Dict("uuid"=>11223344))
+Recruiters.register(invite,profile,account="account3")
 
 # Now let's test braiding 
 

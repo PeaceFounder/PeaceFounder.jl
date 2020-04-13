@@ -1,12 +1,12 @@
-using PeaceVote.DemeNet: Notary, Cypher, DemeSpec, Deme, Signer, Certificate, datadir, save, DemeID, ID
+using DemeNet: Notary, Cypher, DemeSpec, Deme, Signer, Certificate, datadir, save, DemeID, ID
 using PeaceVote.BraidChains: members, proposals, attest, voters
 using PeaceCypher
 
 using PeaceFounder.Braiders
 using PeaceFounder.BraidChains
-using PeaceFounder.DataFormat: load
+using PeaceFounder.Ledgers: load
 #import PeaceFounder
-using PeaceFounder.Types: Port, BraiderConfig, RecorderConfig, PFID, Proposal, Vote, BraidChain
+using PeaceFounder.Types: Port, BraiderConfig, RecorderConfig, Proposal, Vote, BraidChain #PFID,
 
 for dir in [homedir() * "/.demenet/"]
     isdir(dir) && rm(dir,recursive=true)
@@ -39,8 +39,9 @@ recorder = Recorder(recorderconfig,braidchain,braider,server)
 for i in 1:3
     account = "account$i"
     member = Signer(deme,account * "/member")
-    identification = PFID("$i","today",member.id)
-    cert = Certificate(identification,maintainer)
+    #identification = PFID("$i","today",member.id)
+    #cert = Certificate(identification,maintainer)
+    cert = Certificate(member.id,maintainer)
     @show register(recorderconfig,cert)
 end
 

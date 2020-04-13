@@ -1,10 +1,10 @@
 module Analysis
 
-using PeaceVote.DemeNet: Intent
+using DemeNet: Intent
 using PeaceVote.BraidChains: voters!, ID, attest
 using PeaceVote.Plugins: AbstractProposal, AbstractVote
 using ..Types: Proposal, Vote, BraidChain
-using ..DataFormat: load
+using ..Ledgers: load
 
 ### One still needs to find the proposal with in the chain. For that additional uniqness property is still valuable.
 

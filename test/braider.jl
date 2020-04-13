@@ -1,4 +1,4 @@
-using PeaceVote.DemeNet: Signer, DemeSpec, Deme, save, Consensus, DemeID
+using DemeNet: Signer, DemeSpec, Deme, save, Consensus, DemeID
 using PeaceCypher
 using PeaceFounder.Braiders
 using PeaceFounder.Types: Port, BraiderConfig

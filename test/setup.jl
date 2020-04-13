@@ -1,9 +1,9 @@
 ### I could use this file to set up the system for the test.
 
-using PeaceVote.DemeNet: DemeSpec, Deme, Signer, save, DemeID
+using DemeNet: DemeSpec, Deme, Signer, save, DemeID, serialize, deserialize
 using PeaceCypher
 using PeaceFounder.Types: BraiderConfig, RecorderConfig, CertifierConfig, SystemConfig, AddressRecord, Port, BraidChain
-using PeaceFounder.DataFormat
+#using PeaceFounder.DataFormat
 using PeaceFounder.MaintainerTools: certify
 
 

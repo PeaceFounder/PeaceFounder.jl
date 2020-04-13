@@ -1,19 +1,14 @@
 module Types
 
-using PeaceVote.DemeNet: Certificate, Contract, Intent, Consensus, AbstractID, ID, DemeID, Deme
+using DemeNet: Certificate, Contract, Intent, Consensus, AbstractID, ID, DemeID, Deme
 using PeaceVote.Plugins: AbstractVote, AbstractProposal, AbstractBraid, AbstractChain
 using Sockets
 using Base: UUID
 
+using Recruiters: CertifierConfig
 #import PeaceVote: load 
 
-abstract type AbstractLedger end
-
-### This part needs to be improved
-#load(ledger::AbstractLedger) = error("Not impl") 
-record!(ledger::AbstractLedger,fname::String,bytes::Vector{UInt8}) = error("Not impl")
-records(ledger::AbstractLedger) = error("Not impl")
-
+import Base.Dict
 
 ### Every module needs to depend on Port. Thus it seems to be the right place.
 struct Port
@@ -60,13 +55,6 @@ end
 
 ### Let's make stuff first for SystemConfig. 
 
-struct CertifierConfig
-    tookenca::ID ### authorithies who can issue tookens. Server allows to add new tookens only from them.
-    serverid::ID ### Server receiveing tookens and the member identities. Is also the one which signs and issues the certificates.
-    tookenport::Port
-    #hmac for keeping the tooken secret
-    certifierport::Port
-end
 
 
 ### Perhaps I could introduce a Mixer subtype.
@@ -128,17 +116,15 @@ struct Braid <: AbstractBraid
     ids::Vector{ID} ### the new ids for the public keys
 end
 
-struct TookenID{T<:AbstractID} <: AbstractID
-    id::T
-    tooken::Int
-end
-
 
 struct BraidChain <: AbstractChain
     deme::Deme
     ledger
 end
 
+
+include("systemconfig.jl")
+include("chaintypes.jl")
 
 ### At this point I may be able to define how the files should look like
 
