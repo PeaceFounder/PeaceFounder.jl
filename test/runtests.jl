@@ -1,9 +1,9 @@
 module BraiderTest
-include("braider.jl")
+include("braidchains/braider.jl")
 end
 
 module BraidChainTest
-include("braidchain.jl")
+include("braidchains/braidchain.jl")
 end
 
 module SystemTest

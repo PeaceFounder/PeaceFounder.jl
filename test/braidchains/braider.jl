@@ -1,7 +1,6 @@
 using DemeNet: Signer, DemeSpec, Deme, save, Consensus, DemeID
 using PeaceCypher
-using PeaceFounder.Braiders
-using PeaceFounder.Types: Port, BraiderConfig
+using PeaceFounder.BraidChains: BraiderConfig, Braider, Mixer, braid!
 
 
 demespec = DemeSpec("PeaceDeme",:default,:PeaceCypher,:default,:PeaceCypher,:PeaceFounder)
@@ -18,7 +17,7 @@ server = Signer(deme,"server")
 MIXER_ID = mixer.id
 SERVER_ID = server.id
 
-config = BraiderConfig(Port(1998),Port(1999),UInt8(3),UInt8(64),SERVER_ID,DemeID(uuid,MIXER_ID))
+config = BraiderConfig(1998,1999,UInt8(3),UInt8(64),SERVER_ID,DemeID(uuid,MIXER_ID))
 
 braider = Braider(config,deme,server)
 

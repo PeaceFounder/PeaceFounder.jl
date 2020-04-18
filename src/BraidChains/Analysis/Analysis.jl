@@ -12,6 +12,7 @@ function normalcount(proposal::Proposal,voters::Set{ID},messages)
 end
 
 
+### Need to improve code so it would dispatch on proposal type at the particular index.
 function normalcount(index::Int,chain::BraidChain) ### Here I could have 
     loadedledger = load(chain.ledger) #BraidChain(deme).records
     messages = attest(loadedledger,chain.deme.notary)

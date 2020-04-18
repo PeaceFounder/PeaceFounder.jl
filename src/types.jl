@@ -1,3 +1,79 @@
+using Base: UUID
+import Base.Dict
+import .BraidChains: BraiderConfig, RecorderConfig, BraidChainConfig
+import Recruiters: CertifierConfig
+using Sockets
+using DemeNet: ID, DemeID
+
+
+struct Port
+    port::Int
+    ip::Union{Nothing,IPv4,IPv6} 
+end
+
+Port(port::Int) = Port(port,nothing)
+
+function Dict(port::Port)
+    dict = Dict{String,Union{String,Int}}("port"=>port.port)
+    if !isnothing(port.ip) 
+        dict["ip"] = string(port.ip)
+        dict["type"] = "$(typeof(port.ip))"
+    else
+        dict["type"] = "Int"
+    end
+
+    return dict
+end
+
+function Port(dict::Dict)
+    port = dict["port"]
+    type = dict["type"]
+    if type == "Int"
+        ip = nothing
+    elseif type == "IPv4"
+        ip = IPv4(dict["ip"])
+    elseif type == "IPv6"
+        ip = IPv6(dict["ip"])
+    end
+    return Port(port,ip)
+end
+
+
+import Sockets.listen
+function listen(port::Port)
+    if port.ip isa Nothing
+        listen(port.port)
+    elseif port.ip isa IPv4
+        listen(IPv4(0),port.port)
+    else
+        listen(IPv6(0),port.port)
+    end
+end
+
+import Sockets.connect
+function connect(port::Port)
+    if port.ip isa Nothing
+        connect(port.port)
+    else
+        connect(port.ip,port.port)
+    end
+end
+
+# I could add also a hash of demefile here!
+struct AddressRecord
+    id::Union{ID,DemeID}
+    hash::Union{Nothing,BigInt}
+    ip::Union{IPv4,IPv6}
+end
+
+function ip(machines::Vector{AddressRecord},id::Union{ID,DemeID})
+    for m in machines
+        if m.id==id
+            return m.ip
+        end
+    end
+end
+
 function Dict(record::AddressRecord)
     dict = Dict()
 
@@ -59,7 +135,7 @@ function CertifierConfig{Port}(dict::Dict,arecords::Vector{AddressRecord})
 end
 
 
-function Dict(config::BraiderConfig)
+function Dict(config::BraiderConfig{Port})
     dict = Dict()
     dict["N"] = Int(config.N)
     dict["M"] = Int(config.M)
@@ -73,7 +149,7 @@ function Dict(config::BraiderConfig)
     return dict
 end
 
-function BraiderConfig(dict::Dict,arecords::Vector{AddressRecord})
+function BraiderConfig{Port}(dict::Dict,arecords::Vector{AddressRecord})
     N = UInt8(dict["N"])
     M = UInt8(dict["M"])
 
@@ -89,7 +165,7 @@ function BraiderConfig(dict::Dict,arecords::Vector{AddressRecord})
     BraiderConfig(port,bport,N,M,server,mid)
 end
 
-function Dict(config::RecorderConfig)
+function Dict(config::RecorderConfig{Port})
     ca = Dict[]
     for mca in config.membersca
         dict = Dict()
@@ -110,7 +186,7 @@ function Dict(config::RecorderConfig)
     return dict
 end
 
-function RecorderConfig(dict::Dict,arecords::Vector{AddressRecord})
+function RecorderConfig{Port}(dict::Dict,arecords::Vector{AddressRecord})
     
     ca = Union{ID,DemeID}[]
     for i in dict["ca"]
@@ -133,61 +209,58 @@ function RecorderConfig(dict::Dict,arecords::Vector{AddressRecord})
     RecorderConfig(ca,server,rport,vport,pport)
 end
 
-function Dict(config::SystemConfig)
+function Dict(config::BraidChainConfig{Port})
+
     dict = Dict()
+    dict["server"] = string(config.server,base=16)
     dict["mport"] = config.mixerport.port
     dict["sport"] = config.syncport.port
-    dict["server"] = string(config.serverid.id,base=16)
-    dict["certifier"] = Dict(config.certifier)
     dict["braider"] = Dict(config.braider)
     dict["recorder"] = Dict(config.recorder)
-
+    
     return dict
 end
 
-function SystemConfig(dict::Dict)
-    public = false ### It must be decided from arecords
-
-    if haskey(dict,"arecords")
-        arecords = AddressRecord[AddressRecord(i) for i in dict["arecords"]]
-    else
-        arecords = AddressRecord[]
-    end
+function BraidChainConfig{Port}(dict::Dict,arecords::Vector{AddressRecord})
 
     server = ID(parse(BigInt,dict["server"],base=16))
     addr = ip(arecords,server)
     mport = Port(dict["mport"],addr)
     sport = Port(dict["sport"],addr)
 
-    certifier = CertifierConfig{Port}(dict["certifier"],arecords)
-    braider = BraiderConfig(dict["braider"],arecords)
-    recorder = RecorderConfig(dict["recorder"],arecords)
+    braider = BraiderConfig{Port}(dict["braider"],arecords)
+    recorder = RecorderConfig{Port}(dict["recorder"],arecords)
 
-    SystemConfig(mport,sport,server,certifier,braider,recorder,arecords)
+    BraidChainConfig(server,mport,sport,braider,recorder)
 end
 
-function Dict(port::Port)
-    dict = Dict{String,Union{String,Int}}("port"=>port.port)
-    if !isnothing(port.ip) 
-        dict["ip"] = string(port.ip)
-        dict["type"] = "$(typeof(port.ip))"
-    else
-        dict["type"] = "Int"
-    end
+struct PeaceFounderConfig
+    braidchain::BraidChainConfig{Port}
+    certifier::CertifierConfig{Port} 
+    arecords::Vector{AddressRecord}    
+end
 
+function Dict(config::PeaceFounderConfig)
+    dict = Dict("braidchain"=>Dict(config.braidchain),"certifier"=>Dict(config.certifier))
+    length(config.arecords)>0 && (dict["arecords"]=Dict(config.arecords))
     return dict
 end
 
-function Port(dict::Dict)
-    port = dict["port"]
-    type = dict["type"]
-    if type == "Int"
-        ip = nothing
-    elseif type == "IPv4"
-        ip = IPv4(dict["ip"])
-    elseif type == "IPv6"
-        ip = IPv6(dict["ip"])
+function PeaceFounderConfig(dict::Dict)
+    
+    if haskey(dict,"arecords")
+        arecords = AddressRecord[AddressRecord(i) for i in dict["arecords"]]
+    else
+        arecords = AddressRecord[]
     end
-    return Port(port,ip)
+
+    certifier = CertifierConfig{Port}(dict["certifier"],arecords)
+    braidchain = BraidChainConfig{Port}(dict["braidchain"],arecords)
+
+
+    return PeaceFounderConfig(braidchain,certifier,arecords)
 end
+
+
+export Port, PeaceFounderConfig, BraidChainConfig, CertifierConfig, RecorderConfig, BraiderConfig
 

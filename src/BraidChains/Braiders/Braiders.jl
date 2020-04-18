@@ -7,7 +7,7 @@ using SynchronicBallot: SocketConfig
 using DemeNet: DemeSpec, Notary, Cypher, Signer, Deme, Contract, Certificate, ID, DemeID, DHsym, DHasym
 using PeaceVote.Plugins: AbstractChain
 
-using ..Types: BraiderConfig
+#using ..Types: BraiderConfig
 import ..Types: Braid
 
 using Pkg.TOML
@@ -55,6 +55,17 @@ function Mixer(port,cypher::Cypher,notary::Notary,signer::Signer)
 end
 
 Mixer(port,deme::Deme,signer::Signer) = Mixer(port,deme.cypher,deme.notary,signer)
+
+
+struct BraiderConfig{T}
+    port::T # braiderport
+    ballotport::T # mixerport
+    N::UInt8
+    M::UInt8
+    gateid::ID # braiderid
+    mixerid::DemeID
+end
+
 
 struct Braider
     server

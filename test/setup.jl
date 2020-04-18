@@ -1,10 +1,9 @@
 ### I could use this file to set up the system for the test.
 
-using DemeNet: DemeSpec, Deme, Signer, save, DemeID, serialize, deserialize
+using DemeNet: DemeSpec, Deme, Signer, save, DemeID
 using PeaceCypher
-using PeaceFounder.Types: BraiderConfig, RecorderConfig, CertifierConfig, SystemConfig, AddressRecord, Port, BraidChain
-#using PeaceFounder.DataFormat
-using PeaceFounder.MaintainerTools: certify
+using PeaceFounder: BraiderConfig, RecorderConfig, CertifierConfig, BraidChainConfig, PeaceFounderConfig, AddressRecord, Port, certify, serialize, deserialize
+using PeaceFounder.BraidChains: BraidChain
 
 
 demespec = DemeSpec("PeaceDeme",:default,:PeaceCypher,:default,:PeaceCypher,:PeaceFounder)
@@ -30,13 +29,12 @@ CERTIFIER_PORT = Port(3007)
 
 braiderconfig = BraiderConfig(BRAIDER_PORT,MIXER_PORT,UInt8(3),UInt8(64),SERVER_ID,DemeID(uuid,MIXER_ID))
 recorderconfig = RecorderConfig([MAINTAINER_ID,SERVER_ID],server.id,REGISTRATOR_PORT,VOTING_PORT,PROPOSAL_PORT)
+braidchainconfig = BraidChainConfig(SERVER_ID,MIXER_PORT,SYNC_PORT,braiderconfig,recorderconfig)
 certifierconfig = CertifierConfig(MAINTAINER_ID,SERVER_ID,TOOKEN_PORT,CERTIFIER_PORT)
-systemconfig = SystemConfig(MIXER_PORT,SYNC_PORT,SERVER_ID,certifierconfig,braiderconfig,recorderconfig,AddressRecord[])
 
-#serialize(deme,systemconfig,maintainer)
+peacefounderconfig = PeaceFounderConfig(braidchainconfig,certifierconfig,AddressRecord[])
 
 braidchain = BraidChain(deme)
-serialize(braidchain,systemconfig)
+serialize(braidchain,peacefounderconfig)
 certify(braidchain,maintainer)
-
-deserialize(braidchain,SystemConfig)
+deserialize(braidchain,PeaceFounderConfig)

@@ -5,8 +5,10 @@ function binary(x)
     io = IOBuffer()
     serialize(io,x)
     return take!(io)
+    #println(String(take!(io)))
 end
 
+deserialize(record::Record,type::Type) = deserialize(IOBuffer(record.data),type)
 
 function load(ledger::AbstractLedger)
     chain = Union{Certificate,Contract}[]
@@ -37,6 +39,18 @@ function load(ledger::AbstractLedger)
     return chain
 end
 
+function getrecord(ledger::AbstractLedger,fname::AbstractString)
+    for record in records(ledger)
+        if record.fname == fname
+            return record
+        end
+    end
+end
+
+
+serialize(ledger::AbstractLedger,data,fname::AbstractString) = record!(ledger,fname,binary(data))
+
+
 serialize(ledger::AbstractLedger,id::Certificate{ID}) = record!(ledger,"members/$(id.document.id)",binary(id))
 
 function serialize(ledger::AbstractLedger,vote::Certificate{Vote}) 
@@ -59,40 +73,4 @@ end
 
 ### This is the only part which depends on TOML. I could replace TOML with serialize and deserialize methods from DemeNet
 
-function serialize(ledger::AbstractLedger,config::Certificate{SystemConfig})
-    fname = ledger.dir * "/PeaceFounder.toml"
-    mkpath(dirname(fname))
 
-    open(fname, "w") do io
-        serialize(io,config)
-    end
-end
-
-
-function serialize(ledger::AbstractLedger,config::SystemConfig)
-    fname = ledger.dir * "/PeaceFounder.toml"
-    mkpath(dirname(fname))
-
-    open(fname, "w") do io
-        serialize(io,config)
-    end
-end
-
-function deserialize(ledger::AbstractLedger,type::Type{Certificate{SystemConfig}})
-    fname = ledger.dir * "/PeaceFounder.toml"
-    @assert isfile(fname) "Config file not found!"
-    
-    open(fname, "r") do io
-        return cert = deserialize(io,Certificate{SystemConfig})
-    end
-end
-
-
-function deserialize(ledger::AbstractLedger,type::Type{SystemConfig})
-    fname = ledger.dir * "/PeaceFounder.toml"
-    @assert isfile(fname) "Config file not found!"
-
-    open(fname, "r") do io
-        return config = deserialize(io,SystemConfig)
-    end
-end

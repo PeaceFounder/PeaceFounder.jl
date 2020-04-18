@@ -1,17 +1,17 @@
-module MaintainerTools
 
-using DemeNet: Signer, Deme, ID, DemeID, Certificate, serialize, deserialize
+using DemeNet: Signer, Deme, ID, DemeID, Certificate, serialize, deserialize, datadir, Profile, Intent
 using Base: UUID
 
-using ..Types: SystemConfig, PFID, BraidChain
-using ..Braiders: Mixer, Braider
-using ..BraidChains: Recorder, register
-using ..Ledgers: serve # I could name it as ledger node or something
+#using ..Types: SystemConfig, PFID, BraidChain
+#using ..Braiders: Mixer, Braider
+using .BraidChains: BraidChain, BraidChainServer, record
+#Recorder, register
+#using ..Ledgers: serve # I could name it as ledger node or something
 #using ..DataFormat
 
 using Recruiters: Certifier
 import Recruiters
-import Recruiters: ticket
+import Recruiters: ticket, addtooken
 #using PeaceVote.KeyChains: ticket ### Will be part of Recruiters.jl
 
 using Sockets # do I need it?
@@ -81,23 +81,14 @@ end
 
 ### We will need some improvement here on 
 
-function certify(chain::BraidChain,signer::Signer)
-    @assert chain.deme.spec.maintainer==signer.id "You are not eligible to certify PeaceFounder.toml for this deme"
-    sc = deserialize(chain.ledger,SystemConfig)
-    cert = Certificate(sc,signer)
-    serialize(chain.ledger,cert)
-end
 
 ### I might need to put this into Types. 
 #Port(port) = Port(getipaddr(),port)
 
-struct System
+struct PeaceFounderServer
     chain::BraidChain
-    mixer
-    certifier
-    braider
     braidchain
-    synchronizer
+    certifier
 end
 
 # I could perhaps start the server from DemeSpec file. In that way I could generate appropriate deme. 
@@ -107,45 +98,72 @@ end
 # When onion sockets will become a thing the System should also be started on the participating members
 # devices or some additionall dedicated mixers.
 
-function System(chain::BraidChain,server::Signer)
+function storeprofile(cert::Certificate{Profile},deme::Deme)
+    uuid = deme.spec.uuid
+    intentprofile = Intent(cert,deme.notary)
+    id = intentprofile.reference
 
-    config = deserialize(chain,SystemConfig)
-    #config = SystemConfig(deme)
+    fname = datadir(uuid) * "/profiles/" * string(id,base=16)
+    mkpath(dirname(fname))
     
-    if config.certifier==nothing
-        certifier = nothing
-    else
-        certifier = Certifier(config.certifier,chain.deme,server)
-        iddaemon = @async while true
-            tooken,profile,cert = take!(certifier.tookencertifier.tickets)
-            @show profile
-            register(config.recorder,cert)
-        end
+    io = IOBuffer()
+    serialize(io,cert)
+    bytes = take!(io)
+    
+    write(fname,bytes)
+end
+
+
+function PeaceFounderServer(config::PeaceFounderConfig,chain::BraidChain,server::Signer)
+
+    #config = deserialize(chain,PeaceFounderConfig)
+
+    #config = SystemConfig(deme)
+
+    braidchain = BraidChainServer(config.braidchain,chain,server)
+
+
+    certifier = Certifier(config.certifier,chain.deme,server)
+    iddaemon = @async while true
+        tooken,profile,cert = take!(certifier.tookencertifier.tickets)
+        @show profile
+        storeprofile(profile,chain.deme)
+        record(config.braidchain.recorder,cert)
     end
     
-    mixer = Mixer(config.mixerport,chain.deme,server)
-    synchronizer = @async serve(config.syncport,chain.ledger)
 
-    braider = Braider(config.braider,chain.deme,server)
+    # if config.certifier==nothing
+    #     certifier = nothing
+    # else
+    #     certifier = Certifier(config.certifier,chain.deme,server)
+    #     iddaemon = @async while true
+    #         tooken,profile,cert = take!(certifier.tookencertifier.tickets)
+    #         @show profile
+    #         storeprofile(profile,chain.deme)
+    #         register(config.recorder,cert)
+    #     end
+    # end
+    
+    # mixer = Mixer(config.mixerport,chain.deme,server)
+    # synchronizer = @async serve(config.syncport,chain.ledger)
+
+    # braider = Braider(config.braider,chain.deme,server)
 
     ### So this is where the bug happens
-    recorder = Recorder(config.recorder,chain,braider,server)
+    #recorder = Recorder(config.recorder,chain,braider,server)
 
-    return System(chain,mixer,certifier,braider,recorder,synchronizer)
+    return PeaceFounderServer(chain,braidchain,certifier)
 end
 
 
-addtooken(chain::BraidChain,tooken,signer::Signer) = Recruiters.addtooken(deserialize(chain,SystemConfig).certifier,chain.deme,tooken,signer)
+addtooken(config::PeaceFounderConfig,deme::Deme,tooken::Int,signer::Signer) = addtooken(config.certifier,deme,tooken,signer)
 
 
-function ticket(chain::BraidChain,tooken::Int) 
-    certifier = deserialize(chain,SystemConfig).certifier
+function ticket(config::PeaceFounderConfig,deme::Deme,tooken::Int) 
+    certifier = config.certifier
     cport = certifier.certifierport
     serverid = certifier.serverid
-    ticket(chain.deme.spec,cport,serverid,tooken)
+    ticket(deme.spec,cport,serverid,tooken) # could improve API
 end
 
 
-export System
-
-end

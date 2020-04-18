@@ -2,11 +2,11 @@ using DemeNet: Notary, Cypher, DemeSpec, Deme, Signer, Certificate, datadir, sav
 using PeaceVote.BraidChains: members, proposals, attest, voters
 using PeaceCypher
 
-using PeaceFounder.Braiders
-using PeaceFounder.BraidChains
-using PeaceFounder.Ledgers: load
+#using PeaceFounder.Braiders
+using PeaceFounder.BraidChains: BraiderConfig, Braider, Mixer, braid!, RecorderConfig, Proposal, Vote, BraidChain, load, Recorder, record
+#using PeaceFounder.Ledgers: load
 #import PeaceFounder
-using PeaceFounder.Types: Port, BraiderConfig, RecorderConfig, Proposal, Vote, BraidChain #PFID,
+#using PeaceFounder.Types: Port, BraiderConfig #PFID,
 
 for dir in [homedir() * "/.demenet/"]
     isdir(dir) && rm(dir,recursive=true)
@@ -21,15 +21,15 @@ maintainer = Signer(deme,"maintainer")
 
 # Somewhere far far away
 mixer = Signer(deme,"mixer")
-mixerserver = Mixer(Port(2001),deme,mixer)
+mixerserver = Mixer(2001,deme,mixer)
 
 server = Signer(deme,"server")
 
 MIXER_ID = mixer.id
 SERVER_ID = server.id
 
-braiderconfig = BraiderConfig(Port(2000),Port(2001),UInt8(3),UInt8(64),SERVER_ID,DemeID(uuid,MIXER_ID))
-recorderconfig = RecorderConfig([maintainer.id,],server.id,Port(2002),Port(2003),Port(2004))
+braiderconfig = BraiderConfig(2000,2001,UInt8(3),UInt8(64),SERVER_ID,DemeID(uuid,MIXER_ID))
+recorderconfig = RecorderConfig([maintainer.id,],server.id,2002,2003,2004)
 
 
 braider = Braider(braiderconfig,deme,server)
@@ -39,15 +39,15 @@ recorder = Recorder(recorderconfig,braidchain,braider,server)
 for i in 1:3
     account = "account$i"
     member = Signer(deme,account * "/member")
-    #identification = PFID("$i","today",member.id)
-    #cert = Certificate(identification,maintainer)
     cert = Certificate(member.id,maintainer)
-    @show register(recorderconfig,cert)
+    @show record(recorderconfig,cert)
 end
 
 pmember = Signer(deme,"account2" * "/member")
 proposal = Proposal("Found peace for a change?",["yes","no","maybe"])
-propose(recorderconfig,proposal,pmember);
+cert = Certificate(proposal,pmember)
+
+record(recorderconfig,cert);
 
 @sync for i in 1:3
     @async begin
@@ -63,7 +63,7 @@ end
 
 sleep(1)
 
-loadedledger = load(braidchain.ledger)
+loadedledger = load(braidchain)
 messages = attest(loadedledger,braidchain.deme.notary)
 index = proposals(messages)[1]
 proposal = messages[index]
@@ -75,6 +75,8 @@ for i in 1:3
     voter = Signer(deme,account * "/voters/$(string(member.id))")
 
     option = Vote(index,rand(1:length(proposal.document.options)))
-    vote(recorderconfig,option,voter)
+    cert = Certificate(option,voter)
+
+    record(recorderconfig,cert)
 end
 

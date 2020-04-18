@@ -1,12 +1,14 @@
-using DemeNet: DemeSpec, Deme, Signer, Certificate, Profile
+using DemeNet: DemeSpec, Deme, Signer, Certificate, Profile, serialize, deserialize
 using PeaceVote.BraidChains: members, proposals, attest, voters
 using PeaceVote: KeyChain
 
-using PeaceFounder.MaintainerTools: System, addtooken, ticket
-using PeaceFounder.Types: PFID, Vote, Proposal, BraidChain
+using PeaceFounder: PeaceFounderServer, PeaceFounderConfig, addtooken, ticket
+using PeaceFounder.BraidChains: Vote, Proposal, BraidChain, load
 using PeaceFounder
 
-import Recruiters
+using PeaceFounder.BraidChains: record, braid!, sync!
+
+using Recruiters: register
 
 
 ### Perhaps I could just run julia in a process
@@ -26,8 +28,11 @@ deme = Deme(demespec)
 server = Signer(deme,"server")
 
 ### The ledger is with deme thus serving should not be hard
+### Perhaps I need to add a config 
+### But it config is read from BraidChain itself
 braidchain = BraidChain(deme)
-system = System(braidchain,server)
+pfconfig = deserialize(braidchain,PeaceFounderConfig)
+system = PeaceFounderServer(pfconfig,braidchain,server)
 
 ### Now let's test the registration
 maintainer = Signer(deme,"maintainer")
@@ -36,17 +41,17 @@ for i in 1:2
     account = "account$i"
     keychain = KeyChain(deme,account)
     cert = Certificate(keychain.member.id,maintainer)
-    @show register(braidchain,cert)
+    @show record(pfconfig,cert)
 end
 
 ### Registration with recruiters
 
 tooken = 123244
-addtooken(braidchain,tooken,maintainer)
-invite = ticket(braidchain,tooken) 
+addtooken(pfconfig,deme,tooken,maintainer)
+invite = ticket(pfconfig,deme,tooken) 
 
 profile = Profile(Dict("uuid"=>11223344))
-Recruiters.register(invite,profile,account="account3")
+register(invite,profile,account="account3")
 
 # Now let's test braiding 
 
@@ -54,7 +59,7 @@ Recruiters.register(invite,profile,account="account3")
     @async begin
         account = "account$i"
         keychain = KeyChain(deme,account)
-        braid!(braidchain,keychain)
+        braid!(pfconfig.braidchain,braidchain,keychain)
     end
 end
 
@@ -62,10 +67,10 @@ end
 
 keychain = KeyChain(deme,"account2")
 proposal = Proposal("Found peace for a change?",["yes","no","maybe"])
-propose(braidchain,proposal,keychain)
+cert = Certificate(proposal,keychain.member)
+record(pfconfig,cert) 
 
 sleep(1)
-
 
 loadedledger = load(braidchain)
 messages = attest(loadedledger,braidchain.deme.notary)
@@ -79,7 +84,8 @@ for i in 1:3
     keychain = KeyChain(deme,account)
     
     option = Vote(index,rand(1:length(proposal.document.options)))
-    vote(braidchain,option,keychain)
+    cert = Certificate(option,braidchain,keychain)
+    record(pfconfig,cert)
 end
 
 # Now let's count 
@@ -91,5 +97,5 @@ sleep(1)
 
 demesync = Deme(demespec)
 bcsync = BraidChain(demesync)
-sync!(bcsync)
+sync!(bcsync,pfconfig)
 @show tally = count(index,bcsync)

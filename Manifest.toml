@@ -47,9 +47,9 @@ uuid = "a99b485a-c5c8-540e-ab00-7a7265134077"
 version = "0.2.3"
 
 [[ExprTools]]
-git-tree-sha1 = "08c1f74d9ad03acf0ee84c12c9e665ab1a9a6e33"
+git-tree-sha1 = "6f0517056812fd6aa3af23d4b70d5325a2ae4e95"
 uuid = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
-version = "0.1.0"
+version = "0.1.1"
 
 [[EzXML]]
 deps = ["Printf", "XML2_jll"]
@@ -62,10 +62,10 @@ deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 
 [[Intervals]]
-deps = ["Dates", "Printf", "TimeZones"]
-git-tree-sha1 = "30bce135cd5856edc91f146e3b7e60d736bd067b"
+deps = ["Dates", "Printf", "RecipesBase", "TimeZones"]
+git-tree-sha1 = "5e9938f4dff72e5ed4c0f7fbe34b204cbabcf43a"
 uuid = "d8418881-c3e1-53bb-8760-2df7ec849ed5"
-version = "1.0.0"
+version = "1.1.0"
 
 [[LibCURL]]
 deps = ["BinaryProvider", "Libdl"]
@@ -122,9 +122,9 @@ version = "0.2.4"
 
 [[PeaceVote]]
 deps = ["DemeNet", "Pkg"]
-git-tree-sha1 = "d07cccbe2a12216203b992615dbac2d39fb80a67"
+git-tree-sha1 = "b3a68915447231e3eeb67af68399382639d9c630"
 uuid = "129db535-0459-46ad-8d3d-b1fb8f318c74"
-version = "0.3.0"
+version = "0.3.1"
 
 [[Pkg]]
 deps = ["Dates", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "UUIDs"]
@@ -197,10 +197,10 @@ deps = ["Distributed", "InteractiveUtils", "Logging", "Random"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [[TimeZones]]
-deps = ["Dates", "EzXML", "Mocking", "Printf", "Serialization", "Unicode"]
-git-tree-sha1 = "f60a33649ef8380bafe6be7d1af1eeb8a3a3ea92"
+deps = ["Dates", "EzXML", "Mocking", "Printf", "RecipesBase", "Serialization", "Unicode"]
+git-tree-sha1 = "0f070959511602e90ac4a8fa1799746c95cc3c19"
 uuid = "f269a46b-ccf7-5d73-abea-4c690281aa53"
-version = "1.0.1"
+version = "1.1.0"
 
 [[UUIDs]]
 deps = ["Random", "SHA"]
@@ -211,9 +211,9 @@ uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 
 [[XML2_jll]]
 deps = ["Libdl", "Libiconv_jll", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "16f427f831b517101d0424ea1af0a2d31a5b6a1b"
+git-tree-sha1 = "987c02a43fa10a491a5f0f7c46a6d3559ed6a8e2"
 uuid = "02c8fc9c-b97f-50b9-bbe4-9be30ff0a78a"
-version = "2.9.9+3"
+version = "2.9.9+4"
 
 [[Zlib_jll]]
 deps = ["Libdl", "Pkg"]

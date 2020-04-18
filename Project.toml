@@ -1,7 +1,7 @@
 name = "PeaceFounder"
 uuid = "916f7771-afe2-4319-943d-0e770c333432"
 authors = ["akels <akels14@gmail.com>"]
-version = "0.2.5"
+version = "0.3.0"
 
 [deps]
 DemeNet = "311d44f8-95d5-40c8-b71c-a916d7747227"
@@ -16,7 +16,7 @@ Synchronizers = "9279c0cf-0ddb-4a8a-93c9-19d312620a08"
 [compat]
 DemeNet = "^0.1.2"
 DiffieHellman = "^0.4"
-PeaceVote = "^0.3.0"
+PeaceVote = "^0.3.1"
 Recruiters = "^0.1.2"
 SynchronicBallot = "^0.3"
 Synchronizers = "^0.1"
