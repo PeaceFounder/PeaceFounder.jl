@@ -1,6 +1,6 @@
 using Base: UUID
 import Base.Dict
-import .BraidChains: BraiderConfig, RecorderConfig, BraidChainConfig
+import PeaceVote.BraidChains: BraiderConfig, RecorderConfig, BraidChainConfig
 import Recruiters: CertifierConfig
 using Sockets
 using DemeNet: ID, DemeID

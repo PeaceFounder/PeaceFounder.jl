@@ -4,7 +4,7 @@ using Base: UUID
 
 #using ..Types: SystemConfig, PFID, BraidChain
 #using ..Braiders: Mixer, Braider
-using .BraidChains: BraidChain, BraidChainServer, record
+using PeaceVote.BraidChains: BraidChain, BraidChainServer, record
 #Recorder, register
 #using ..Ledgers: serve # I could name it as ledger node or something
 #using ..DataFormat
@@ -113,14 +113,15 @@ function storeprofile(cert::Certificate{Profile},deme::Deme)
     write(fname,bytes)
 end
 
-
+### I could substitute chain with a deme and then create braidchain with in
 function PeaceFounderServer(config::PeaceFounderConfig,chain::BraidChain,server::Signer)
 
     #config = deserialize(chain,PeaceFounderConfig)
 
     #config = SystemConfig(deme)
 
-    braidchain = BraidChainServer(config.braidchain,chain,server)
+    #chain = BraidChain()
+    braidchain = BraidChainServer(chain,server)
 
 
     certifier = Certifier(config.certifier,chain.deme,server)

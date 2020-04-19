@@ -3,13 +3,12 @@ using PeaceVote.BraidChains: members, proposals, attest, voters
 using PeaceVote: KeyChain
 
 using PeaceFounder: PeaceFounderServer, PeaceFounderConfig, addtooken, ticket
-using PeaceFounder.BraidChains: Vote, Proposal, BraidChain, load
+using PeaceVote.BraidChains: Vote, Proposal, BraidChain, load
 using PeaceFounder
 
-using PeaceFounder.BraidChains: record, braid!, sync!
+using PeaceVote.BraidChains: record, braid!, sync!
 
 using Recruiters: register
-
 
 ### Perhaps I could just run julia in a process
 for dir in [homedir() * "/.demenet/"]
@@ -23,7 +22,6 @@ end
 uuid = Setup.uuid
 demespec = DemeSpec(uuid)
 deme = Deme(demespec)
-
 
 server = Signer(deme,"server")
 
@@ -41,7 +39,8 @@ for i in 1:2
     account = "account$i"
     keychain = KeyChain(deme,account)
     cert = Certificate(keychain.member.id,maintainer)
-    @show record(pfconfig,cert)
+    #@show record(pfconfig,cert)
+    @show record(braidchain,cert)
 end
 
 ### Registration with recruiters
@@ -59,7 +58,8 @@ register(invite,profile,account="account3")
     @async begin
         account = "account$i"
         keychain = KeyChain(deme,account)
-        braid!(pfconfig.braidchain,braidchain,keychain)
+        #braid!(pfconfig.braidchain,braidchain,keychain)
+        braid!(braidchain,keychain)
     end
 end
 
@@ -68,7 +68,8 @@ end
 keychain = KeyChain(deme,"account2")
 proposal = Proposal("Found peace for a change?",["yes","no","maybe"])
 cert = Certificate(proposal,keychain.member)
-record(pfconfig,cert) 
+#record(pfconfig,cert) 
+record(braidchain,cert) 
 
 sleep(1)
 
@@ -85,7 +86,8 @@ for i in 1:3
     
     option = Vote(index,rand(1:length(proposal.document.options)))
     cert = Certificate(option,braidchain,keychain)
-    record(pfconfig,cert)
+    #record(pfconfig,cert)
+    record(braidchain,cert)
 end
 
 # Now let's count 
