@@ -121,10 +121,10 @@ uuid = "84e01822-a062-59e4-8289-aa032edeecdd"
 version = "0.2.4"
 
 [[PeaceVote]]
-deps = ["DemeNet", "Pkg"]
-git-tree-sha1 = "b3a68915447231e3eeb67af68399382639d9c630"
+deps = ["DemeNet", "DiffieHellman", "Pkg", "Sockets", "SynchronicBallot", "Synchronizers"]
+git-tree-sha1 = "5579de01610550929605ea45bcb2e8013e391208"
 uuid = "129db535-0459-46ad-8d3d-b1fb8f318c74"
-version = "0.3.1"
+version = "0.3.2"
 
 [[Pkg]]
 deps = ["Dates", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "UUIDs"]
@@ -132,9 +132,9 @@ uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
 [[Polynomials]]
 deps = ["Intervals", "LinearAlgebra", "RecipesBase"]
-git-tree-sha1 = "a88e0eddef9202b651f4b60b37b59ca67bb49516"
+git-tree-sha1 = "19f1b9e3f27702309880b9ccb051287729af7db4"
 uuid = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
-version = "0.7.0"
+version = "0.8.0"
 
 [[Primes]]
 deps = ["Test"]

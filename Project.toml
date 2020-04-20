@@ -1,7 +1,7 @@
 name = "PeaceFounder"
 uuid = "916f7771-afe2-4319-943d-0e770c333432"
 authors = ["akels <akels14@gmail.com>"]
-version = "0.3.0"
+version = "0.3.1"
 
 [deps]
 DemeNet = "311d44f8-95d5-40c8-b71c-a916d7747227"
@@ -12,7 +12,7 @@ Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"
 
 [compat]
 DemeNet = "^0.1.2"
-PeaceVote = "^0.3.1"
+PeaceVote = "^0.3.2"
 Recruiters = "^0.1.2"
 julia = "1"
 
