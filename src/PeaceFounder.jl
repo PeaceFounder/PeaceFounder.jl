@@ -9,11 +9,11 @@ include("types.jl")
 include("serialization.jl")
 include("tools.jl")
 
-import PeaceVote.BraidChains: record
+import PeaceVote: record
 record(config::PeaceFounderConfig,data) = record(config.braidchain,data)
 
 
-import PeaceVote.BraidChains: sync!
+import PeaceVote: sync!
 sync!(chain::BraidChain,config::PeaceFounderConfig) = sync!(chain,config.braidchain.syncport)
 
 using DemeNet: datadir
@@ -41,7 +41,7 @@ function config(deme::Deme)
     return intent.document
 end
 
-import PeaceVote.BraidChains: BraidChain
+import PeaceVote: BraidChain
 BraidChain(config::PeaceFounderConfig,deme::Deme) = BraidChain(config.braidchain,deme)
 BraidChain(deme::Deme) = BraidChain(config(deme),deme)
 

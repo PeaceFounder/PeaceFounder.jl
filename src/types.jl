@@ -1,9 +1,10 @@
-using Base: UUID
-import Base.Dict
-import PeaceVote.BraidChains: BraiderConfig, RecorderConfig, BraidChainConfig
-import Recruiters: CertifierConfig
-using Sockets
 using DemeNet: ID, DemeID
+using Base: UUID, Dict
+using Sockets
+
+import Base.Dict
+import PeaceVote: BraiderConfig, RecorderConfig, BraidChainConfig
+import Recruiters: CertifierConfig
 
 
 struct Port
@@ -261,6 +262,4 @@ function PeaceFounderConfig(dict::Dict)
     return PeaceFounderConfig(braidchain,certifier,arecords)
 end
 
-
-export Port, PeaceFounderConfig, BraidChainConfig, CertifierConfig, RecorderConfig, BraiderConfig
 

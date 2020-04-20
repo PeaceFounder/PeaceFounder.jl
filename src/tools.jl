@@ -1,20 +1,18 @@
 
 using DemeNet: Signer, Deme, ID, DemeID, Certificate, serialize, deserialize, datadir, Profile, Intent
 using Base: UUID
-
+using Sockets # do I need it?
 #using ..Types: SystemConfig, PFID, BraidChain
 #using ..Braiders: Mixer, Braider
-using PeaceVote.BraidChains: BraidChain, BraidChainServer, record
+
 #Recorder, register
 #using ..Ledgers: serve # I could name it as ledger node or something
 #using ..DataFormat
-
+using PeaceVote: BraidChain, BraidChainServer, record
 using Recruiters: Certifier
 import Recruiters
-import Recruiters: ticket, addtooken
-#using PeaceVote.KeyChains: ticket ### Will be part of Recruiters.jl
 
-using Sockets # do I need it?
+import Recruiters: ticket, addtooken
 
 
 ### The configuration is stored in the ledger which can be transfered publically. One only needs to check that the configuration is signed by the server. So in the end one first downloads the ledger and then checks whether the configuration makes sense with serverid
@@ -22,8 +20,6 @@ using Sockets # do I need it?
 ### One should load system config with Deme. One thus would need to establish Ledger which thus would not require to have stuff. The constructor for Deme would be available here locally.
 
 ### Perhaps much better option would be to connect to the server over ssh since when one sets up the system one needs to have a key. We could use something like `scp` to copy a maintainerid and generate a server key executed by `julia "somefile.jl"` and returned that to a standart output. 
-
-using Sockets
 
 # One would write it in the setup file as
 # SERVER_ID = configure("pi@192.1.1.1",MAINTAINER_ID)

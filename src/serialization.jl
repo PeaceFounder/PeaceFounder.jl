@@ -3,7 +3,9 @@
 using DemeNet: Certificate, Intent, Signer, Deme
 import DemeNet: serialize, deserialize
 
-using PeaceVote.BraidChains: BraidChain, Ledger, getrecord, record!, readbootrecord, writebootrecord
+using PeaceVote: BraidChain
+using PeaceVote.BraidChains: getrecord, record!, readbootrecord, writebootrecord, Ledger
+
 
 # Directory could be obtained with a method. 
 
