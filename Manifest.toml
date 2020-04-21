@@ -3,6 +3,12 @@
 [[Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
+[[BinDeps]]
+deps = ["Compat", "Libdl", "SHA", "URIParser"]
+git-tree-sha1 = "12093ca6cdd0ee547c39b1870e0c9c3f154d9ca9"
+uuid = "9e28174c-4ba2-5203-b857-d8d62c4213ee"
+version = "0.8.10"
+
 [[BinaryProvider]]
 deps = ["Libdl", "SHA"]
 git-tree-sha1 = "5b08ed6036d9d3f0ee6369410b830f8873d4024c"
@@ -14,15 +20,31 @@ git-tree-sha1 = "5274a781a2e71cfb9a2083dfcd2ca5318716a660"
 uuid = "3a3ce9e8-98e7-11e9-0fa0-055639f146d3"
 version = "0.1.1"
 
+[[Compat]]
+deps = ["Base64", "Dates", "DelimitedFiles", "Distributed", "InteractiveUtils", "LibGit2", "Libdl", "LinearAlgebra", "Markdown", "Mmap", "Pkg", "Printf", "REPL", "Random", "Serialization", "SharedArrays", "Sockets", "SparseArrays", "Statistics", "Test", "UUIDs", "Unicode"]
+git-tree-sha1 = "ed2c4abadf84c53d9e58510b5fc48912c2336fbb"
+uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
+version = "2.2.0"
+
 [[CryptoGroups]]
 deps = ["BitConverter", "ECC", "Mods", "Paillier", "Primes", "Random"]
 git-tree-sha1 = "85c8ff8078d384a7d7c1ce22cc255f698731eed7"
 uuid = "bc997328-bedd-407e-bcd3-5758e064a52d"
 version = "0.1.2"
 
+[[CryptoSignatures]]
+deps = ["CryptoGroups", "Random"]
+git-tree-sha1 = "6d27f5ca22a87e7acc30cca60e7a637b96e04eaf"
+uuid = "35cc5888-0c46-470e-89c7-eafcaf79a1aa"
+version = "0.2.2"
+
 [[Dates]]
 deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
+
+[[DelimitedFiles]]
+deps = ["Mmap"]
+uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 
 [[DemeNet]]
 deps = ["DiffieHellman", "Pkg"]
@@ -97,6 +119,9 @@ uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 deps = ["Base64"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
 
+[[Mmap]]
+uuid = "a63ad114-7e13-5084-954f-fe012c677804"
+
 [[Mocking]]
 deps = ["ExprTools"]
 git-tree-sha1 = "916b850daad0d46b8c71f65f719c49957e9513ed"
@@ -114,11 +139,23 @@ git-tree-sha1 = "262b92184325959e231a93ec5acd61b29b20d237"
 uuid = "d8f48be2-8af9-45f0-b400-11a6372d221d"
 version = "0.3.1"
 
+[[Nettle]]
+deps = ["BinDeps", "BinaryProvider", "Libdl", "Test"]
+git-tree-sha1 = "f57e8e907faab4f55f9f164313a633509ac83e2c"
+uuid = "49dea1ee-f6fa-5aa6-9a11-8816cee7d4b9"
+version = "0.4.0"
+
 [[Paillier]]
 deps = ["Polynomials", "Primes", "Random"]
 git-tree-sha1 = "4da59ccc00548b8765b74909f7be4be998eab061"
 uuid = "84e01822-a062-59e4-8289-aa032edeecdd"
 version = "0.2.4"
+
+[[PeaceCypher]]
+deps = ["CryptoGroups", "CryptoSignatures", "DemeNet", "Nettle", "Random", "SecureIO"]
+git-tree-sha1 = "7d1ce803be52ad63ab1b6ec391dbfb98402521c1"
+uuid = "7743456c-e0c5-4477-a2b6-196c240b0368"
+version = "0.2.0"
 
 [[PeaceVote]]
 deps = ["DemeNet", "DiffieHellman", "Pkg", "Sockets", "SynchronicBallot", "Synchronizers"]
@@ -174,11 +211,29 @@ git-tree-sha1 = "d9adabd079828c167a96f6ac1bfce1ab0a758751"
 uuid = "c35d69d1-b747-5018-a192-25bc5e63c83d"
 version = "0.3.1"
 
+[[SecureIO]]
+deps = ["Nettle"]
+git-tree-sha1 = "983245bb187058eee0f27c8cdfee7b60d18e5b01"
+uuid = "ee77041e-65ec-469d-b516-892ca52996d6"
+version = "0.3.0"
+
 [[Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 
+[[SharedArrays]]
+deps = ["Distributed", "Mmap", "Random", "Serialization"]
+uuid = "1a1011a3-84de-559e-8e89-a11a2f7dc383"
+
 [[Sockets]]
 uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
+
+[[SparseArrays]]
+deps = ["LinearAlgebra", "Random"]
+uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+
+[[Statistics]]
+deps = ["LinearAlgebra", "SparseArrays"]
+uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [[SynchronicBallot]]
 deps = ["DiffieHellman", "Multiplexers", "Serialization", "Sockets"]
@@ -201,6 +256,12 @@ deps = ["Dates", "EzXML", "Mocking", "Printf", "RecipesBase", "Serialization", "
 git-tree-sha1 = "0f070959511602e90ac4a8fa1799746c95cc3c19"
 uuid = "f269a46b-ccf7-5d73-abea-4c690281aa53"
 version = "1.1.0"
+
+[[URIParser]]
+deps = ["Unicode"]
+git-tree-sha1 = "53a9f49546b8d2dd2e688d216421d050c9a31d0d"
+uuid = "30578b45-9adc-5946-b283-645ec420af67"
+version = "0.4.1"
 
 [[UUIDs]]
 deps = ["Random", "SHA"]

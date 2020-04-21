@@ -1,3 +1,5 @@
+import Pkg; Pkg.add("PeaceCypher")
+
 using DemeNet: DemeSpec, Deme, Signer, Certificate, Profile, serialize, deserialize
 using PeaceVote: KeyChain, record, braid!, sync!, Vote, Proposal, BraidChain, load, proposals, attest, voters
 using Recruiters: register
