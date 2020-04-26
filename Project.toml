@@ -1,7 +1,7 @@
 name = "PeaceFounder"
 uuid = "916f7771-afe2-4319-943d-0e770c333432"
 authors = ["akels <akels14@gmail.com>"]
-version = "0.3.2"
+version = "0.3.1"
 
 [deps]
 DemeNet = "311d44f8-95d5-40c8-b71c-a916d7747227"
