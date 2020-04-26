@@ -2,6 +2,9 @@ module PeaceFounder
 
 ### Internal modules
 #include("BraidChains/BraidChains.jl")
+import DemeNet
+import DemeNet: Plugin
+const plugin = Plugin[@__MODULE__]
 
 ### The rest of the code
 
@@ -41,9 +44,26 @@ function config(deme::Deme)
     return intent.document
 end
 
+### The initializer ###
+
+using DemeNet: AbstractInitializer
+
+struct Init <: AbstractInitializer 
+    deme::Deme
+end
+
+plugin(::Type{AbstractInitializer},deme::Deme) = Init(deme)
+DemeNet.init(x::Init,port::Dict) = init(x.deme,port)
+DemeNet.config(x::Init) = config(x.deme)
+DemeNet.updateconfig(x::Init) = updateconfig(x.deme)
+
+
 import PeaceVote: BraidChain
-BraidChain(config::PeaceFounderConfig,deme::Deme) = BraidChain(config.braidchain,deme)
-BraidChain(deme::Deme) = BraidChain(config(deme),deme)
+BraidChain(deme::Deme,config::PeaceFounderConfig) = BraidChain(config.braidchain,deme)
+BraidChain(deme::Deme) = BraidChain(config(deme),deme) ### This is piracy. 
+
+using PeaceVote: AbstractChain
+plugin(::Type{AbstractChain}, deme::Deme,config::PeaceFounderConfig) = BraidChain(deme,config)
 
 
 # function certify(chain::BraidChain,signer::Signer)

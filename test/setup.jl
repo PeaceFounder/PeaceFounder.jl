@@ -3,10 +3,9 @@
 using DemeNet: DemeSpec, Deme, Signer, save, DemeID
 using PeaceCypher
 using PeaceFounder: BraiderConfig, RecorderConfig, CertifierConfig, BraidChainConfig, PeaceFounderConfig, AddressRecord, Port, certify, serialize, deserialize, config
-using PeaceVote.BraidChains: BraidChain
+using PeaceVote: AbstractChain
 
-
-demespec = DemeSpec("PeaceDeme",:default,:PeaceCypher,:default,:PeaceCypher,:PeaceCypher)
+demespec = DemeSpec("PeaceDeme",:default,:PeaceCypher,:default,:PeaceCypher,:PeaceFounder)
 save(demespec) ### Necessary to connect with Mixer
 uuid = demespec.uuid
 deme = Deme(demespec)
@@ -34,12 +33,8 @@ certifierconfig = CertifierConfig(MAINTAINER_ID,SERVER_ID,TOOKEN_PORT,CERTIFIER_
 
 peacefounderconfig = PeaceFounderConfig(braidchainconfig,certifierconfig,AddressRecord[])
 
-
 serialize(deme,peacefounderconfig)
 certify(deme,maintainer)
 deserialize(deme,PeaceFounderConfig)
 
-braidchain = BraidChain(deme)
-
-
-#config(deme)
+braidchain = AbstractChain(deme)

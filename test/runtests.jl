@@ -1,10 +1,8 @@
-import Pkg; Pkg.add("PeaceCypher")
+import PeaceFounder 
 
-using DemeNet: DemeSpec, Deme, Signer, Certificate, Profile, serialize, deserialize
-using PeaceVote: KeyChain, record, braid!, sync!, Vote, Proposal, BraidChain, load, proposals, attest, voters
+using DemeNet: DemeSpec, Deme, Signer, Certificate, Profile
+using PeaceVote: KeyChain, record, braid!, sync!, Vote, Proposal, load, proposals, attest, voters, AbstractChain
 using Recruiters: register
-using PeaceFounder: PeaceFounderServer, PeaceFounderConfig, addtooken, ticket
-
 
 ### CleanUp ###
 
@@ -13,40 +11,54 @@ for dir in [homedir() * "/.demenet/"]
 end
 
 ### Setting up the system ###
-
 module Setup
 include("setup.jl") # defines deme and systemconfig
+include("serve.jl")
 end
 
-uuid = Setup.uuid
-demespec = DemeSpec(uuid)
+### Maintainer generates invites ###
+
+invites = []
+
+module Maintainer 
+
+import PeaceFounder
+
+using DemeNet: Signer, Deme, DemeSpec, AbstractInitializer, init, config
+using Recruiters: addtooken, ticket
+import ..Setup
+
+demespec = DemeSpec(Setup.uuid)
 deme = Deme(demespec)
-
-server = Signer(deme,"server")
-
-braidchain = BraidChain(deme)
-pfconfig = deserialize(braidchain,PeaceFounderConfig)
-system = PeaceFounderServer(pfconfig,braidchain,server)
-
-### Testing microservices ###
+initializer = AbstractInitializer(deme)
+pfconfig = config(initializer)
 
 maintainer = Signer(deme,"maintainer")
 
-for i in 1:2
-    account = "account$i"
-    keychain = KeyChain(deme,account)
-    cert = Certificate(keychain.member.id,maintainer)
-    @show record(braidchain,cert)
+import ..invites
+
+tookens = [121233,234324,123133]
+
+for tooken in tookens
+    addtooken(pfconfig,deme,tooken,maintainer)  ### Perhaps I could just extend that with recruiters!
+    invite = ticket(pfconfig,deme,tooken) 
+    ### One can send it, for example, over email
+    push!(invites,invite)
 end
 
-# Registration with recruiters
+end
 
-tooken = 123244
-addtooken(pfconfig,deme,tooken,maintainer)
-invite = ticket(pfconfig,deme,tooken) 
+### Registration with recruiters
 
-profile = Profile(Dict("uuid"=>11223344))
-register(invite,profile,account="account3")
+for i in 1:3
+    profile = Profile(Dict("uuid"=>i))    
+    invite = invites[i]
+    register(invite,profile,account="account$i")
+end
+
+demespec = DemeSpec(Setup.uuid)
+deme = Deme(demespec)
+braidchain = AbstractChain(deme)
 
 # Braiding 
 
@@ -66,6 +78,7 @@ cert = Certificate(proposal,keychain.member)
 record(braidchain,cert) 
 
 sleep(1)
+sync!(braidchain)
 
 loadedledger = load(braidchain)
 messages = attest(loadedledger,braidchain.deme.notary)
@@ -85,12 +98,7 @@ end
 
 # Now let's count 
 sleep(1)
+sync!(braidchain)
 
 @show tally = count(index,braidchain)
 
-# Let's test synchronization
-
-demesync = Deme(demespec)
-bcsync = BraidChain(demesync)
-sync!(bcsync,pfconfig)
-@show tally = count(index,bcsync)
