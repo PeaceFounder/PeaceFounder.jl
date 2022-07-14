@@ -1,5 +1,5 @@
 
-![](docs/src/logo.svg)
+![](https://raw.githubusercontent.com/PeaceFounder/PeaceFounder.github.io/master/assets/infra/logo.svg)
 
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://PeaceFounder.github.io/PeaceFounder.jl/stable)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://PeaceFounder.github.io/PeaceFounder.jl/dev)
