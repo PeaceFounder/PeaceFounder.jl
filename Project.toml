@@ -1,23 +1,17 @@
 name = "PeaceFounder"
-uuid = "916f7771-afe2-4319-943d-0e770c333432"
-authors = ["akels <akels14@gmail.com>"]
-version = "0.3.1"
+uuid = "e27653ee-9918-43bd-96c3-a19beeb55964"
+authors = ["Janis Erdmanis <janiserdmanis@protonmail.ch>"]
+version = "0.4.0"
 
 [deps]
-DemeNet = "311d44f8-95d5-40c8-b71c-a916d7747227"
-PeaceVote = "129db535-0459-46ad-8d3d-b1fb8f318c74"
-Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-Recruiters = "deefbfe4-5b57-4941-9cbb-7e0220485fa4"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+HistoryTrees = "6629d18c-a67a-486a-9b40-962f9d752038"
+Infiltrator = "5903a43b-9cc3-4c30-8d17-598619ec4e9b"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+Nettle = "49dea1ee-f6fa-5aa6-9a11-8816cee7d4b9"
+Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
 Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"
-
-[compat]
-DemeNet = "^0.1.2"
-PeaceVote = "^0.3.2"
-Recruiters = "^0.1.2"
-julia = "1"
-
-[extras]
-PeaceCypher = "7743456c-e0c5-4477-a2b6-196c240b0368"
-
-[targets]
-test = ["PeaceCypher"]
+StructTypes = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+UnicodePlots = "b8865327-cd53-5732-bb35-84acbb429228"
