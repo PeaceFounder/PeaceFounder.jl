@@ -2,7 +2,7 @@ using Test
 using Dates
 using PeaceFounder.Schedulers
 
-scheduler = Scheduler(; retry_interval = 3)
+scheduler = Scheduler(; retry_interval = 1)
 
 schedule!(scheduler, now() + Second(1))
 

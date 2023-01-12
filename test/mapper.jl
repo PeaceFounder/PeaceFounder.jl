@@ -2,19 +2,27 @@ using Test
 
 import PeaceFounder.Model
 import PeaceFounder.Mapper
-using PeaceFounder.Model: Crypto, gen_signer, pseudonym, TicketID, Member, Proposal, Ballot, Selection, generator, state, id, vote, seed, tally, approve, istallied
+using PeaceFounder.Model: Crypto, gen_signer, pseudonym, TicketID, Member, Proposal, Ballot, Selection, generator, state, id, vote, seed, tally, approve, istallied, Deme, hasher, HMAC, auth, token, isbinding
 
 import Dates: Dates, Date
 
 crypto = Crypto("SHA-256", "MODP", UInt8[1, 2, 3, 6])
 GUARDIAN = gen_signer(crypto)
+DEME = Deme("Community", id(GUARDIAN), crypto)
 
-Mapper.setup!(GUARDIAN)
+
+Mapper.setup!(DEME, GUARDIAN)
+RECRUIT_AUTHORIZATION_KEY = Mapper.get_recruit_key() # Similarly I could have a method for a recruit authorization key. 
+RECRUIT_HMAC = HMAC(RECRUIT_AUTHORIZATION_KEY, hasher(crypto))
 
 
-function enroll!(signer, token)
+function enroll(signer, ticketid, token)
 
-    admission = Mapper.seek_admission!(id(signer), token)
+    auth_code = auth(id(signer), token, hasher(signer))
+
+    # ---- evesdropers listening --------
+    
+    admission = Mapper.seek_admission(id(signer), ticketid, auth_code)
     
     commit = Mapper.get_chain_commit()
     g = generator(commit)
@@ -26,21 +34,43 @@ function enroll!(signer, token)
 end
 
 
-token = Mapper.submit_ticket!(TicketID("Alice"))
+function enlist_ticket(ticketid)
+
+    timestamp = Dates.now()
+    ticket_auth_code = auth(ticketid, timestamp, RECRUIT_HMAC)
+
+    # ---- evesdropers listening --------
+    
+    salt, salt_auth_code = Mapper.enlist_ticket(ticketid, timestamp, ticket_auth_code) # ouptut is sent to main server    
+
+    # ---- evesdropers listening --------
+
+    @test isbinding(ticketid, salt, salt_auth_code, RECRUIT_HMAC)  # done on the server
+    return token(ticketid, salt, RECRUIT_HMAC)
+end
+
+ticketid_alice = TicketID("Alice")
+token_alice = enlist_ticket(ticketid_alice)
+
+ticketid_bob = TicketID("Bob")
+token_bob = enlist_ticket(ticketid_bob)
+
+ticketid_eve = TicketID("Eve")
+token_eve = enlist_ticket(ticketid_eve)
+
+
 alice = gen_signer(crypto)
-access, ack = enroll!(alice, token)
+access_alice, ack = enroll(alice, ticketid_alice, token_alice)
 
-token = Mapper.submit_ticket!(TicketID("Bob"))
 bob = gen_signer(crypto)
-access, ack = enroll!(bob, token)
+access_bob, ack = enroll(bob, ticketid_bob, token_bob)
 
-token = Mapper.submit_ticket!(TicketID("Eve"))
 eve = gen_signer(crypto)
-access, ack = enroll!(eve, token)
+access_eve, ack = enroll(eve, ticketid_eve, token_eve)
 
 
-status = Mapper.get_ticket_status(TicketID("Alice")) # :registered, 
-admission = Mapper.get_ticket_admission(TicketID("Alice"))
+status = Mapper.get_ticket_status(ticketid_alice) # :registered, 
+admission = Mapper.get_ticket_admission(ticketid_alice)
 
 commit = Mapper.get_chain_commit()
 

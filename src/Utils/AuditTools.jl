@@ -1,5 +1,8 @@
 module AuditTools
 
+using ..Model: Transaction, Pseudonym, Proposal, Digest, Vote
+
+
 # BraidChain and BallotBox methods must be designed in a way to keep invariants for auditing.
 
 struct BraidChainArchive
@@ -14,8 +17,10 @@ struct BallotBoxArchive
 end
 
 
-
-
+"""
+Forms an archive of braidchain or ballotbox which can be sent over wire or audited.
+"""
+function archive end 
 
 
 """

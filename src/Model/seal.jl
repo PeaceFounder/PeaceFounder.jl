@@ -1,62 +1,80 @@
 """
-One to one mapping from a value to byte vector. Necessary to uniquelly hash an object.
+ToDo: a well specified encoding is essential here. Binary tree encoding may suffice here. More fancy approach would be to use a DER encoding. Meanwhile JSON shall be used.
 """
-function canonicalize(m::Member)
-    io = IOBuffer()
-    JSON3.write(io, m)
-    return take!(io)
-end
+function canonicalize end
 
-function canonicalize(v::Vote)
-    io = IOBuffer()
-    JSON3.write(io, v)
-    return take!(io)
-end
+# """
+# One to one mapping from a value to byte vector. Necessary to uniquelly hash an object.
+# """
+# function canonicalize(m::Member)
+#     io = IOBuffer()
+#     JSON3.write(io, m)
+#     return take!(io)
+# end
 
-function canonicalize(p::Proposal)
-    io = IOBuffer()
-    JSON3.write(io, p)
-    return take!(io)
-end
+# function canonicalize(v::Vote)
+#     io = IOBuffer()
+#     JSON3.write(io, v)
+#     return take!(io)
+# end
 
-
-function canonicalize(state::ChainState)
-    io = IOBuffer()
-    JSON3.write(io, state)
-    return take!(io)
-end
-
-function canonicalize(state::BallotBoxState)
-    io = IOBuffer()
-    JSON3.write(io, state)
-    return take!(io)
-end
-
-function canonicalize(admission::Admission)
-    io = IOBuffer()
-    JSON3.write(io, admission)
-    return take!(io)
-end
+# function canonicalize(p::Proposal)
+#     io = IOBuffer()
+#     JSON3.write(io, p)
+#     return take!(io)
+# end
 
 
-function canonicalize(promise::NonceCommitment)
-    io = IOBuffer()
-    JSON3.write(io, promise)
-    return take!(io)
-end
+# function canonicalize(state::ChainState)
+#     io = IOBuffer()
+#     JSON3.write(io, state)
+#     return take!(io)
+# end
+
+# function canonicalize(state::BallotBoxState)
+#     io = IOBuffer()
+#     JSON3.write(io, state)
+#     return take!(io)
+# end
+
+# function canonicalize(admission::Admission)
+#     io = IOBuffer()
+#     JSON3.write(io, admission)
+#     return take!(io)
+# end
 
 
-function canonicalize(lot::Lot)
-    io = IOBuffer()
-    JSON3.write(io, lot)
-    return take!(io)
-end
+# function canonicalize(promise::NonceCommitment)
+#     io = IOBuffer()
+#     JSON3.write(io, promise)
+#     return take!(io)
+# end
 
 
+# function canonicalize(lot::Lot)
+#     io = IOBuffer()
+#     JSON3.write(io, lot)
+#     return take!(io)
+# end
+
+
+# function canonicalize(receipt::CastReceipt)
+#     io = IOBuffer()
+#     JSON3.write(io, receipt)
+#     return take!(io)
+# end
+
+
+# digest could have a generic method with canonicalize. 
 
 digest(vote::Vote, hasher::Hash) = digest(canonicalize(vote), hasher)
 
 digest(proposal::Proposal, hasher::Hash) = digest(canonicalize(proposal), hasher)
+
+digest(record::CastRecord, hasher::Hash) = digest(receipt(record, hasher), hasher) # exception
+
+digest(receipt::CastReceipt, hasher::Hash) = digest(canonicalize(receipt), hasher)
+
 
 function body(proposal::Proposal)
     proposal = @set proposal.approval = nothing
@@ -108,6 +126,7 @@ verify(state::BallotBoxState, seal::Seal, crypto::Crypto) = verify(canonicalize(
 body(vote::Vote) = @set vote.approval = nothing
 
 
+# Should not use this approach
 function seal(vote::Vote, generator::Vector{UInt8}, signer::Signer)
 
     @assert vote.seq == seq(signer, vote.proposal) + 1
@@ -158,8 +177,6 @@ end
 
 
 
-
-
 #hash(bytes::Vector{UInt8}) = Nettle.digest("SHA3_256", bytes)
 function digest(data::Vector{UInt8}, hasher::Hash)
     return Digest(Nettle.digest("SHA3_256", data))
@@ -173,36 +190,3 @@ end
 function digest(x::Digest, y::Digest, hasher::Hash)
     return digest(UInt8[x.data..., y.data...], hasher)
 end
-
-
-
-# Needed for canonicalize method
-StructTypes.StructType(::Type{Pseudonym}) = StructTypes.Struct()
-StructTypes.StructType(::Type{Signature}) = StructTypes.Struct()
-StructTypes.StructType(::Type{Seal}) = StructTypes.Struct()
-
-StructTypes.StructType(::Type{Member}) = StructTypes.Struct()
-StructTypes.omitempties(::Type{Member}) = (:approval, :PoK)
-
-StructTypes.StructType(::Type{Proposal}) = StructTypes.Struct()
-StructTypes.omitempties(::Type{Proposal}) = (:approval,)
-
-StructTypes.StructType(::Type{Vote}) = StructTypes.Struct()
-StructTypes.omitempties(::Type{Vote}) = (:approval,)
-
-StructTypes.StructType(::Type{ChainState}) = StructTypes.Struct()
-StructTypes.StructType(::Type{Digest}) = StructTypes.Struct()
-
-StructTypes.StructType(::Type{Ballot}) = StructTypes.Struct()
-
-StructTypes.StructType(::Type{BallotBoxState}) = StructTypes.Struct()
-StructTypes.omitempties(::Type{BallotBoxState}) = (:tally,)
-
-StructTypes.StructType(::Type{NonceCommitment}) = StructTypes.Struct()
-
-StructTypes.StructType(::Type{Lot}) = StructTypes.Struct()
-StructTypes.omitempties(::Type{Lot}) = (:pulse,)
-
-
-
-

@@ -1,142 +1,132 @@
 module Client
 # Methods to interact with HTTP server
 
+using Infiltrator
+
 using ..Model
-using ..Model: Member, Pseudonym, Proposal, Vote, BraidChainSummary
-using HTTP: Router, Request, Response
+using ..Model: Member, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, Hash, AckConsistency, AckInclusion, CastAck, Deme, Signer
+using HTTP: Router, Request, Response, Handler, HTTP, iserror
+
 using JSON3
-
-using ..Model: base16encode, base16decodev
-
+using Dates
 
 
-function post(target, msg; body = [])
+using ..Parser: marshal, unmarshal
 
-    io = IOBuffer()
-    JSON3.write(io, msg)
+using ..Model: base16encode, base16decode
 
-    req = Request("POST", target, body, take!(io))
 
-    return req
+# A server client method for submitting a new ticket and receiving a token
+
+# hex2bytes 
+# bytes2hex
+
+post(route::String, target::String, body) = HTTP.post(route * target, body)
+put(route::String, target::String, body) = HTTP.put(route * target, body)
+
+
+function request(method::String, router::Router, target::String, body::Vector{UInt8})
+
+    request = Request("POST", target, [], body)
+    response = router(request)
+
+    return response
 end
 
 
-function get(target; body = [])
+request(method::String, route::String, target::String, body::Vector{UInt8}) = HTTP.request(method, route * target, body)
 
-    req = Request("GET", target, body)
 
-    return req
+post(route, target, body) = request("POST", route, target, body)
+put(route, target, body) = request("PUT", route, target, body)
+get(route, target) = request("GET", route, target, body)
+
+
+
+
+function enlist_ticket(router::Router, ticketid::TicketID, hmac::HMAC)
+
+    timestamp = Dates.now()
+    ticket_auth_code = Model.auth(ticketid, timestamp, hmac)
+    body = marshal((ticketid, timestamp, ticket_auth_code))
+
+    response = post(router, "/tickets", body)
+
+    @assert !iserror(response)
+
+    salt, salt_auth_code = unmarshal(response.body, Tuple{Vector{UInt8}, Digest})
+
+    @assert isbinding(ticketid, salt, salt_auth_code, hmac)
+
+    return Model.token(ticketid, salt, hmac)
 end
 
 
-# Parametrization with regards to type is somewhat controversial. It's not always the case for new type to be created.
-post_member(router::Router, member::Member) = post("/members", member) |> router
 
-function get_member_list(router::Router)
+function seek_admission(router::Router, id::Pseudonym, ticketid::TicketID, token::Digest, hasher::Hash)
 
-    resp = get("/members") |> router
+    auth_code = Model.auth(id, token, hasher)
+    body = marshal((id, auth_code))
+    tid = bytes2hex(bytes(ticketid))
+    response = put(router, "/tickets/$tid", body)
 
-    list = JSON3.read(resp.body, Vector{Tuple{String, Pseudonym}})
+    @assert !iserror(response)
 
-    return list
+    admission = unmarshal(response.body, Admission)
+
+    #@assert Model.verify(admission, crypto)
+    #@assert id == Model.id(admission)
+
+    return admission # A deme file is used to verify 
 end
 
 
 
-function get_member(router::Router, id::Pseudonym)
-    
-    resp = get("/members/" * base16encode(id)) |> router
-
-    member = JSON3.read(resp.body, Member)
-
-    return member
-end
-
-"""
-Registers a member if possible. Possible error states:
-
-    - server not reachable
-    - invalid bare state
-    - invalid admission
-    - no reply from server on success (In this case member checks server on /members/{id} if registration was succesfull)
-"""
-function enroll_member(router::Router, admission::Admission, signer::Signer)
-
-    summary = Client.get_braidchain_summary(ROUTER)
-    # verification of the state could be added here
-    @assert verify(summary.state)
-    member = Member(admission, generator(summary), alice)
-    newstate, oldtreehash = Client.post_member(ROUTER, member)
-    @assert verify(member, oldtreehash, newstate) # 
-
-    # Both states can be kept locally to keep the server accountable
-    return
+struct CastGuard
+    proposal::Proposal
+    ack_proposal::AckInclusion
+    vote::Vote
+    ack_cast::CastAck # this also would contain a seed
+    ack_integrity::Vector{AckConsistency}
 end
 
 
-function get_admission(router::Router, id::Pseudonym, tooken::BigInt) end
+struct EnrollGuard
+    admission::Union{Admission, Nothing}
+    enrollee::Union{Member, Nothing}
+    ack::Union{AckInclusion, Nothing}
+end
 
-function enroll_member(router::Router, tooken::BigInt, signer::Signer)
+EnrollGuard() = EnrollGuard(nothing, nothing, nothing)
 
-    admission = get_admission(router, pseudonym(signer), tooken) # could be repeated as long as tooken remains the same
-
-    enroll_member(router::Router, admission, signer)
-
-    return
+mutable struct Voter # mutable because it also needs to deal with storage
+    deme::Deme
+    signer::Signer
+    guard::EnrollGuard
+    casts::Vector{CastGuard}
+    proposals::Vector{Tuple{Int, Proposal}}
 end
 
 
-function post_proposal(router::Router, proposal::Proposal) end
+Model.id(voter::Voter) = Model.id(voter.signer)
 
 
-function get_proposals(router::Router; status=nothing) end
+function Voter(deme::Deme) 
+    signer = Model.gen_signer(deme.crypto)
+    return Voter(deme, signer, EnrollGuard(), CastGuard[], Tuple{Int, Proposal}[])
+end
 
-function get_proposal(router::Router, pid::UUID) end
-
-
-
-function update_proposal(router::Router, proposal::Proposal) end
-#function update_proposal(router::Router, proposal::Proposal, tooken::Tooken) end
+#router = connect(route, gate, hasher)
 
 
-function get_votes(router::Router, pid::UUID) end
+function enroll!(voter::Voter, router, ticketid, token) # EnrollGuard 
+    # checks that 
+end
 
 
-function get_vote(router::Router, pid::UUID, n::Int) end # It's an authetificated chain
-
-
-function post_vote(router::Router, vote::Vote) end 
-
-function get_result(router::Router, pid::UUID) end
-
-
-# Returns the length of the cahin. A tree hash as well. Number of memebers and proposals. Some other statistics.
-function get_braidchain_summary(router::Router) 
-    resp = get("/braidchain") |> router
-    summary = JSON3.read(resp.body, BraidChainSummary)
-    return summary
-end 
-
-
-function get_braidchain_element(router::Router, n::Int) end # This is where different Transaction types would need to be filtered out. A type field could be suitable here.
-
-
-# Server methods when interacting with server. 
-
-
-function get_braider_summary(router::Router) end # Available summary before athetification
-
-
-function post_braider_job(req::Request, braidjob) end
-#function post_braider_job(req::Request, tooken::Tooken) end
-
-function get_braider_job_summary(router::Router) end # Note that jobs would contain entries available after authetification
-
-
-function get_braider_job(router::Router, jobid::UUID) end
-
-
-
+function enroll!(voter::Voter, router) # For continuing from the last place
+    # something else
+end
 
 
 

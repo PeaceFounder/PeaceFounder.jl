@@ -1,4 +1,6 @@
 using Base: UUID
+using Dates: DateTime
+
 
 struct Ballot
     options::Vector{String}
@@ -49,9 +51,9 @@ struct Proposal <: Transaction
     ballot::Ballot
     open::DateTime
     closed::DateTime
-    collector::Pseudonym # 
+    collector::Union{Pseudonym, Nothing} # 
     
-    state::ChainState
+    state::Union{ChainState, Nothing}
     approval::Union{Seal, Nothing} 
 
     Proposal(uuid::UUID, summary::String, description::String, ballot::Ballot, open::DateTime, closed::DateTime, collector::Pseudonym, state::ChainState, approval::Union{Seal, Nothing}) = new(uuid, summary, description, ballot, open, closed, collector, state, approval)
@@ -159,10 +161,10 @@ end
 
 isbinding(vote::Vote, proposal::Proposal, crypto::Crypto) = vote.proposal == digest(proposal, hasher(crypto))
 
-isbinding(vote::Vote, spine::Vector{Digest}, crypto::Crypto) = digest(vote, hasher(crypto)) in spine
+
+isbinding(record, spine::Vector{Digest}, crypto::Crypto) = isbinding(record, spine, hasher(crypto))
 
 pseudonym(vote::Vote) = pseudonym(vote.approval)
-
 
 
 struct BallotBoxState
@@ -170,9 +172,10 @@ struct BallotBoxState
     index::Int
     root::Digest
     tally::Union{Nothing, Tally} 
+    view::Union{Nothing, BitVector} # 
 end
 
-BallotBoxState(seed::Digest, index::Int, root::Nothing, tally::Nothing) = BallotBoxState(seed, index, Digest(), tally)
+BallotBoxState(seed::Digest, index::Int, root::Nothing, tally::Nothing, view::Nothing) = BallotBoxState(seed, index, Digest(), tally, view)
 
 index(state::BallotBoxState) = state.index
 root(state::BallotBoxState) = state.root
@@ -187,19 +190,53 @@ istallied(state::BallotBoxState) = !isnothing(state.tally)
 istallied(commit::Commit{BallotBoxState}) = istallied(state(commit))
 
 
+
+struct CastRecord
+    vote::Vote
+    timestamp::DateTime
+end
+
+
+struct CastReceipt
+    vote::Digest
+    timestamp::DateTime
+end
+
+receipt(record::CastRecord, hasher::Hash) = CastReceipt(digest(record.vote, hasher), record.timestamp)
+
+isbinding(receipt::CastReceipt, ack::AckInclusion, hasher::Hash) = digest(receipt, hasher) == leaf(ack)
+
+isbinding(receipt::CastReceipt, spine::Vector{Digest}, hasher::Hash) = digest(receipt, hasher) in spine
+isbinding(record::CastRecord, spine::Vector{Digest}, hasher::Hash) = isbinding(receipt(record, hasher), spine, hasher)
+
+# A good place to also reply with a blind signature here for a proof of pariticpation
+struct CastAck
+    receipt::CastReceipt
+    ack::AckInclusion
+end
+
+id(ack::CastAck) = id(ack.ack)
+
+function verify(ack::CastAck, crypto::Crypto)
+    isbinding(ack.receipt, ack.ack, hasher(crypto)) || return false
+    return verify(ack.ack, crypto)
+end
+
+
 mutable struct BallotBox
     proposal::Proposal
     voters::Set{Pseudonym} # better than members
     collector::Pseudonym
     seed::Union{Digest, Nothing}
     crypto::Crypto # on the other hand the inclusion of a vote should be binding enough as it includes proposal hash.
-    ledger::Vector{Vote}
+    queue::Vector{Vote}
+    ledger::Vector{CastRecord}
     tree::HistoryTree
     commit::Union{Commit{BallotBoxState}, Nothing}
 end
 
 
-BallotBox(proposal::Proposal, voters::Set{Pseudonym}, collector::Pseudonym, crypto::Crypto) = BallotBox(proposal, voters, collector, nothing, crypto, Vote[], HistoryTree(Digest, hasher(crypto)), nothing)
+BallotBox(proposal::Proposal, voters::Set{Pseudonym}, collector::Pseudonym, crypto::Crypto) = BallotBox(proposal, voters, collector, nothing, crypto, Vote[], CastRecord[], HistoryTree(Digest, hasher(crypto)), nothing)
 
 
 generator(ballotbox::BallotBox) = generator(ballotbox.proposal)
@@ -210,9 +247,9 @@ members(ballotbox) = ballotbox.voters
 ledger(ballotbox::BallotBox) = ballotbox.ledger
 spine(ballotbox::BallotBox) = ballotbox.tree.d # 
 
-Base.length(ballotbox::BallotBox) = length(ledger(ballotbox))
+Base.length(ballotbox::BallotBox) = length(ledger(ballotbox)) + length(ballotbox.queue)
 
-index(ballotbox::BallotBox) = length(ballotbox)
+index(ballotbox::BallotBox) = length(ledger(ballotbox))
 
 seed(ballotbox::BallotBox) = ballotbox.seed
 
@@ -221,18 +258,23 @@ root(ballotbox::BallotBox, N::Int) = root(ballotbox.tree, N)
 root(ballotbox::BallotBox) = root(ballotbox.tree)
 
 record(ballotbox::BallotBox, N::Int) = ledger(ballotbox)[N]
+receipt(ballotbox::BallotBox, N::Int) = receipt(record(ballotbox, N), hasher(ballotbox.crypto))
+
 
 commit(ballotbox::BallotBox) = !isnothing(ballotbox.commit) ? ballotbox.commit : error("commitment not defined")
 
 
-selections(votes::Vector{Vote}) = (i.selection for i in votes) # Note that dublicates are removed at this stage
+selections(votes::Vector{CastRecord}) = (i.vote.selection for i in votes) # Note that dublicates are removed at this stage
+tallyview(votes::Vector{CastRecord}) = BitVector(true for i in votes) 
+
 
 tally(ballotbox::BallotBox) = tally(ballotbox.proposal.ballot, selections(ledger(ballotbox)))
+tallyview(ballotbox::BallotBox) = tallyview(ballotbox.ledger)
+
 
 istallied(ballotbox::BallotBox) = istallied(ballotbox.commit)
 
 set_seed!(ballotbox::BallotBox, seed::Digest) = ballotbox.seed = seed;
-
 
 
 function ack_leaf(ballotbox::BallotBox, index::Int) 
@@ -244,8 +286,10 @@ function ack_leaf(ballotbox::BallotBox, index::Int)
     return AckInclusion(proof, commit(ballotbox))
 end
 
-isbinding(vote::Vote, ack::AckInclusion{BallotBoxState}, crypto::Crypto) = digest(vote, crypto) == leaf(ack)
+#isbinding(vote::Vote, ack::AckInclusion{BallotBoxState}, crypto::Crypto) = digest(vote, crypto) == leaf(ack)
 
+
+isbinding(vote::Vote, ack::CastAck, crypto::Crypto) = digest(vote, crypto) == ack.receipt.vote
 
 function ack_root(ballotbox::BallotBox, N::Int) 
 
@@ -257,13 +301,23 @@ function ack_root(ballotbox::BallotBox, N::Int)
 end
 
 
+function ack_cast(ballotbox::BallotBox, N::Int)
+    
+    ack = ack_leaf(ballotbox, N)
+    _receipt = receipt(ballotbox, N)
+
+    return CastAck(_receipt, ack)    
+end
+
+
+
 commit_index(ballotbox::BallotBox) = index(commit(ballotbox))
 commit_state(ballotbox::BallotBox) = state(commit(ballotbox))
 
-function Base.push!(ballotbox::BallotBox, vote::Vote) 
+function Base.push!(ballotbox::BallotBox, record::CastRecord) 
     
-    push!(ballotbox.tree, digest(vote, ballotbox.crypto))
-    push!(ballotbox.ledger, vote)
+    push!(ballotbox.tree, digest(record, ballotbox.crypto))
+    push!(ballotbox.ledger, record)
 
     return
 end
@@ -282,39 +336,101 @@ function state(ballotbox::BallotBox; with_tally::Union{Nothing, Bool} = nothing)
 
     if with_tally
         _tally = tally(ballotbox)
+        _view = tallyview(ballotbox)
     else
         _tally = nothing
+        _view = nothing
     end
 
-    return BallotBoxState(seed(ballotbox), index(ballotbox), root(ballotbox), _tally)
+    return BallotBoxState(seed(ballotbox), index(ballotbox), root(ballotbox), _tally, _view)
 end
 
 
 
-function record!(ballotbox::BallotBox, vote::Vote, crypto::Crypto)
 
-    N = findfirst(==(vote), ledger(ballotbox))
+function get_dublicate_index(ballotbox::BallotBox, vote::Vote)
+
+    N = findfirst(==(vote), (i.vote for i in ledger(ballotbox)))
     !isnothing(N) && return N
 
+    M = findfirst(==(vote), ballotbox.queue)
+    !isnothing(M) && return M + length(ledger(ballotbox))
+    
+    return
+end
+
+
+
+
+function validate(ballotbox::BallotBox, vote::Vote)
+    
     @assert isconsistent(vote.selection, ballotbox.proposal.ballot)
-    @assert isbinding(vote, ballotbox.proposal, crypto) # isbinding(proposal(ballotbox), vote, crypto) 
+    @assert isbinding(vote, ballotbox.proposal, ballotbox.crypto) # isbinding(proposal(ballotbox), vote, crypto) 
     @assert pseudonym(vote) in members(ballotbox)
 
-    @assert verify(vote, generator(ballotbox), crypto)
+    @assert verify(vote, generator(ballotbox), ballotbox.crypto)
 
-    push!(ballotbox, vote)
+    return
+end
+
+
+
+function record!(ballotbox::BallotBox, vote::Vote)
+
+    N = get_dublicate_index(ballotbox, vote)
+    isnothing(N) || return N
+    
+    validate(ballotbox, vote)
+
+    push!(ballotbox.queue, vote)
+
     N = length(ballotbox) # here it is important to have a proper length of the data!
     
     return N
 end
 
-function commit!(ballotbox::BallotBox, signer::Signer; with_tally::Union{Nothing, Bool} = nothing)
+
+function record!(ballotbox::BallotBox, record::CastRecord)
+
+    @assert length(ballotbox.queue) == 0 "BallotBox have uncommited votes."
+
+    (; vote ) = record
+
+    N = get_dublicate_index(ballotbox, vote)
+    isnothing(N) || return N
+
+    validate(ballotbox, vote)
+
+    push!(ballotbox, record)
+
+    N = length(ballotbox) # here it is important to have a proper length of the data!
+    
+    return N
+end
+
+
+
+function commit!(ballotbox::BallotBox, timestamp::DateTime, signer::Signer; with_tally::Union{Nothing, Bool} = nothing)
+
+    # while commit! no changes to ballotbox allowed. It's up to user to put locks in place.
+
+    for vote in ballotbox.queue
+
+        # an ideal place to form a blind signature on the user's request.
+        record = CastRecord(vote, timestamp)
+        push!(ballotbox, record)
+        
+    end
+
+    resize!(ballotbox.queue, 0)
 
     _state = state(ballotbox; with_tally)
     ballotbox.commit = Commit(_state, seal(_state, signer))
 
     return
 end
+
+commit!(ballotbox::BallotBox, signer::Signer; with_tally::Union{Nothing, Bool} = nothing) = commit!(ballotbox, Dates.now(), signer; with_tally)
 
 
 
@@ -351,7 +467,7 @@ function record!(station::PollingStation, uuid::UUID, vote::Vote)
     
     bbox = ballotbox(station, uuid)
 
-    return record!(bbox, vote, station.crypto)
+    return record!(bbox, vote)
 end
 
 
@@ -383,10 +499,12 @@ commit(station::PollingStation, uuid::UUID) = commit(ballotbox(station, uuid))
 
 ack_leaf(station::PollingStation, uuid::UUID, N::Int) = ack_leaf(ballotbox(station, uuid), N)
 ack_root(station::PollingStation, uuid::UUID, N::Int) = ack_root(ballotbox(station, uuid), N)
-
+ack_cast(station::PollingStation, uuid::UUID, N::Int) = ack_cast(ballotbox(station, uuid), N)
 
 record(station::PollingStation, uuid::UUID, N::Int) = record(ballotbox(station, uuid), N)
 spine(station::PollingStation, uuid::UUID) = spine(ballotbox(station, uuid))
+
+receipt(station::PollingStation, uuid::UUID, N::Int) = receipt(ballotbox(station, uuid), N)
 
 ledger(station::PollingStation, uuid::UUID) = ledger(ballotbox(station, uuid))
 

@@ -3,7 +3,7 @@ using Test
 import Sockets
 import PeaceFounder.Model
 
-import .Model: Crypto, gen_signer, pseudonym, BraidChain, commit!, TokenRecruiter, PollingStation, TicketID, add!, id, admit!, commit, verify, generator, Member, approve, record!, ack_leaf, isbinding, roll, peers, members, state, Proposal, add!, vote, Ballot, Selection, uuid, record, spine, tally, BeaconClient, Dealer, charge_nonces!, pulse_timestamp, nonce_promise, schedule!, next_job, pass!, draw, seed, set_seed!
+import .Model: Crypto, gen_signer, pseudonym, BraidChain, commit!, TokenRecruiter, PollingStation, TicketID, add!, id, admit!, commit, verify, generator, Member, approve, record!, ack_leaf, isbinding, roll, peers, members, state, Proposal, vote, Ballot, Selection, uuid, record, spine, tally, BeaconClient, Dealer, charge_nonces!, pulse_timestamp, nonce_promise, schedule!, next_job, pass!, draw, seed, set_seed!, ack_cast, hasher, HMAC, enlist!, token, auth
 
 
 crypto = Crypto("SHA-256", "MODP", UInt8[1, 2, 3, 6])
@@ -14,7 +14,9 @@ BRAID_CHAIN = BraidChain(id(GUARDIAN), crypto)
 # an alternative is making the first transaction a Manifest
 commit!(BRAID_CHAIN, GUARDIAN)
 
-RECRUITER = TokenRecruiter(GUARDIAN)
+RECRUIT_AUTHORIZATION_KEY = UInt8[1, 2, 3, 6, 7, 8]
+RECRUIT_HMAC = HMAC(RECRUIT_AUTHORIZATION_KEY, hasher(crypto))
+RECRUITER = TokenRecruiter(GUARDIAN, RECRUIT_AUTHORIZATION_KEY)
 
 POLLING_STATION = PollingStation(crypto)
 
@@ -27,9 +29,13 @@ record!(BRAID_CHAIN, promises)
 # If there are no elements in the chain this errors. 
 # as well as asking for a root, leaf elements.
 
-function enroll!(signer, token)
+function enroll(signer, ticketid, token)
 
-    admission = admit!(RECRUITER, id(signer), token)
+    auth_code = auth(id(signer), token, hasher(signer))
+
+    # ---- evesdropers listening --------
+
+    admission = admit!(RECRUITER, id(signer), ticketid, auth_code)
     @test verify(admission, crypto)
     _commit = commit(BRAID_CHAIN)
     @test id(_commit) == id(GUARDIAN)
@@ -43,10 +49,33 @@ function enroll!(signer, token)
     return access, ack
 end
 
+function enlist(ticketid)
 
-token = add!(RECRUITER, TicketID("Alice"))
+    timestamp = Dates.now()
+    ticket_auth_code = auth(ticketid, timestamp, RECRUIT_HMAC)
+
+    # ---- evesdropers listening --------
+    
+    salt, salt_auth_code = enlist!(RECRUITER, ticketid, timestamp, ticket_auth_code) # ouptut is sent to main server    
+
+    # ---- evesdropers listening --------
+    
+    @test isbinding(ticketid, salt, salt_auth_code, RECRUIT_HMAC)  # done on the server
+    return token(ticketid, salt, RECRUIT_HMAC)    
+end
+
+
+ticketid_alice = TicketID("Alice")
+token_alice = enlist(ticketid_alice)
+
+ticketid_bob = TicketID("Bob")
+token_bob = enlist(ticketid_bob)
+
+ticketid_eve = TicketID("Eve")
+token_eve = enlist(ticketid_eve)
+
 alice = gen_signer(crypto)
-access, ack = enroll!(alice, token)
+access, ack = enroll(alice, ticketid_alice, token_alice)
 
 @test isbinding(access, ack, crypto) # true if acknolwedgemnt is a witness for access; perhaps iswitness could be a better one
 @test id(ack) == id(GUARDIAN)
@@ -63,15 +92,11 @@ access, ack = enroll!(alice, token)
 @test pseudonym(access) in members(BRAID_CHAIN)
 
 
-token = add!(RECRUITER, TicketID("Bob"))
 bob = gen_signer(crypto)
-access, ack = enroll!(bob, token)
+access, ack = enroll(bob, ticketid_bob, token_bob)
 
-
-token = add!(RECRUITER, TicketID("Eve"))
 eve = gen_signer(crypto)
-access, ack = enroll!(eve, token)
-
+access, ack = enroll(eve, ticketid_eve, token_eve)
 
 ### Now I have a three members
 
@@ -134,7 +159,8 @@ commit!(POLLING_STATION, uuid(proposal), GUARDIAN)
 
 @test verify(commit(POLLING_STATION, uuid(proposal)), crypto)
 
-ack = ack_leaf(POLLING_STATION, uuid(proposal), N)
+#ack = ack_leaf(POLLING_STATION, uuid(proposal), N)
+ack = ack_cast(POLLING_STATION, uuid(proposal), N)
 
 @test isbinding(v, ack, crypto)
 @test id(ack) == id(GUARDIAN)
@@ -149,8 +175,9 @@ record!(POLLING_STATION, uuid(proposal), v)
 commit!(POLLING_STATION, uuid(proposal), GUARDIAN)
 
 
-@test record(POLLING_STATION, uuid(proposal), 3) == v
-@test isbinding(v, spine(POLLING_STATION, uuid(proposal)), crypto)
+_record = record(POLLING_STATION, uuid(proposal), 3)
+@test _record.vote == v
+@test isbinding(_record, spine(POLLING_STATION, uuid(proposal)), crypto)
 
 r = tally(POLLING_STATION, uuid(proposal)) 
 

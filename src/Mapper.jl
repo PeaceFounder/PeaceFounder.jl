@@ -4,13 +4,14 @@ module Mapper
 using Infiltrator
 
 import Sockets
-import Dates
+import Dates: Dates, DateTime
 import ..Schedulers: Schedulers, Scheduler
 
 using ..Model
-using ..Model: Crypto, gen_signer, pseudonym, BraidChain, TokenRecruiter, PollingStation, TicketID, Member, Proposal, Ballot, Selection, Transaction, Signer, Dealer, BraidBroker, Pseudonym, Vote, id
+using ..Model: Crypto, gen_signer, pseudonym, BraidChain, TokenRecruiter, PollingStation, TicketID, Member, Proposal, Ballot, Selection, Transaction, Signer, Dealer, BraidBroker, Pseudonym, Vote, id, Deme, Digest, Admission
 using Base: UUID
 
+const DEME = Ref{Deme}()
 
 const GUARDIAN = Ref{Signer}()
 const RECRUITER = Ref{TokenRecruiter}()
@@ -98,14 +99,17 @@ function tally_process_loop()
 end
 
 
-function setup!(guardian::Signer)
+function setup!(deme::Deme, guardian::Signer)
 
     crypto = guardian.spec
+
+    DEME[] = deme
 
     GUARDIAN[] = guardian
     BRAID_CHAIN[] = BraidChain(id(guardian), crypto)
 
-    RECRUITER[] = TokenRecruiter(guardian)
+    recruiter_auth_key = rand(UInt8, 16) # For a simple access
+    RECRUITER[] = TokenRecruiter(guardian, recruiter_auth_key)
     
     beacon = Model.BeaconClient(id(guardian), crypto, Sockets.ip"0.0.0.0") # ToDo
     DEALER[] = Dealer(crypto, beacon; delay = 5)
@@ -136,19 +140,22 @@ end
 #gen_token!(form::FormID) = Model.add!(RECRUITER[], form)
 # returns a tooken
 # submit_ticket could also reset token if it is expiring
-submit_ticket!(ticketid::TicketID; expiration_time = nothing) = Model.add!(RECRUITER[], ticketid)
-delete_ticket!(ticketid::TicketID) = Model.remove!(RECRUITER[], ticketid) # 
+get_recruit_key() = Model.key(RECRUITER[])
+
+enlist_ticket(ticketid::TicketID, timestamp::DateTime, auth_code::Digest; expiration_time = nothing) = Model.enlist!(RECRUITER[], ticketid, timestamp, auth_code)
+#delete_ticket!(ticketid::TicketID) = Model.remove!(RECRUITER[], ticketid) # 
+
 get_ticket_ids() = Model.ticket_ids(RECRUITER[])
-get_ticket_status(ticketid::TicketID) = Model.isadmitted(RECRUITER[], ticketid)
-get_ticket_admission(ticketid::TicketID) = Model.admission(RECRUITER[], ticketid)
+get_ticket_status(ticketid::TicketID) = Model.isadmitted(ticketid, RECRUITER[])
+get_ticket_admission(ticketid::TicketID) = Model.select(Admission, ticketid, RECRUITER[])
 
 
-seek_admission!(id::Pseudonym, token) = Model.admit!(RECRUITER[], id, token)
-get_admission(id::Pseudonym) = RECRUITER[][id]
+seek_admission(id::Pseudonym, ticketid::TicketID, auth_code::Digest) = Model.admit!(RECRUITER[], id, ticketid, auth_code)
+get_admission(id::Pseudonym) = Model.select(Admission, id, RECRUITER[])
 list_admissions() = [i.admission for i in RECRUITER[].tickets]
 
 get_chain_roll() = Model.roll(BRAID_CHAIN[])
-get_member(_id::Pseudonym) = filter(x -> Model.id(x) == _id, list_members())[1]
+get_member(_id::Pseudonym) = filter(x -> Model.id(x) == _id, list_members())[1] # Model.select
 
 
 get_chain_commit() = Model.commit(BRAID_CHAIN[])

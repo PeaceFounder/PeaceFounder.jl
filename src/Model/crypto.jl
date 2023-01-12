@@ -10,6 +10,7 @@ Digest() = Digest(UInt8[])
 
 Base.:(==)(x::Digest, y::Digest) = x.data == y.data
 
+bytes(digest::Digest) = digest.data
 
 struct Hash 
     spec::String
@@ -72,6 +73,10 @@ id(signer::Signer) = signer.pbkey
 
 pseudonym(signer::Signer, generator::Vector{UInt8}) = pseudonym(signer) # ToDo
 
+crypto(signer::Signer) = signer.spec
+hasher(signer::Signer) = hasher(crypto(signer))
+
+
 function gen_signer(crypto::Crypto) 
     return Signer(crypto, Pseudonym(rand(UInt8, 4)), UInt8[1, 2, 3, 4])
 end
@@ -102,6 +107,8 @@ struct Seal
     pbkey::Pseudonym
     sig::Signature
 end
+
+Seal(id::Pseudonym, r, s) = Seal(id, Signature(r, s))
 
 Base.:(==)(x::Seal, y::Seal) = x.pbkey == y.pbkey && x.sig == y.sig
 
@@ -156,3 +163,15 @@ id(ack::AckConsistency) = id(ack.commit)
 commit(ack::AckConsistency) = ack.commit
 
 verify(ack::AckConsistency, crypto::Crypto) = HistoryTrees.verify(ack.proof, root(ack.commit), index(ack.commit); hash = hasher(crypto)) && verify(commit(ack), crypto)
+
+
+struct HMAC
+    key::Vector{UInt8}
+    hasher::Hash
+end
+
+hasher(hmac::HMAC) = hmac.hasher
+
+digest(bytes::Vector{UInt8}, hmac::HMAC) = digest(UInt8[bytes..., hmac.key...], hasher(hmac))
+
+key(hmac::HMAC) = hmac.key

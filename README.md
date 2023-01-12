@@ -1,18 +1,18 @@
 # PeaceFounder.jl
 
-- Peacefounder evoting system is designed around the shuffling of voters rather than votes and is a foundation that enables full public auditability and running all types of ballots one can imagine.
+- PeaceFounder e-voting system is designed around the shuffling of voters rather than votes. It is a foundation that enables full public auditability and running all types of ballots one can imagine.
 - Preferential voting, voting with a budget constraint, splitting long ballots in shards and using statistics to infer results, or organically changing representatives by changing a vote during a midterm is in the scope of the project.
 - The current focus is a REST API that organisations could easily integrate to become more transparent and trustworthy for internally run ballots.
 
-## Easally adaptable for your needs
+## Easily adaptable to your needs
 
-A niche I am targeting is already existing homepages of different kinds of organisations that perhaps now use some internal remote voting solution that could be prone to mistrust due to manipulation and want to become more transparent and trustworthy. 
+A niche I am targeting is already existing homepages of different kinds of organisations that may now use some internal remote voting solution that could be prone to mistrust due to manipulation and want to become more transparent and trustworthy. 
 
-- A member willing to participate in voting would simply capture a QR code from the organisation homepage generated with the help of REST API containing a member identification code at the organisation and a token, which would automatically register it for voting.
+- A member willing to participate in voting would capture a QR code from the organisation homepage generated with the help of REST API containing a member identification code at the organisation and a token, which would automatically register it for voting.
 - Peacfounder's goal is to stay out of politics. That way, each organisation can decide upon the procedures by which a proposal is given for everyone to be voted upon themselves. Because peacfounder votes are encoded into plaintext, many ballot types are possible. 
-- When a proposal is finalised, voter signs it with relative generator encoded into the proposal and sends it to ballotbox for inclusion. 
-- Every member receives all registered proposals to the peacefounder through REST API, all in order with strong integrity guarantees. Similarly to assert vote inclusion in finaly tally each voter receives inclusion proof which can be asserted publically in case of misconduct. 
-- Upon selecting a proposal, the voter fills in a ballot on the mobile phone and, when finished, signs it with a relative generator assigned to the proposal, which protects the anonymity of the voter. The vote then is delivered anonymously to the vote collector with services like TOR. A recent port, Arti, will be of great use for making a client application. When a vote is recorded, an inclusion proof is returned to the voter, preventing any attempts to drop the votes as the evidence of doing so can be readily published and recognised by everyone to be true.
+- When a proposal is finalised, the voter signs it with a relative generator encoded into the proposal and sent it to the ballot box for inclusion. 
+- Every member receives all registered proposals to the peacefounder through REST API, all in order with solid integrity guarantees. Similarly, to assert vote inclusion in the final tally, each voter receives inclusion proof which can be asserted publically in case of misconduct. 
+- Upon selecting a proposal, the voter fills in a ballot on the mobile phone and, when finished, signs it with a relative generator assigned to the proposal, which protects the voter's anonymity. The vote then is delivered anonymously to the vote collector with services like TOR. When a vote is recorded, an inclusion proof is returned to the voter, preventing any attempts to as the evidence of doing so can be readily published and recognised by everyone to be true. A recent port, Arti, will be of great use for casting client votes without being tracked.
 
 ## REST API
 
@@ -43,11 +43,12 @@ GET /braidchain/{Int}/root : AckConsistency
 GET /braidchain/commit : Commit
 GET /braidchain/tar : BraidChainArchive
 
-POST /pollingstation/{UUID}/votes : Vote -> AckInclusion
+POST /pollingstation/{UUID}/votes : Vote -> CastAck
 GET /pollingstation/{UUID}/spine : Vector{Digest}
 GET /pollingstation/{UUID}/commit : Commit{BallotBoxState}
 GET /pollingstation/{UUID}/proposal : Tuple{Int, Proposal}
-GET /pollingstation/{UUID}/votes/{Int}/record : Vote
+GET /pollingstation/{UUID}/votes/{Int}/record : CastRecord
+GET /pollingstation/{UUID}/votes/{Int}/receipt : CastReceipt
 GET /pollingstation/{UUID}/votes/{Int}/leaf : AckInclusion
 GET /pollingstation/{UUID}/votes/{Int}/root : AckConsistency
 GET /pollingstation/{UUID}/tar : BallotBoxArchive

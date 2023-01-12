@@ -1,0 +1,3 @@
+module Beacons
+
+end

@@ -31,19 +31,19 @@ include("seal.jl") # Defines how values should be canonicalized. Could contain m
 
 
 
-struct Deme # I could also call it Deme. In app then list all votin contexts as demes
+struct Deme
     uuid::UUID
     title::String
-    description::String
-    tally_trigger_delay::Union{Nothing, Int}
     guardian::Pseudonym
-    seal::Union{Seal, Nothing}
+    crypto::Crypto
+    cert # TLS certificate used for communication
+    #seal::Union{Seal, Nothing}
 end
 
-# This one should be part of braidchain
-# Can't be part of  the BraidChain as that would assume knowledge of the signers key
 
+Deme(title::String, guardian::Pseudonym, crypto::Crypto) = Deme(UUID(rand(1:10000)), title, guardian, crypto, nothing)
 
+hasher(deme::Deme) = hasher(deme.crypto)
 
 
 end
