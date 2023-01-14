@@ -66,6 +66,8 @@ function select(::Type{Ticket}, f::Function, recruiter::TokenRecruiter)
     return nothing
 end
 
+select(::Type{Ticket}, ticketid::TicketID, recruiter::TokenRecruiter) = select(Ticket, i -> i.ticketid == ticketid, recruiter)
+
 select(::Type{Admission}, f::Function, recruiter::TokenRecruiter) = select(Ticket, f, recruiter).admission
 
 select(::Type{Admission}, ticketid::TicketID, recruiter::TokenRecruiter) = select(Admission, i -> i.ticketid == ticketid, recruiter)
@@ -164,7 +166,18 @@ unpack(x::Nothing) = nothing
 
 
 
+struct TicketStatus
+    ticketid::TicketID
+    timestamp::DateTime
+    admission::Union{Nothing, Admission}
+end
 
 
+function ticket_status(ticketid::TicketID, recruiter::TokenRecruiter)
 
+    ticket = select(Ticket, ticketid, recruiter)
 
+    return TicketStatus(ticketid, ticket.timestamp, ticket.admission)
+end
+
+isadmitted(status::TicketStatus) = !isnothing(status.admission)

@@ -3,7 +3,7 @@ using Test
 import Sockets
 import PeaceFounder.Model
 
-import .Model: Crypto, gen_signer, pseudonym, BraidChain, commit!, TokenRecruiter, PollingStation, TicketID, add!, id, admit!, commit, verify, generator, Member, approve, record!, ack_leaf, isbinding, roll, peers, members, state, Proposal, vote, Ballot, Selection, uuid, record, spine, tally, BeaconClient, Dealer, charge_nonces!, pulse_timestamp, nonce_promise, schedule!, next_job, pass!, draw, seed, set_seed!, ack_cast, hasher, HMAC, enlist!, token, auth
+import .Model: Crypto, gen_signer, pseudonym, BraidChain, commit!, TokenRecruiter, PollingStation, TicketID, add!, id, admit!, commit, verify, generator, Member, approve, record!, ack_leaf, isbinding, roll, constituents, members, state, Proposal, vote, Ballot, Selection, uuid, record, spine, tally, BeaconClient, Dealer, charge_nonces!, pulse_timestamp, nonce_promise, schedule!, next_job, pass!, draw, seed, set_seed!, ack_cast, hasher, HMAC, enlist!, token, auth
 
 
 crypto = Crypto("SHA-256", "MODP", UInt8[1, 2, 3, 6])
@@ -88,7 +88,7 @@ access, ack = enroll(alice, ticketid_alice, token_alice)
 
 # That hash of ack coreponds to one of access
 @test access in roll(BRAID_CHAIN)
-@test id(access) in peers(BRAID_CHAIN)
+@test id(access) in constituents(BRAID_CHAIN)
 @test pseudonym(access) in members(BRAID_CHAIN)
 
 
@@ -101,7 +101,7 @@ access, ack = enroll(eve, ticketid_eve, token_eve)
 ### Now I have a three members
 
 @test access in roll(BRAID_CHAIN) # coresponds to enroll!
-@test id(access) in peers(BRAID_CHAIN)
+@test id(access) in constituents(BRAID_CHAIN)
 @test pseudonym(access) in members(BRAID_CHAIN)
 
 # A proposal can be constructed as

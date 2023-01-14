@@ -6,11 +6,13 @@ abstract type Transaction end # an alternative name is Transaction
 struct ChainState
     index::Int
     root::Digest
-    generator::Vector{UInt8}
+    generator::Generator
     #proot::Digest # Noinvasive way to make sure that every member get's the latest set of proposals.
 end
 
-ChainState(index::Int, root::Nothing, generator::Vector{UInt8}) = ChainState(index, Digest(), generator)
+ChainState(index::Int, root::Nothing, generator::Generator) = ChainState(index, Digest(), generator)
+
+@batteries ChainState
 
 generator(state::ChainState) = state.generator
 generator(commit::Commit{ChainState}) = generator(commit.state)
@@ -25,9 +27,8 @@ mutable struct BraidChain
     members::Set{Pseudonym}
     ledger::Vector{Transaction}
     crypto::Crypto
-    generator::Vector{UInt8}
+    generator::Generator
     guardian::Pseudonym
-
     tree::HistoryTree
     commit::Union{Commit{ChainState}, Nothing}
 end
@@ -60,11 +61,10 @@ function select(::Type{T}, f::Function, chain::BraidChain) where T <: Transactio
 end
 
 
-
 #roll(chain::BraidChain) = (m for m in chain.ledger if m isa Member)
 roll(chain::BraidChain) = (m for m in chain.ledger if m isa Member)
 
-peers(chain::BraidChain) = Set(id(i) for i in roll(chain))
+constituents(chain::BraidChain) = Set(id(i) for i in roll(chain))
 
 generator(chain::BraidChain) = chain.generator
 
@@ -151,14 +151,15 @@ members(chain::BraidChain, state::ChainState) = members(chain, state.index)
 
 struct Member <: Transaction
     admission::Admission
-    generator::Vector{UInt8}
+    generator::Generator
     pseudonym::Pseudonym
     approval::Union{Signature, Nothing} # In principle it could also be a proof log_G(A) == log_Y(B)
 end
 
-Member(admission::Admission, generator::Vector{UInt8}, pseudonym::Pseudonym) = Member(admission, generator, pseudonym, nothing)
+Member(admission::Admission, generator::Generator, pseudonym::Pseudonym) = Member(admission, generator, pseudonym, nothing)
 
 
+Base.:(==)(x::Member, y::Member) = x.admission == y.admission && x.generator == y.generator && x.pseudonym == y.pseudonym && x.approval == y.approval
 
 approve(member::Member, signer::Signer) = @set member.approval = sign(member, signer)
 

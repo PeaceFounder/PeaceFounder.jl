@@ -4,8 +4,11 @@ module Client
 using Infiltrator
 
 using ..Model
-using ..Model: Member, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, Hash, AckConsistency, AckInclusion, CastAck, Deme, Signer
-using HTTP: Router, Request, Response, Handler, HTTP, iserror
+using ..Model: Member, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, Hash, AckConsistency, AckInclusion, CastAck, Deme, Signer, TicketStatus, Commit, ChainState
+
+using ..Model: id, hasher, pseudonym, isbinding, generator, isadmitted
+
+using HTTP: Router, Request, Response, Handler, HTTP, iserror, StatusError
 
 using JSON3
 using Dates
@@ -16,19 +19,15 @@ using ..Parser: marshal, unmarshal
 using ..Model: base16encode, base16decode
 
 
-# A server client method for submitting a new ticket and receiving a token
-
-# hex2bytes 
-# bytes2hex
-
 post(route::String, target::String, body) = HTTP.post(route * target, body)
 put(route::String, target::String, body) = HTTP.put(route * target, body)
 
-
 function request(method::String, router::Router, target::String, body::Vector{UInt8})
 
-    request = Request("POST", target, [], body)
+    request = Request(method, target, [], body)
     response = router(request)
+
+    iserror(response) && throw(StatusError(response.status, method, target, response))
 
     return response
 end
@@ -39,9 +38,17 @@ request(method::String, route::String, target::String, body::Vector{UInt8}) = HT
 
 post(route, target, body) = request("POST", route, target, body)
 put(route, target, body) = request("PUT", route, target, body)
-get(route, target) = request("GET", route, target, body)
+get(route, target) = request("GET", route, target, UInt8[])
 
 
+
+function get_deme(router::Router)
+
+    response = get(router, "/deme")
+    deme = unmarshal(response.body, Deme)
+
+    return deme
+end
 
 
 function enlist_ticket(router::Router, ticketid::TicketID, hmac::HMAC)
@@ -52,15 +59,12 @@ function enlist_ticket(router::Router, ticketid::TicketID, hmac::HMAC)
 
     response = post(router, "/tickets", body)
 
-    @assert !iserror(response)
-
     salt, salt_auth_code = unmarshal(response.body, Tuple{Vector{UInt8}, Digest})
 
     @assert isbinding(ticketid, salt, salt_auth_code, hmac)
 
     return Model.token(ticketid, salt, hmac)
 end
-
 
 
 function seek_admission(router::Router, id::Pseudonym, ticketid::TicketID, token::Digest, hasher::Hash)
@@ -70,8 +74,6 @@ function seek_admission(router::Router, id::Pseudonym, ticketid::TicketID, token
     tid = bytes2hex(bytes(ticketid))
     response = put(router, "/tickets/$tid", body)
 
-    @assert !iserror(response)
-
     admission = unmarshal(response.body, Admission)
 
     #@assert Model.verify(admission, crypto)
@@ -79,6 +81,36 @@ function seek_admission(router::Router, id::Pseudonym, ticketid::TicketID, token
 
     return admission # A deme file is used to verify 
 end
+
+
+function get_ticket_status(router::Router, ticketid::TicketID)
+
+    tid = bytes2hex(bytes(ticketid))
+    response = get(router, "/tickets/$tid")
+
+    status = unmarshal(response.body, TicketStatus)
+
+    return status
+end
+
+
+function enroll_member(router::Router, member::Member)
+    
+    response = post(router, "/braidchain/members", marshal(member))
+    ack = unmarshal(response.body, AckInclusion{ChainState})
+
+    return ack
+end
+
+
+function get_chain_commit(router::Router)
+
+    response = get(router, "/braidchain/commit")
+    commit = unmarshal(response.body, Commit{ChainState})
+
+    return commit
+end
+
 
 
 
@@ -98,6 +130,7 @@ struct EnrollGuard
 end
 
 EnrollGuard() = EnrollGuard(nothing, nothing, nothing)
+EnrollGuard(admission::Admission) = EnrollGuard(admission, nothing, nothing)
 
 mutable struct Voter # mutable because it also needs to deal with storage
     deme::Deme
@@ -110,6 +143,12 @@ end
 
 Model.id(voter::Voter) = Model.id(voter.signer)
 
+Model.pseudonym(voter::Voter) = pseudonym(voter.signer) # I could drop this method in favour of identity
+Model.pseudonym(voter::Voter, g) = pseudonym(voter.signer, g)
+
+Model.isadmitted(voter::Voter) = !isnothing(voter.guard.admission)
+
+Model.hasher(voter::Voter) = hasher(voter.deme)
 
 function Voter(deme::Deme) 
     signer = Model.gen_signer(deme.crypto)
@@ -120,12 +159,37 @@ end
 
 
 function enroll!(voter::Voter, router, ticketid, token) # EnrollGuard 
-    # checks that 
+
+    if !isadmitted(voter)
+        admission = seek_admission(router, id(voter), ticketid, token, hasher(voter))
+        #@assert isbinding(admission, voter.deme)
+        voter.guard = EnrollGuard(admission)
+    end
+
+    enroll!(voter, router)
+
+    return
 end
 
 
 function enroll!(voter::Voter, router) # For continuing from the last place
-    # something else
+
+    @assert isadmitted(voter)
+    admission = voter.guard.admission
+
+    commit = get_chain_commit(router)
+
+    #isbinding(commit, voter.deme)
+    
+    g = generator(commit)
+
+    enrollee = Model.approve(Member(admission, g, pseudonym(voter, g)), voter.signer)
+
+    ack = enroll_member(router, enrollee)
+    
+    voter.guard = EnrollGuard(admission, enrollee, ack)
+
+    return
 end
 
 

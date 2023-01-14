@@ -19,8 +19,8 @@ A niche I am targeting is already existing homepages of different kinds of organ
 This is a rest API for the PeaceFounder. 
 
 ```
-GET /manifest # returns a current manifest file
-GET /manifest/{hash}
+GET /deme # returns a current manifest file
+GET /deme/{hash}
 
 POST /tickets : TicketID -> token::BigInt # resets token when repeated
 DELETE /tickets/{TicketID}

@@ -127,7 +127,7 @@ body(vote::Vote) = @set vote.approval = nothing
 
 
 # Should not use this approach
-function seal(vote::Vote, generator::Vector{UInt8}, signer::Signer)
+function seal(vote::Vote, generator::Generator, signer::Signer)
 
     @assert vote.seq == seq(signer, vote.proposal) + 1
 
@@ -137,7 +137,7 @@ function seal(vote::Vote, generator::Vector{UInt8}, signer::Signer)
 end
 
 
-function verify(vote::Vote, generator::Vector{UInt8}, crypto::Crypto)
+function verify(vote::Vote, generator::Generator, crypto::Crypto)
     
     bytes = canonicalize(body(vote))
 

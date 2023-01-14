@@ -137,18 +137,18 @@ function setup!(deme::Deme, guardian::Signer)
 end
 
 
-#gen_token!(form::FormID) = Model.add!(RECRUITER[], form)
-# returns a tooken
-# submit_ticket could also reset token if it is expiring
 get_recruit_key() = Model.key(RECRUITER[])
+
+get_deme() = DEME[]
 
 enlist_ticket(ticketid::TicketID, timestamp::DateTime, auth_code::Digest; expiration_time = nothing) = Model.enlist!(RECRUITER[], ticketid, timestamp, auth_code)
 #delete_ticket!(ticketid::TicketID) = Model.remove!(RECRUITER[], ticketid) # 
 
 get_ticket_ids() = Model.ticket_ids(RECRUITER[])
-get_ticket_status(ticketid::TicketID) = Model.isadmitted(ticketid, RECRUITER[])
-get_ticket_admission(ticketid::TicketID) = Model.select(Admission, ticketid, RECRUITER[])
 
+get_ticket_status(ticketid::TicketID) = Model.ticket_status(ticketid, RECRUITER[])
+get_ticket_admission(ticketid::TicketID) = Model.select(Admission, ticketid, RECRUITER[])
+get_ticket_timestamp(ticketid::TicketID) = Model.select(Ticket, ticketid, RECRUITER[]).timestamp
 
 seek_admission(id::Pseudonym, ticketid::TicketID, auth_code::Digest) = Model.admit!(RECRUITER[], id, ticketid, auth_code)
 get_admission(id::Pseudonym) = Model.select(Admission, id, RECRUITER[])
@@ -173,6 +173,7 @@ get_chain_record(N::Int) = BRAID_CHAIN[][N]
 get_chain_ack_leaf(N::Int) = Model.ack_leaf(BRAID_CHAIN[], N)
 get_chain_ack_root(N::Int) = Model.ack_root(BRAID_CHAIN[], N)
 
+enroll_member(member::Member) = submit_chain_record!(member)
 
 get_roll() = Model.roll(BRAID_CHAIN[])
 
@@ -191,8 +192,6 @@ function schedule_pulse!(uuid::UUID, timestamp, nonceid)
 
     return
 end
-
-
 
 
 function submit_chain_record!(proposal::Proposal)

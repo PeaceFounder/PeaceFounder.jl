@@ -2,15 +2,16 @@ module Parser
 
 using Infiltrator
 
+using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Member, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, NonceCommitment, Lot, CastReceipt, CastRecord, Model, bytes, Admission, Deme, Crypto, Hash, TicketStatus, Commit, AckInclusion, Generator
+using HistoryTrees: InclusionProof, ConsistencyProof
 
-using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Member, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, NonceCommitment, Lot, CastReceipt, CastRecord, Model, bytes, Admission
 
 using Dates: DateTime
 
 using JSON3 
 using StructTypes
 
-using StructTypes: constructfrom
+using StructTypes: constructfrom, construct
 
 using Base64: base64encode, base64decode
 
@@ -22,8 +23,6 @@ Model.canonicalize(x) = marshal(x)
 # Needed for canonicalize method
 StructTypes.StructType(::Type{Signature}) = StructTypes.Struct()
 
-StructTypes.StructType(::Type{Member}) = StructTypes.Struct()
-StructTypes.omitempties(::Type{Member}) = (:approval, :PoK)
 
 StructTypes.StructType(::Type{Proposal}) = StructTypes.Struct()
 StructTypes.omitempties(::Type{Proposal}) = (:approval,)
@@ -31,13 +30,10 @@ StructTypes.omitempties(::Type{Proposal}) = (:approval,)
 StructTypes.StructType(::Type{Vote}) = StructTypes.Struct()
 StructTypes.omitempties(::Type{Vote}) = (:approval,)
 
-StructTypes.StructType(::Type{ChainState}) = StructTypes.Struct()
-#StructTypes.StructType(::Type{Digest}) = StructTypes.Struct()
-
 StructTypes.StructType(::Type{Ballot}) = StructTypes.Struct()
 
 StructTypes.StructType(::Type{BallotBoxState}) = StructTypes.Struct()
-StructTypes.omitempties(::Type{BallotBoxState}) = (:tally,)
+StructTypes.omitempties(::Type{BallotBoxState}) = (:tally, :view)
 
 StructTypes.StructType(::Type{NonceCommitment}) = StructTypes.Struct()
 
@@ -48,20 +44,24 @@ StructTypes.StructType(::Type{CastReceipt}) = StructTypes.Struct()
 StructTypes.StructType(::Type{CastRecord}) = StructTypes.Struct()
 
 
-
 StructTypes.StructType(::Type{TicketID}) = StructTypes.StringType()
-Base.string(ticketid::TicketID) = base64encode(bytes(ticketid))
-StructTypes.construct(::Type{TicketID}, s::AbstractString) = TicketID(base64decode(s))
+Base.string(ticketid::TicketID) = bytes2hex(bytes(ticketid))
+StructTypes.construct(::Type{TicketID}, s::AbstractString) = TicketID(hex2bytes(s))
 
 
 StructTypes.StructType(::Type{Digest}) = StructTypes.StringType()
-Base.string(x::Digest) = base64encode(bytes(x))
-StructTypes.construct(::Type{Digest}, s::AbstractString) = Digest(base64decode(s))
+Base.string(x::Digest) = bytes2hex(bytes(x))
+StructTypes.construct(::Type{Digest}, s::AbstractString) = Digest(hex2bytes(s))
 
 
 StructTypes.StructType(::Type{Pseudonym}) = StructTypes.StringType()
-Base.string(x::Pseudonym) = base64encode(bytes(x))
-StructTypes.construct(::Type{Pseudonym}, s::AbstractString) = Pseudonym(base64decode(s))
+Base.string(x::Pseudonym) = bytes2hex(bytes(x))
+StructTypes.construct(::Type{Pseudonym}, s::AbstractString) = Pseudonym(hex2bytes(s))
+
+
+StructTypes.StructType(::Type{Generator}) = StructTypes.StringType()
+Base.string(x::Generator) = bytes2hex(bytes(x))
+StructTypes.construct(::Type{Generator}, s::AbstractString) = Generator(hex2bytes(s))
 
 
 StructTypes.StructType(::Type{Admission}) = StructTypes.Struct()
@@ -73,11 +73,8 @@ function marshal(x)
     JSON3.write(io, x) 
     return take!(io)
 end
-    
 
-#unmarshal(bytes, T::DataType) = JSON3.read(bytes, T)
 unmarshal(bytes) = JSON3.read(bytes)
-
 
 unmarshal(bytes, T::DataType) = JSON3.read(bytes, T)
 
@@ -92,12 +89,6 @@ function StructTypes.construct(::Type{Seal}, x)
 
     return Seal(id, sig)
 end
-
-
-
-
-# StructTypes.lower, StructTypes.lowertype could be used something alternative
-
 
 
 function marshal(event::Tuple{TicketID, DateTime, Digest})
@@ -125,7 +116,7 @@ end
 function marshal(event::Tuple{Vector{UInt8}, Digest})
     
     salt, auth_code = event
-    payload = Dict(:salt => base64encode(salt), :auth_code => auth_code)
+    payload = Dict(:salt => bytes2hex(salt), :auth_code => auth_code)
 
     return marshal(payload)
 end
@@ -135,7 +126,7 @@ function unmarshal(bytes, ::Type{Tuple{Vector{UInt8}, Digest}})
     
     payload = unmarshal(bytes)
 
-    salt = base64decode(payload.salt)
+    salt = hex2bytes(payload.salt)
     auth_code = constructfrom(Digest, payload.auth_code)
     
     return (salt, auth_code)
@@ -164,6 +155,57 @@ function unmarshal(bytes, ::Type{Tuple{TicketID, Digest}})
     return (id, auth_code)
 end
 
+
+
+StructTypes.StructType(::Type{Crypto}) = StructTypes.CustomStruct()
+StructTypes.lower(crypto::Crypto) = Dict(:hash => crypto.hasher, :group => crypto.group, :generator => bytes2hex(bytes(crypto.generator)))
+
+function StructTypes.construct(::Type{Crypto}, x)
+    
+    hasher = Hash(x["hash"])
+    group = x["group"]
+    generator = Generator(hex2bytes(x["generator"]))
+
+    return Crypto(hasher, group, generator)
+end
+
+
+StructTypes.StructType(::Type{Deme}) = StructTypes.Struct()
+StructTypes.omitempties(::Type{Deme}) = (:cert,)
+
+StructTypes.StructType(::Type{Hash}) = StructTypes.StringType()
+Base.string(hasher::Hash) = hasher.spec
+StructTypes.construct(::Type{Hash}, spec::AbstractString) = Hash(spec)
+
+
+StructTypes.StructType(::Type{TicketStatus}) = StructTypes.Struct()
+StructTypes.omitempties(::Type{TicketStatus}) = (:admission,)
+
+
+StructTypes.StructType(::Type{Member}) = StructTypes.Struct()
+StructTypes.omitempties(::Type{Member}) = (:approval,)
+
+
+StructTypes.StructType(::Type{Commit}) = StructTypes.Struct()
+StructTypes.StructType(::Type{AckInclusion}) = StructTypes.Struct()
+
+
+StructTypes.StructType(::Type{InclusionProof}) = StructTypes.CustomStruct()
+
+StructTypes.lower(proof::InclusionProof) = Dict(:index => proof.index, :leaf => proof.leaf, :path => proof.path)
+
+
+function StructTypes.construct(::Type{InclusionProof}, event)
+
+    index = event["index"]
+    leaf = Digest(hex2bytes(event["leaf"]))
+    path = Digest[Digest(hex2bytes(i)) for i in event["path"]]
+
+    return InclusionProof(path, index, leaf)
+end
+
+
+StructTypes.StructType(::Type{ChainState}) = StructTypes.Struct()
 
 
 export marshal, unmarshal

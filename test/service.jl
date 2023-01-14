@@ -1,3 +1,4 @@
+using Test
 import PeaceFounder: Client, Service, Mapper, Model
 import .Service: ROUTER
 
@@ -22,24 +23,18 @@ eve_token = Client.enlist_ticket(ROUTER, eve_ticketid, RECRUIT_HMAC)
 # ------------- token and ticketid gets sent over a QR code --------------
 
 
-alice_id = Model.id(Client.Voter(DEME))
+deme = Client.get_deme(ROUTER) # If router have already retrieved that, no need to repepeat
+alice = Client.Voter(deme)
 
-admission = Client.seek_admission(ROUTER, alice_id, alice_ticketid, alice_token, Model.hasher(crypto))
+@test !Model.isadmitted(Client.get_ticket_status(ROUTER, alice_ticketid))
+Client.enroll!(alice, ROUTER, alice_ticketid, alice_token) # if unsuccesfull, throws an error
+@test Model.isadmitted(Client.get_ticket_status(ROUTER, alice_ticketid))
 
+bob = Client.Voter(deme)
+Client.enroll!(bob, ROUTER, bob_ticketid, bob_token) 
 
-# deme = Client.get_deme(ROUTER) # If router have already retrieved that, no need to repepeat
-
-# alice = Client.Voter(deme)
-# @test Client.get_ticket_status(ROUTER, alice_ticketid) == false
-# Client.enroll!(alice, ROUTER, alice_ticketid, alice_token) # if unsuccesfull, throws an error
-# @test Client.get_ticket_status(ROUTER, alice_ticketid) == true
-
-# bob = Client.Voter(deme)
-# Client.enroll!(bob, ROUTER, bob_ticketid, bob_token) 
-
-# eve = Client.Voter(deme)
-# Client.enroll!(eve, ROUTER, eve_ticketid, eve_token) 
-
+eve = Client.Voter(deme)
+Client.enroll!(eve, ROUTER, eve_ticketid, eve_token) 
 
 # proposal_draft = Model.Proposal(
 #     uuid = Base.UUID(23445325),

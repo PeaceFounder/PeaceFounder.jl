@@ -1,21 +1,43 @@
 using Test
 import PeaceFounder: Model, Parser
-import .Model: TicketID, Digest, Pseudonym, Admission, Seal
+import .Model: TicketID, Digest, Pseudonym, Admission, Seal, Deme, Crypto, Member, Signature, Generator
 import .Parser: marshal, unmarshal
 import Dates: DateTime, now
 
+isconsistent(event::T) where T = unmarshal(marshal(event), T) == event
+
+roundtrip(event::T) where T = unmarshal(marshal(event), T)
+
 
 event = (TicketID("Alice"), now(), Digest(UInt8[1, 2, 3, 4]))
-@test unmarshal(marshal(event), Tuple{TicketID, DateTime, Digest}) == event
+@test isconsistent(event)
 
 event = (UInt8[2, 3, 4, 5], Digest(UInt8[1, 2, 3, 4, 5]))
-@test unmarshal(marshal(event), Tuple{Vector{UInt8}, Digest}) == event
+@test isconsistent(event)
 
 event = (Pseudonym(UInt8[1, 2, 3, 4]), Digest(UInt8[1, 2, 3, 4, 5]))
-@test unmarshal(marshal(event), Tuple{Pseudonym, Digest}) == event
+@test isconsistent(event)
 
-event = Admission(TicketID("Alice"), Pseudonym(UInt8[1, 2, 3, 4]), now())
-@test unmarshal(marshal(event), Admission) == event
+
+admission = Admission(TicketID("Alice"), Pseudonym(UInt8[1, 2, 3, 4]), now(), Seal(Pseudonym(UInt8[1, 2, 3, 4]), Signature(123, 4345)))
+@test isconsistent(admission)
+
 
 event = Seal(Pseudonym(UInt8[1, 2, 3, 4]), 2, 4)
-@test unmarshal(marshal(event), Seal) == event
+@test isconsistent(event)
+
+event = Deme("Community", Pseudonym(UInt8[1, 2, 3, 4]), Model.Crypto("SHA-256", "MODP", UInt8[1, 2, 3, 6]))
+@test isconsistent(event)
+
+event = Member(admission, Generator(UInt8[1, 2, 3, 4]), Pseudonym(UInt8[1, 2, 3, 4]), Signature(123, 4242))
+@test isconsistent(event)
+
+
+# using .Model: BallotBoxState, AckInclusion, Digest, Commit, Seal, Pseudonym, Signature
+# using HistoryTrees: InclusionProof
+
+# ack = AckInclusion{BallotBoxState}(InclusionProof(Any[Digest(UInt8[0xa8, 0x58, 0x8d, 0x46, 0xdc, 0xaa, 0x33, 0xd9, 0xc5, 0x76, 0x96, 0x18, 0x0c, 0x27, 0x24, 0xeb, 0xf1, 0xf5, 0xf3, 0x85, 0xad, 0xef, 0x98, 0xeb, 0xc9, 0xdc, 0xd9, 0xcf, 0x33, 0x6b, 0xf3, 0x79])], 3, Digest(UInt8[0x9f, 0x12, 0xe1, 0x0e, 0xb7, 0x74, 0x23, 0x3b, 0xb4, 0x5e, 0x1c, 0x96, 0xaa, 0x86, 0x9c, 0xe3, 0x49, 0x01, 0x25, 0x95, 0xdc, 0x36, 0xbb, 0xd3, 0xe1, 0x1a, 0xd9, 0x85, 0x59, 0xbb, 0x34, 0x6d])), Commit{BallotBoxState}(BallotBoxState(Digest(UInt8[0x3b, 0xe1, 0x30, 0x44, 0x3d, 0x2e, 0x67, 0x05, 0xac, 0x2d, 0x2b, 0x9d, 0xac, 0x4e, 0x3c, 0x1d, 0xb9, 0x56, 0x05, 0xde, 0x1d, 0x59, 0x54, 0x1e, 0x6a, 0x28, 0xa4, 0xed, 0x97, 0xcd, 0xa2, 0xf2]), 3, Digest(UInt8[0x27, 0xfc, 0xd6, 0x62, 0x10, 0x63, 0x57, 0x93, 0x15, 0x04, 0x14, 0x14, 0x29, 0x04, 0x71, 0x1c, 0xd4, 0x58, 0x15, 0xde, 0xf5, 0xb0, 0x78, 0xf4, 0x08, 0xbc, 0xdf, 0x9f, 0xad, 0xd0, 0xb3, 0x51]), nothing, nothing), Seal(Pseudonym(UInt8[0x80, 0xd7, 0x93, 0x82]), Signature(3454545, 23423424))))
+
+# @test isconsistent(ack)
+
+

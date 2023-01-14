@@ -173,7 +173,9 @@ struct BallotBoxState
     root::Digest
     tally::Union{Nothing, Tally} 
     view::Union{Nothing, BitVector} # 
-end
+end 
+
+@batteries BallotBoxState
 
 BallotBoxState(seed::Digest, index::Int, root::Nothing, tally::Nothing, view::Nothing) = BallotBoxState(seed, index, Digest(), tally, view)
 

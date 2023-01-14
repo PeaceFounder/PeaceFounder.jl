@@ -1,7 +1,6 @@
 module Service
 
 # This is the outermost layer for the sercvice concerned with providing services for outsied world. 
-
 # Defines how HTTP requests are processed
 
 using Infiltrator
@@ -10,20 +9,11 @@ using ..Mapper
 using ..Parser: marshal, unmarshal
 
 using HTTP: Request, Response, HTTP
-using ..Model: TicketID, Digest, Pseudonym, Digest
+using ..Model: TicketID, Digest, Pseudonym, Digest, Member
 using Dates: DateTime
 
 const ROUTER = HTTP.Router()
 
-
-# GET /manifest # returns a current manifest file
-# GET /manifest/{hash}
-
-# POST /tickets : Tuple{TicketID, Digest} -> Tuple{salt::Vector{UInt8}, auth_code::Digest}  # resets token when repeated
-# DELETE /tickets/{TicketID} : auth_code::Digest -> Bool
-# PUT /tickets/{TicketID} : Tuple{Pseudonym, token::BigInt} -> Admission
-# GET /tickets/{TicketID}/status : Bool # whether token is active
-# GET /tickets/{TicketID}/admission : Admission
 
 # POST /braidchain/members : Member -> AckInclusion
 # GET /braidchain/members : Vector{Tuple{Int, Member}}
@@ -50,7 +40,9 @@ const ROUTER = HTTP.Router()
 # GET /pollingstation/{UUID}/tar : BallotBoxArchive
 # GET /pollingstation/collectors # necessary to make a proposal
 
-# This way I will be able to use structtypes 
+
+get_deme(req::Request) = Response(200, marshal(Mapper.get_deme()))
+HTTP.register!(ROUTER, "GET", "/deme", get_deme)
 
 
 function enlist_ticket(req::Request) 
@@ -64,7 +56,6 @@ end
 HTTP.register!(ROUTER, "POST", "/tickets", enlist_ticket)
 
 
-
 """
 A client submits his public key ID together with a tooken. If succesful admission is returned which client could use further to enroll into braidchain.
 """
@@ -73,17 +64,46 @@ function seek_admission(req::Request)
     tid = HTTP.getparam(req, "ticketid")
     ticketid = TicketID(hex2bytes(tid))
 
-    
-    
     id, auth_code = unmarshal(req.body, Tuple{Pseudonym, Digest})
     response = Mapper.seek_admission(id, ticketid, auth_code)
     
     return Response(200, marshal(response))
 end
 
-HTTP.register!(ROUTER, "POST", "/tickets/{ticketid}", seek_admission)
+HTTP.register!(ROUTER, "PUT", "/tickets/{ticketid}", seek_admission)
+
+function get_ticket_status(req::Request)
+
+    tid = HTTP.getparam(req, "ticketid")
+    ticketid = TicketID(hex2bytes(tid))
+
+    status = Mapper.get_ticket_status(ticketid)
+    
+    return Response(200, marshal(status))
+end
+
+HTTP.register!(ROUTER, "GET", "/tickets/{ticketid}", get_ticket_status)
 
 
+function enroll_member(req::Request)
+    
+    member = unmarshal(req.body, Member)
+    response = Mapper.enroll_member(member)
+
+    return Response(200, marshal(response))
+end
+
+HTTP.register!(ROUTER, "POST", "/braidchain/members", enroll_member)
+
+
+function get_chain_commit(req::Request)
+    
+    response = Mapper.get_chain_commit()
+
+    return Response(200, marshal(response))
+end
+
+HTTP.register!(ROUTER, "GET", "/braidchain/commit", get_chain_commit)
 
 
 end

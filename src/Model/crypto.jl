@@ -2,6 +2,14 @@ using HistoryTrees: InclusionProof, ConsistencyProof
 import HistoryTrees: leaf, root
 
 
+struct Generator
+    data::Vector{UInt8}
+end
+
+@batteries Generator
+
+bytes(generator::Generator) = generator.data
+
 struct Digest
     data::Vector{UInt8}
 end
@@ -22,12 +30,15 @@ end
 struct Crypto
     hasher::Hash
     group
-    generator::Vector{UInt8}
+    #generator::Vector{UInt8}
+    generator::Generator
 end
 
-Crypto(hash_spec::String, group_spec::String, generator::Vector{UInt8}) = Crypto(Hash(hash_spec), group_spec, generator)
+Crypto(hash_spec::String, group_spec::String, generator::Vector{UInt8}) = Crypto(Hash(hash_spec), group_spec, Generator(generator))
+Crypto(hash_spec::String, group_spec::String, generator::Generator) = Crypto(Hash(hash_spec), group_spec, generator)
+Crypto(crypto::Crypto, generator::Generator) = Crypto(crypto.hasher, crypto.group, generator)
 
-Crypto(crypto::Crypto, generator::Vector{UInt8}) = Crypto(crypto.hasher, crypto.group, generator)
+Base.:(==)(x::Crypto, y::Crypto) = x.hasher == y.hasher && x.group == y.group && x.generator == y.generator
 
 generator(crypto::Crypto) = crypto.generator
 
@@ -71,7 +82,7 @@ seq(signer::Signer, proposal::Digest) = 0 #
 pseudonym(signer::Signer) = signer.pbkey
 id(signer::Signer) = signer.pbkey
 
-pseudonym(signer::Signer, generator::Vector{UInt8}) = pseudonym(signer) # ToDo
+pseudonym(signer::Signer, generator::Generator) = pseudonym(signer) # ToDo
 
 crypto(signer::Signer) = signer.spec
 hasher(signer::Signer) = hasher(crypto(signer))
@@ -85,7 +96,7 @@ end
 sign(x::Vector{UInt8}, signer::Signer) = Signature(3454545, 23423424) # ToDo
 
 
-sign(x::Vector{UInt8}, generator::Vector{UInt8}, signer::Signer) = Signature(3454545, 23423424) # ToDo
+sign(x::Vector{UInt8}, generator::Generator, signer::Signer) = Signature(3454545, 23423424) # ToDo
 
 
 struct Signature
@@ -97,7 +108,7 @@ Base.:(==)(x::Signature, y::Signature) = x.r == y.r && x.s == y.s
 
 verify(x::Vector{UInt8}, pk::Pseudonym, signature::Signature, crypto::Crypto) = true # ToDo
 
-verify(x::Vector{UInt8}, pk::Pseudonym, signature::Signature, generator::Vector{UInt8}, crypto::Crypto) = true # ToDo
+verify(x::Vector{UInt8}, pk::Pseudonym, signature::Signature, generator::Generator, crypto::Crypto) = true # ToDo
 
 
 # Approval
@@ -120,15 +131,17 @@ verify(x::Vector{UInt8}, seal::Seal, crypto::Crypto) = verify(x, seal.pbkey, sea
 seal(x::Vector{UInt8}, signer::Signer) = Seal(signer.pbkey, sign(x, signer))
 
 
-seal(x::Vector{UInt8}, generator::Vector{UInt8}, signer::Signer) = Seal(pseudonym(signer, generator), sign(x, generator, signer))
+seal(x::Vector{UInt8}, generator::Generator, signer::Signer) = Seal(pseudonym(signer, generator), sign(x, generator, signer))
 
-verify(x::Vector{UInt8}, seal::Seal, generator::Vector{UInt8}, crypto::Crypto) = verify(x, seal.pbkey, seal.sig, generator, crypto)
+verify(x::Vector{UInt8}, seal::Seal, generator::Generator, crypto::Crypto) = verify(x, seal.pbkey, seal.sig, generator, crypto)
 
 
 struct Commit{T}
     state::T
     seal::Seal
 end
+
+@batteries Commit
 
 id(commit::Commit) = pseudonym(commit.seal) # It is an id because of the context
 
@@ -143,6 +156,10 @@ struct AckInclusion{T}
     proof::InclusionProof
     commit::Commit{T}
 end
+
+@batteries AckInclusion
+
+#Base.:(==)(x::T, y::T) where T <: AckInclusion = 
 
 leaf(ack::AckInclusion) = leaf(ack.proof)
 id(ack::AckInclusion) = id(ack.commit)

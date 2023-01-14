@@ -2,7 +2,7 @@ using Test
 
 import PeaceFounder.Model
 import PeaceFounder.Mapper
-using PeaceFounder.Model: Crypto, gen_signer, pseudonym, TicketID, Member, Proposal, Ballot, Selection, generator, state, id, vote, seed, tally, approve, istallied, Deme, hasher, HMAC, auth, token, isbinding
+using PeaceFounder.Model: Crypto, gen_signer, pseudonym, TicketID, Member, Proposal, Ballot, Selection, generator, state, id, vote, seed, tally, approve, istallied, Deme, hasher, HMAC, auth, token, isbinding, Generator
 
 import Dates: Dates, Date
 
