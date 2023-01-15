@@ -4,14 +4,15 @@ module Client
 using Infiltrator
 
 using ..Model
-using ..Model: Member, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, Hash, AckConsistency, AckInclusion, CastAck, Deme, Signer, TicketStatus, Commit, ChainState
+using ..Model: Member, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, Hash, AckConsistency, AckInclusion, CastAck, Deme, Signer, TicketStatus, Commit, ChainState, Proposal
 
-using ..Model: id, hasher, pseudonym, isbinding, generator, isadmitted
+using ..Model: id, hasher, pseudonym, isbinding, generator, isadmitted, state
 
 using HTTP: Router, Request, Response, Handler, HTTP, iserror, StatusError
 
 using JSON3
 using Dates
+using Setfield
 
 
 using ..Parser: marshal, unmarshal
@@ -112,6 +113,37 @@ function get_chain_commit(router::Router)
 end
 
 
+function enlist_proposal(router::Router, proposal::Proposal)
+
+    response = post(router, "/braidchain/proposals", marshal(proposal))
+    ack = unmarshal(response.body, AckInclusion{ChainState})
+
+    return ack
+end
+
+
+function enlist_proposal(router::Router, proposal::Proposal, guardian::Signer)
+
+    commit = get_chain_commit(router)
+
+    proposal = @set proposal.anchor = state(commit)
+    proposal = @set proposal.collector = id(guardian)
+
+    proposal = Model.approve(proposal, guardian)
+    
+    return proposal, enlist_proposal(router, proposal)    
+end
+
+
+function get_proposal_list(router::Router)
+
+    response = get(router, "/braidchain/proposals")
+    
+    proposal_list = unmarshal(response.body, Vector{Tuple{Int, Proposal}})
+
+    return proposal_list
+end
+
 
 
 struct CastGuard
@@ -128,6 +160,20 @@ struct EnrollGuard
     enrollee::Union{Member, Nothing}
     ack::Union{AckInclusion, Nothing}
 end
+
+function Base.show(io::IO, guard::EnrollGuard)
+
+    println(io, "EnrollGuard:")
+
+    if !isnothing(guard.enrollee)
+        println(io, Model.show_string(guard.enrollee))
+        print(io, Model.show_string(guard.ack))
+    else
+        println(io, Model.show_string(guard.admission))
+    end
+    
+end
+
 
 EnrollGuard() = EnrollGuard(nothing, nothing, nothing)
 EnrollGuard(admission::Admission) = EnrollGuard(admission, nothing, nothing)
@@ -149,6 +195,27 @@ Model.pseudonym(voter::Voter, g) = pseudonym(voter.signer, g)
 Model.isadmitted(voter::Voter) = !isnothing(voter.guard.admission)
 
 Model.hasher(voter::Voter) = hasher(voter.deme)
+
+
+function Base.show(io::IO, voter::Voter)
+
+    println(io, "Voter:")
+    println(io, Model.show_string(voter.deme))
+    println(io, Model.show_string(voter.signer))
+    println(io, Model.show_string(voter.guard))
+    println(io, "  casts : $(voter.casts)")
+
+
+    for (i, p) in voter.proposals
+
+        println(io, "")
+        print(io, "  $i\t")
+        print(io, Model.show_string(p))
+
+    end
+end
+
+
 
 function Voter(deme::Deme) 
     signer = Model.gen_signer(deme.crypto)
@@ -192,6 +259,16 @@ function enroll!(voter::Voter, router) # For continuing from the last place
     return
 end
 
+
+function update_proposal_cache!(voter::Voter, router)
+
+    proposal_list = get_proposal_list(router)
+    
+    resize!(voter.proposals, 0)
+    append!(voter.proposals, proposal_list)
+
+    return
+end
 
 
 

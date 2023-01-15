@@ -22,6 +22,26 @@ root(state::ChainState) = state.root
 
 isbinding(record::Transaction, ack::AckInclusion{ChainState}, crypto::Crypto) = digest(record, crypto) == leaf(ack)
 
+isbinding(record::Transaction, ack::AckInclusion{ChainState}, hasher::Hash) = digest(record, hasher) == leaf(ack)
+isbinding(ack::AckInclusion{ChainState}, record::Transaction, hasher::Hash) = isbinding(record, ack, hasher)
+
+
+isbinding(ack::AckInclusion{ChainState}, id::Pseudonym) = issuer(ack) == id
+
+
+
+
+function Base.show(io::IO, state::ChainState)
+    
+    println(io, "ChainState:")
+    println(io, "  index : $(state.index)")
+    println(io, "  root : $(string(state.root))")
+    print(io, "  generator : $(string(state.generator))")
+    
+end
+
+
+
 
 mutable struct BraidChain
     members::Set{Pseudonym}
@@ -32,6 +52,31 @@ mutable struct BraidChain
     tree::HistoryTree
     commit::Union{Commit{ChainState}, Nothing}
 end
+
+
+function print_vector(io::IO, vector::Vector)
+    
+    for i in vector
+        println(io, show_string(i))
+    end
+    
+end
+
+
+function Base.show(io::IO, chain::BraidChain)
+
+    println(io, "BraidChain:")
+    println(io, "  members : $(length(chain.members)) entries")
+    println(io, "  generator : $(string(chain.generator))")
+    println(io, "  guardian : $(string(chain.guardian))")
+    println(io, "")
+    #println(io, show_string(chain.ledger))
+    print_vector(io, chain.ledger)
+    println(io, "")
+    print(io, show_string(chain.commit))
+
+end
+
 
 
 BraidChain(guardian::Pseudonym, crypto::Crypto) = BraidChain(Set{Pseudonym}(), Transaction[], crypto, generator(crypto), guardian, HistoryTree(Digest, hasher(crypto)), nothing)
@@ -163,12 +208,29 @@ Base.:(==)(x::Member, y::Member) = x.admission == y.admission && x.generator == 
 
 approve(member::Member, signer::Signer) = @set member.approval = sign(member, signer)
 
+issuer(member::Member) = issuer(member.admission)
 
 id(member::Member) = id(member.admission)
 
 pseudonym(member::Member) = member.pseudonym
 
 generator(member::Member) = member.generator
+
+ticket(member::Member) = ticket(member.admission)
+
+function Base.show(io::IO, member::Member)
+
+    println(io, "Member:")
+    println(io, "  issuer : $(string(issuer(member)))")
+    println(io, "  ticket : $(string(ticket(member)))")
+    println(io, "  identity : $(string(id(member)))")
+    println(io, "  generator : $(string(generator(member)))")
+    print(io, "  pseudonym : $(string(pseudonym(member)))")
+
+end
+
+
+
 
 
 function Base.push!(chain::BraidChain, m::Member)

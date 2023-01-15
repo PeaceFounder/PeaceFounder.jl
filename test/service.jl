@@ -1,6 +1,7 @@
 using Test
 import PeaceFounder: Client, Service, Mapper, Model
 import .Service: ROUTER
+import Dates
 
 crypto = Model.Crypto("SHA-256", "MODP", UInt8[1, 2, 3, 6])
 GUARDIAN = Model.gen_signer(crypto)
@@ -36,23 +37,28 @@ Client.enroll!(bob, ROUTER, bob_ticketid, bob_token)
 eve = Client.Voter(deme)
 Client.enroll!(eve, ROUTER, eve_ticketid, eve_token) 
 
-# proposal_draft = Model.Proposal(
-#     uuid = Base.UUID(23445325),
-#     summary = "Are you ready for democracy?",
-#     description = "",
-#     ballot = Model.Ballot(["yes", "no"]),
-#     open = Dates.now(),
-#     closed = Dates.now() + Dates.Second(1),
-# )
+proposal_draft = Model.Proposal(
+    uuid = Base.UUID(23445325),
+    summary = "Are you ready for democracy?",
+    description = "",
+    ballot = Model.Ballot(["yes", "no"]),
+    open = Dates.now(),
+    closed = Dates.now() + Dates.Second(5)
+)
 
-# Client.submit_proposal(ROUTER, proposal_draft, GUARDIAN)
+proposal, ack = Client.enlist_proposal(ROUTER, proposal_draft, GUARDIAN)
 
+@test Model.isbinding(proposal, ack, DEME)
+@test Model.verify(ack, crypto)
+
+Client.update_proposal_cache!(alice, ROUTER)
+
+#proposal_list = Client.get_proposal_list(ROUTER)
 # proposal = Client.list_proposals(ROUTER)[1]
 
 # Client.cast_vote!(alice, ROUTER, proposal, Selection(2))
 # Client.cast_vote!(bob, ROUTER, proposal, Selection(1))
 # Client.cast_vote!(eve, ROUTER, proposal, Selection(2))
-
 
 # Client.check_vote!(alice, ROUTER, proposal) # asks for consistency proof that previous commitment still holds. 
 

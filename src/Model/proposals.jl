@@ -53,17 +53,17 @@ struct Proposal <: Transaction
     closed::DateTime
     collector::Union{Pseudonym, Nothing} # 
     
-    state::Union{ChainState, Nothing}
+    anchor::Union{ChainState, Nothing}
     approval::Union{Seal, Nothing} 
 
-    Proposal(uuid::UUID, summary::String, description::String, ballot::Ballot, open::DateTime, closed::DateTime, collector::Pseudonym, state::ChainState, approval::Union{Seal, Nothing}) = new(uuid, summary, description, ballot, open, closed, collector, state, approval)
+    Proposal(uuid::UUID, summary::String, description::String, ballot::Ballot, open::DateTime, closed::DateTime, collector::Union{Pseudonym, Nothing}, state::Union{ChainState, Nothing}, approval::Union{Seal, Nothing}) = new(uuid, summary, description, ballot, open, closed, collector, state, approval)
 
 
-    Proposal(; uuid, summary, description, ballot, open, closed, collector, state, approval = nothing) = Proposal(uuid, summary, description, ballot, open, closed, collector, state, approval)
+    Proposal(; uuid, summary, description, ballot, open, closed, collector = nothing, state = nothing, approval = nothing) = Proposal(uuid, summary, description, ballot, open, closed, collector, state, approval)
 end
 
-state(proposal::Proposal) = proposal.state
-generator(proposal::Proposal) = generator(state(proposal))
+state(proposal::Proposal) = proposal.anchor
+generator(proposal::Proposal) = isnothing(proposal.anchor) ? nothing : generator(state(proposal))
 
 uuid(proposal::Proposal) = proposal.uuid
 
@@ -73,6 +73,37 @@ isbinding(chain::BraidChain, state::ChainState) = root(chain, index(state)) == r
 isdone(proposal::Proposal; time) = proposal.closed < time
 isopen(proposal::Proposal; time) = proposal.open < time && proposal.closed > time
 isstarted(proposal::Proposal; time) = proposal.open < time
+
+
+issuer(proposal::Proposal) = isnothing(proposal.approval) ? nothing : pseudonym(proposal.approval)
+
+function status(proposal::Proposal)
+    
+    time = Dates.now()
+    (; open, closed) = proposal
+
+    if time < open
+        return "pending"
+    elseif time < closed
+        return "started"
+    else
+        return "closed"
+    end
+end
+
+
+
+function Base.show(io::IO, proposal::Proposal)
+    
+    println(io, "Proposal:")
+    println(io, "  summary : $(proposal.summary)")
+    println(io, "  uuid : $(proposal.uuid)")
+    println(io, "  window : $(proposal.open) - $(proposal.closed) ($(status(proposal)))")
+    println(io, "  generator : $(string(generator(proposal)))")
+    println(io, "  collector : $(string(proposal.collector))")
+    print(io, "  issuer : $(string(issuer(proposal)))")
+
+end
 
 
 function Base.:(==)(x::Proposal, y::Proposal)
@@ -124,7 +155,7 @@ function record!(chain::BraidChain, p::Proposal)
 end
 
 # It could also throw an error 
-members(chain::BraidChain, proposal::Proposal) = members(chain, proposal.state)
+members(chain::BraidChain, proposal::Proposal) = members(chain, proposal.anchor)
 
 select(::Type{Proposal}, uuid::UUID, chain::BraidChain) = select(Proposal, x -> x.uuid == uuid, chain)
 
@@ -139,8 +170,19 @@ end
 
 Vote(proposal::Digest, seed::Digest, selection::Selection, seq::Int) = Vote(proposal, seed, selection, seq, nothing)
 
-
 Base.:(==)(x::Vote, y::Vote) = x.proposal == y.proposal && x.selection == y.selection && x.seq == y.seq && x.approval == y.approval
+
+
+function Base.show(io::IO, vote::Vote)
+
+    println(io, "Vote:")
+    println(io, "  proposal : $(string(vote.proposal))")
+    println(io, "  seed : $(string(vote.seed))")
+    println(io, "  selection : $(vote.selection)")
+    println(io, "  seq : $(vote.seq)")
+    print(io, "  pseudonym : $(string(pseudonym(vote)))")
+
+end
 
 # I could have Vote{<:Option}, Proposal{<:AbstractBallot} and AbstractTally to accomodate different voting scenarious.
 # The selection is associated here with Ballot parametric type
@@ -164,7 +206,7 @@ isbinding(vote::Vote, proposal::Proposal, crypto::Crypto) = vote.proposal == dig
 
 isbinding(record, spine::Vector{Digest}, crypto::Crypto) = isbinding(record, spine, hasher(crypto))
 
-pseudonym(vote::Vote) = pseudonym(vote.approval)
+pseudonym(vote::Vote) = isnothing(vote.approval) ? nothing : pseudonym(vote.approval)
 
 
 struct BallotBoxState
@@ -192,16 +234,43 @@ istallied(state::BallotBoxState) = !isnothing(state.tally)
 istallied(commit::Commit{BallotBoxState}) = istallied(state(commit))
 
 
+function Base.show(io::IO, state::BallotBoxState)
+    
+    println(io, "BallotBoxState:")
+    println(io, "  seed : $(string(state.seed))")
+    println(io, "  index : $(state.index)")
+    println(io, "  root : $(string(state.root))")
+    println(io, "  tally : $(tally(state))")
+
+    view_str = isnothing(state.view) ? nothing : bitstring(state.view)
+    print(io, "  view : $(view_str)")
+end
+
 
 struct CastRecord
     vote::Vote
     timestamp::DateTime
 end
 
+function Base.show(io::IO, receipt::CastRecord)
+
+    println(io, "CastRecord:")
+    println(io, show_string(receipt.vote))
+    print(io, "  timestamp : $(receipt.timestamp)")
+
+end
 
 struct CastReceipt
     vote::Digest
     timestamp::DateTime
+end
+
+function Base.show(io::IO, receipt::CastReceipt)
+
+    println(io, "CastReceipt:")
+    println(io, "  vote : $(string(receipt.vote))")
+    print(io, "  timestamp : $(receipt.timestamp)")
+
 end
 
 receipt(record::CastRecord, hasher::Hash) = CastReceipt(digest(record.vote, hasher), record.timestamp)
@@ -224,6 +293,14 @@ function verify(ack::CastAck, crypto::Crypto)
     return verify(ack.ack, crypto)
 end
 
+function Base.show(io::IO, ack::CastAck)
+
+    println(io, "CastAck:")
+    println(io, show_string(ack.receipt))
+    println(io, show_string(ack.ack))
+
+end
+
 
 mutable struct BallotBox
     proposal::Proposal
@@ -239,6 +316,23 @@ end
 
 
 BallotBox(proposal::Proposal, voters::Set{Pseudonym}, collector::Pseudonym, crypto::Crypto) = BallotBox(proposal, voters, collector, nothing, crypto, Vote[], CastRecord[], HistoryTree(Digest, hasher(crypto)), nothing)
+
+
+function Base.show(io::IO, ballotbox::BallotBox)
+
+    println(io, "BallotBox:")
+    println(io, "  voters : $(length(ballotbox.voters)) entries")
+    println(io, "  seed : $(string(ballotbox.seed))")
+    println(io, "  queue : $(length(ballotbox.queue)) uncommited entries")
+    println(io, show_string(ballotbox.proposal))
+    println(io, "")
+
+    print_vector(io, ballotbox.ledger)
+    
+    println(io, "")
+    println(io, show_string(ballotbox.commit))
+
+end
 
 
 generator(ballotbox::BallotBox) = generator(ballotbox.proposal)
@@ -442,6 +536,20 @@ struct PollingStation
 end
 
 PollingStation(crypto::Crypto) = PollingStation(BallotBox[], crypto)
+
+
+function Base.show(io::IO, station::PollingStation)
+    
+    println(io, "PollingStation:")
+    println(io, "")
+
+    for i in station.halls
+        println(io, show_string(i.proposal))
+    end
+
+end
+
+
 
 function add!(station::PollingStation, proposal::Proposal, voters::Set{Pseudonym}, collector::Pseudonym)
     bbox = BallotBox(proposal, voters, collector, station.crypto)

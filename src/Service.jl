@@ -9,7 +9,7 @@ using ..Mapper
 using ..Parser: marshal, unmarshal
 
 using HTTP: Request, Response, HTTP
-using ..Model: TicketID, Digest, Pseudonym, Digest, Member
+using ..Model: TicketID, Digest, Pseudonym, Digest, Member, Proposal
 using Dates: DateTime
 
 const ROUTER = HTTP.Router()
@@ -104,6 +104,28 @@ function get_chain_commit(req::Request)
 end
 
 HTTP.register!(ROUTER, "GET", "/braidchain/commit", get_chain_commit)
+
+
+function enlist_proposal(req::Request)
+
+    proposal = unmarshal(req.body, Proposal)
+    ack = Mapper.enlist_proposal(proposal)
+
+    return Response(200, marshal(ack))
+end
+
+HTTP.register!(ROUTER, "POST", "/braidchain/proposals", enlist_proposal)
+
+
+function get_proposal_list(req::Request)
+
+    proposal_list = Mapper.get_chain_proposal_list()
+    
+    return Response(200, marshal(proposal_list))
+end
+
+HTTP.register!(ROUTER, "GET", "/braidchain/proposals", get_proposal_list)
+
 
 
 end

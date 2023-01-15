@@ -174,10 +174,14 @@ get_chain_ack_leaf(N::Int) = Model.ack_leaf(BRAID_CHAIN[], N)
 get_chain_ack_root(N::Int) = Model.ack_root(BRAID_CHAIN[], N)
 
 enroll_member(member::Member) = submit_chain_record!(member)
+enlist_proposal(proposal::Proposal) = submit_chain_record!(proposal)
 
 get_roll() = Model.roll(BRAID_CHAIN[])
 
 get_peers() = Model.peers(BRAID_CHAIN[])
+
+get_constituents() = Model.constituents(BRAID_CHAIN[])
+
 
 get_members(N::Int) = Model.members(BRAID_CHAIN[], N)
 get_members() = Model.members(BRAID_CHAIN[])

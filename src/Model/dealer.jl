@@ -25,6 +25,16 @@ struct NonceCommitment <: Transaction
 end
 
 
+function Base.show(io::IO, commitment::NonceCommitment)
+    
+    println(io, "NonceCommitment:")
+    println(io, "  promises : $(length(commitment.promises)) entries")
+    print(io, "  reset : $(commitment.reset)")
+
+end
+
+
+
 struct DealerJob
     uuid::UUID
     timestamp::DateTime
@@ -39,6 +49,20 @@ struct Lot <: Transaction
 end
 
 seed(lot::Lot) = isnothing(lot.pulse) ? lot.nonce : error("TODO: pulse needs to be hashed with nonce.")
+
+
+function Base.show(io::IO, lot::Lot)
+
+    println(io, "Lot:")
+    println(io, "  uuid : $(lot.uuid)")
+    println(io, "  nonce : $(string(lot.nonce))")
+    println(io, "  timestamp : $(lot.timestamp)")
+    print(io, "  pulse : $(lot.pulse)")
+    
+end
+
+
+
 
 struct Dealer
     nonces::Vector{Digest}

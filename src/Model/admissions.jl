@@ -23,11 +23,24 @@ Admission(ticketid::TicketID, id::Pseudonym, timestamp::DateTime) = Admission(ti
 
 Base.:(==)(x::Admission, y::Admission) = x.ticketid == y.ticketid && x.id == y.id && x.timestamp == y.timestamp && x.approval == y.approval
 
-
 approve(admission::Admission, signer::Signer) = @set admission.approval = seal(admission, signer)
 
+issuer(admission::Admission) = isnothing(admission.approval) ? nothing : pseudonym(admission.approval)
 
 id(admission::Admission) = admission.id
+
+ticket(admission::Admission) = admission.ticketid
+
+
+function Base.show(io::IO, admission::Admission)
+    
+    println(io, "Admission:")
+    println(io, "  ticket : $(string(admission.ticketid))")
+    println(io, "  identity : $(string(admission.id))")
+    println(io, "  timestamp : $(admission.timestamp)")
+    print(io, "  issuer : $(string(issuer(admission)))")
+
+end
 
 
 mutable struct Ticket
@@ -38,7 +51,6 @@ mutable struct Ticket
     token::Digest
     admission::Union{Admission, Nothing}
 end
-
 
 struct TokenRecruiter
     tickets::Vector{Ticket}
@@ -75,8 +87,8 @@ select(::Type{Admission}, ticketid::TicketID, recruiter::TokenRecruiter) = selec
 select(::Type{Admission}, id::Pseudonym, recruiter::TokenRecruiter) = select(Admission, i -> isnothing(i) ? false : i.admission.id == id, recruiter::TokenRecruiter)
 
 
-ticket_ids(recruiter::TokenRecruiter) = (i.ticketid for i in recruiter.tickets)
-
+ticket_ids(recruiter::TokenRecruiter) = tickets(recruiter)
+tickets(recruiter::TokenRecruiter) = (i.ticketid for i in recruiter.tickets)
 #admission(recruiter::TokenRecruiter, ticketid::TicketID) = recruiter[ticketid].admission
 
 
