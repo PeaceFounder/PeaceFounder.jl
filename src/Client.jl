@@ -4,9 +4,11 @@ module Client
 using Infiltrator
 
 using ..Model
-using ..Model: Member, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, Hash, AckConsistency, AckInclusion, CastAck, Deme, Signer, TicketStatus, Commit, ChainState, Proposal
+using ..Model: Member, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, Hash, AckConsistency, AckInclusion, CastAck, Deme, Signer, TicketStatus, Commit, ChainState, Proposal, BallotBoxState
+using Base: UUID
 
-using ..Model: id, hasher, pseudonym, isbinding, generator, isadmitted, state
+
+using ..Model: id, hasher, pseudonym, isbinding, generator, isadmitted, state, verify, crypto
 
 using HTTP: Router, Request, Response, Handler, HTTP, iserror, StatusError
 
@@ -141,9 +143,60 @@ function get_proposal_list(router::Router)
     
     proposal_list = unmarshal(response.body, Vector{Tuple{Int, Proposal}})
 
+    # Perhaps the list needs to be supplemented with a commit. 
+    # Meanwhile the issuer signature can be used to check the integrity
+    # An attack vector where issuer is corrupt and issues different proposals for different people is something to be aware of
+    # Though it would not go through as the inclusion proof would be asked from the braidchain.
+
     return proposal_list
 end
 
+
+function get_chain_leaf(router::Router, N::Int)
+
+    response = get(router, "/braidchain/$N/leaf")
+    ack = unmarshal(response.body, AckInclusion{ChainState})
+
+    return ack
+end
+
+
+function get_chain_root(router::Router, N::Int)
+
+    response = get(router, "/braidchain/$N/root")
+    ack = unmarshal(response.body, AckConsistency{ChainState})
+
+    return ack
+end
+
+
+function get_chain_record(router::Router, N::Int)
+
+    response = get(router, "/braidchain/$N/record")
+    
+    @show response # Need a way to get a type information
+    
+    error("Not implemented")
+end
+
+
+function get_ballotbox_commit(router::Router, uuid::UUID)
+
+    response = get(router, "/poolingstation/$uuid/commit")
+    
+    commit = unmarshal(response.body, Commit{BallotBoxState})
+    
+    return commit
+end
+
+function cast_vote(router::Router, uuid::UUID, vote::Vote)
+
+    response = post(router, "/poolingstation/$(uuid)/votes", marshal(vote))
+
+    ack = unmarshal(response.body, CastAck)
+
+    return ack
+end
 
 
 struct CastGuard
@@ -153,6 +206,10 @@ struct CastGuard
     ack_cast::CastAck # this also would contain a seed
     ack_integrity::Vector{AckConsistency}
 end
+
+CastGuard(proposal::Proposal, ack_proposal::AckInclusion, vote::Vote, ack_cast::CastAck) = CastGuard(proposal, ack_proposal, vote, ack_cast, AckConsistency[])
+
+root(guard::CastGuard) = isempty(guard.ack_integrity) ? root(guard.ack_cast) : root(guard.ack_integrity)
 
 
 struct EnrollGuard
@@ -183,7 +240,7 @@ mutable struct Voter # mutable because it also needs to deal with storage
     signer::Signer
     guard::EnrollGuard
     casts::Vector{CastGuard}
-    proposals::Vector{Tuple{Int, Proposal}}
+    cache::Vector{Tuple{Int, Proposal}}
 end
 
 
@@ -195,6 +252,8 @@ Model.pseudonym(voter::Voter, g) = pseudonym(voter.signer, g)
 Model.isadmitted(voter::Voter) = !isnothing(voter.guard.admission)
 
 Model.hasher(voter::Voter) = hasher(voter.deme)
+
+proposals(voter::Voter) = collect(proposal for (index, proposal) in voter.cache)
 
 
 function Base.show(io::IO, voter::Voter)
@@ -246,6 +305,8 @@ function enroll!(voter::Voter, router) # For continuing from the last place
 
     commit = get_chain_commit(router)
 
+    # TODO: Add assertions 
+
     #isbinding(commit, voter.deme)
     
     g = generator(commit)
@@ -264,8 +325,62 @@ function update_proposal_cache!(voter::Voter, router)
 
     proposal_list = get_proposal_list(router)
     
-    resize!(voter.proposals, 0)
-    append!(voter.proposals, proposal_list)
+    resize!(voter.cache, 0)
+    append!(voter.cache, proposal_list)
+
+    return
+end
+
+
+function get_index(voter::Voter, proposal::Proposal)
+
+    for (n, p) in voter.cache
+
+        if p == proposal
+            return n
+        end
+    end
+
+    error("Can't be here. Proposal not found in voter's cache.")
+end
+
+
+function get_record(voter::Voter, uuid::UUID)
+
+    for (index, proposal) in voter.cache
+
+        if proposal.uuid == uuid
+            return (index, proposal)
+        end
+    end
+
+    error("Can't be here. Proposal not found in voter's cache.")
+end
+
+
+function cast_vote!(voter::Voter, router::Router, uuid::UUID, selection)
+
+    index, proposal = get_record(voter, uuid)
+
+    ack_leaf = get_chain_leaf(router, index)
+
+    @assert isbinding(proposal, ack_leaf, voter.deme)
+    @assert verify(ack_leaf, voter.deme.crypto)
+    
+    commit = get_ballotbox_commit(router, proposal.uuid)
+    
+    @assert isbinding(commit, proposal, hasher(voter.deme))
+    @assert verify(commit, Model.crypto(voter.deme))
+    
+    vote = Model.vote(proposal, Model.seed(commit), selection, voter.signer)
+    ack = cast_vote(router, proposal.uuid, vote)
+
+    @assert isbinding(ack, proposal, hasher(voter.deme))
+    @assert isbinding(ack, vote, hasher(voter.deme))
+    @assert verify(ack, crypto(voter.deme))
+
+    guard = CastGuard(proposal, ack_leaf, vote, ack)
+    push!(voter.casts, guard)
 
     return
 end

@@ -1,5 +1,5 @@
 using Test
-import PeaceFounder: Client, Service, Mapper, Model
+import PeaceFounder: Client, Service, Mapper, Model, Schedulers
 import .Service: ROUTER
 import Dates
 
@@ -42,8 +42,8 @@ proposal_draft = Model.Proposal(
     summary = "Are you ready for democracy?",
     description = "",
     ballot = Model.Ballot(["yes", "no"]),
-    open = Dates.now(),
-    closed = Dates.now() + Dates.Second(5)
+    open = Dates.now() + Dates.Millisecond(100),
+    closed = Dates.now() + Dates.Second(3)
 )
 
 proposal, ack = Client.enlist_proposal(ROUTER, proposal_draft, GUARDIAN)
@@ -52,19 +52,21 @@ proposal, ack = Client.enlist_proposal(ROUTER, proposal_draft, GUARDIAN)
 @test Model.verify(ack, crypto)
 
 Client.update_proposal_cache!(alice, ROUTER)
+Client.update_proposal_cache!(bob, ROUTER)
+Client.update_proposal_cache!(eve, ROUTER)
 
-#proposal_list = Client.get_proposal_list(ROUTER)
-# proposal = Client.list_proposals(ROUTER)[1]
+Schedulers.waituntil(proposal.open + Dates.Millisecond(1000))
 
-# Client.cast_vote!(alice, ROUTER, proposal, Selection(2))
-# Client.cast_vote!(bob, ROUTER, proposal, Selection(1))
-# Client.cast_vote!(eve, ROUTER, proposal, Selection(2))
+Client.cast_vote!(alice, ROUTER, proposal.uuid, Model.Selection(2))
+Client.cast_vote!(bob, ROUTER, proposal.uuid, Model.Selection(1))
+Client.cast_vote!(eve, ROUTER, proposal.uuid, Model.Selection(2))
 
-# Client.check_vote!(alice, ROUTER, proposal) # asks for consistency proof that previous commitment still holds. 
+# Client.check_vote!(alice, ROUTER, proposal) # asks for consistency proof that previous commitment still holds. Also get's a tally and it's view 
 
+chain_commit = Client.get_ballotbox_commit(ROUTER, proposal.uuid)
+@test Model.istallied(chain_commit) == false
 
-# chain_commit = Client.get_chain_commit(ROUTER)
-# @test istallied(chain_commit) == false
-# sleep(1)
-# chain_commit = Client.get_chain_commit(ROUTER)
-# @test istallied(chain_commit) == true
+Schedulers.waituntil(proposal.closed + Dates.Millisecond(100))
+
+chain_commit = Client.get_ballotbox_commit(ROUTER, proposal.uuid)
+@test Model.istallied(chain_commit) == true

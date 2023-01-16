@@ -22,6 +22,22 @@ Base.notify(scheduler::Scheduler) = notify(scheduler.condition)
 Base.notify(scheduler::Scheduler, value) = notify(scheduler.condition, value)
 
 
+# This seems something interesting to put in the code
+function waituntil(time::DateTime)
+
+    interval = time - now()
+    
+    if interval > Dates.Second(0)
+
+        seconds = interval.value/1000
+        timer = Timer(seconds)
+        wait(timer)
+        
+    end
+
+    return
+end
+
 function next_event(scheduler::Scheduler)
 
     timestamp, value = scheduler.schedule[1]
@@ -92,6 +108,7 @@ schedule!(scheduler::Scheduler, timestamp::DateTime) = schedule!(scheduler, time
 
 
 retry!(scheduler::Scheduler) = scheduler.finished = false;
+
 
 
 export Scheduler, schedule!, retry!, wait, notify # wait and notify as extension from base

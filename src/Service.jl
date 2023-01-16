@@ -7,9 +7,10 @@ using Infiltrator
 
 using ..Mapper
 using ..Parser: marshal, unmarshal
+using Base: UUID
 
 using HTTP: Request, Response, HTTP
-using ..Model: TicketID, Digest, Pseudonym, Digest, Member, Proposal
+using ..Model: TicketID, Digest, Pseudonym, Digest, Member, Proposal, Vote
 using Dates: DateTime
 
 const ROUTER = HTTP.Router()
@@ -125,6 +126,82 @@ function get_proposal_list(req::Request)
 end
 
 HTTP.register!(ROUTER, "GET", "/braidchain/proposals", get_proposal_list)
+
+
+function get_chain_leaf(req::Request)
+
+    N = parse(Int, HTTP.getparam(req, "N"))
+    ack = Mapper.get_chain_ack_leaf(N)
+
+    return Response(200, marshal(ack))
+end
+
+HTTP.register!(ROUTER, "GET", "/braidchain/{N:[0-9]+}/leaf", get_chain_leaf)
+
+
+function get_chain_root(req::Request)
+
+    N = parse(Int, HTTP.getparam(req, "N"))
+    ack = Mapper.get_chain_ack_root(N)
+
+    return Response(200, marshal(ack))
+end
+
+HTTP.register!(ROUTER, "GET", "/braidchain/{N:[0-9]+}/root", get_chain_root)
+
+
+function get_chain_record(req::Request)
+
+    N = parse(Int, HTTP.getparam(req, "N"))
+    record = Mapper.get_chain_record(N)
+
+    return Response(200, marshal(record)) # type information is important here for receiver!
+end
+
+HTTP.register!(ROUTER, "GET", "/braidchain/{N:[0-9]+}/record", get_chain_record)
+
+
+function get_ballotbox_commit(req::Request)
+    
+    uuid_hex = HTTP.getparam(req, "uuid")
+    uuid = UUID(uuid_hex)
+
+    commit = Mapper.get_ballotbox_commit(uuid)
+    
+    return Response(200, marshal(commit))
+end
+
+HTTP.register!(ROUTER, "GET", "/poolingstation/{uuid}/commit", get_ballotbox_commit)
+
+
+function get_ballotbox_proposal(req::Request)
+    
+    uuid_hex = HTTP.getparam(req, "uuid")
+    uuid = UUID(uuid_hex)
+
+    proposal = Mapper.get_ballotbox_proposal(uuid)
+    
+    return Response(200, marshal(proposal))
+end
+
+HTTP.register!(ROUTER, "GET", "/poolingstation/{uuid}/proposal", get_ballotbox_proposal)
+
+
+
+function cast_vote(req::Request)
+    
+    uuid_hex = HTTP.getparam(req, "uuid")
+    uuid = UUID(uuid_hex)
+
+    vote = unmarshal(req.body, Vote)
+    ack = Mapper.cast_vote(uuid, vote)
+
+    return Response(200, marshal(ack))
+end
+
+HTTP.register!(ROUTER, "POST", "/poolingstation/{uuid}/votes", cast_vote)
+
+
 
 
 

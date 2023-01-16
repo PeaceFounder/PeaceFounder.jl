@@ -6,9 +6,13 @@ struct Ballot
     options::Vector{String}
 end
 
+@batteries Ballot
+
 struct Selection
     option::Int
 end
+
+@batteries Selection
 
 isconsistent(selection::Selection, ballot::Ballot) = 1 <= selection.option <= length(ballot.options)
 
@@ -62,6 +66,8 @@ struct Proposal <: Transaction
     Proposal(; uuid, summary, description, ballot, open, closed, collector = nothing, state = nothing, approval = nothing) = Proposal(uuid, summary, description, ballot, open, closed, collector, state, approval)
 end
 
+@batteries Proposal
+
 state(proposal::Proposal) = proposal.anchor
 generator(proposal::Proposal) = isnothing(proposal.anchor) ? nothing : generator(state(proposal))
 
@@ -92,7 +98,6 @@ function status(proposal::Proposal)
 end
 
 
-
 function Base.show(io::IO, proposal::Proposal)
     
     println(io, "Proposal:")
@@ -104,24 +109,6 @@ function Base.show(io::IO, proposal::Proposal)
     print(io, "  issuer : $(string(issuer(proposal)))")
 
 end
-
-
-function Base.:(==)(x::Proposal, y::Proposal)
-
-    x.summary == y.summary || return false
-    x.description == y.description || return false
-    x.options == y.options || return false
-    x.open == y.open || return false
-    x.closed == y.closed || return false
-    x.mset == y.mset || return false
-    x.generator == y.generator || return false
-    x.treehash == y.treehash || return false
-    x.approval == y.approval || return false
-
-    return true
-end
-
-
 
 function Base.push!(chain::BraidChain, p::Proposal)
     push!(chain.ledger, p)
@@ -210,6 +197,7 @@ pseudonym(vote::Vote) = isnothing(vote.approval) ? nothing : pseudonym(vote.appr
 
 
 struct BallotBoxState
+    proposal::Digest
     seed::Digest
     index::Int
     root::Digest
@@ -219,7 +207,7 @@ end
 
 @batteries BallotBoxState
 
-BallotBoxState(seed::Digest, index::Int, root::Nothing, tally::Nothing, view::Nothing) = BallotBoxState(seed, index, Digest(), tally, view)
+BallotBoxState(proposal::Digest, seed::Digest, index::Int, root::Nothing, tally::Nothing, view::Nothing) = BallotBoxState(proposal, seed, index, Digest(), tally, view)
 
 index(state::BallotBoxState) = state.index
 root(state::BallotBoxState) = state.root
@@ -234,9 +222,16 @@ istallied(state::BallotBoxState) = !isnothing(state.tally)
 istallied(commit::Commit{BallotBoxState}) = istallied(state(commit))
 
 
+isbinding(state::BallotBoxState, proposal::Proposal, hasher::Hash) = state.proposal == digest(proposal, hasher)
+
+isbinding(commit::Commit{BallotBoxState}, proposal::Proposal, hasher::Hash) = issuer(commit) == proposal.collector && isbinding(state(commit), proposal, hasher)
+
+
+
 function Base.show(io::IO, state::BallotBoxState)
     
     println(io, "BallotBoxState:")
+    println(io, "  proposal : $(string(state.proposal))")
     println(io, "  seed : $(string(state.seed))")
     println(io, "  index : $(state.index)")
     println(io, "  root : $(string(state.root))")
@@ -280,10 +275,12 @@ isbinding(receipt::CastReceipt, ack::AckInclusion, hasher::Hash) = digest(receip
 isbinding(receipt::CastReceipt, spine::Vector{Digest}, hasher::Hash) = digest(receipt, hasher) in spine
 isbinding(record::CastRecord, spine::Vector{Digest}, hasher::Hash) = isbinding(receipt(record, hasher), spine, hasher)
 
+isbinding(receipt::CastReceipt, vote::Vote, hasher::Hash) = receipt.vote == digest(vote, hasher)
+
 # A good place to also reply with a blind signature here for a proof of pariticpation
 struct CastAck
     receipt::CastReceipt
-    ack::AckInclusion
+    ack::AckInclusion{BallotBoxState}
 end
 
 id(ack::CastAck) = id(ack.ack)
@@ -292,6 +289,13 @@ function verify(ack::CastAck, crypto::Crypto)
     isbinding(ack.receipt, ack.ack, hasher(crypto)) || return false
     return verify(ack.ack, crypto)
 end
+
+isbinding(ack::CastAck, proposal::Proposal, hasher::Hash) = isbinding(ack.ack, proposal, hasher)
+
+isbinding(ack::AckInclusion{BallotBoxState}, proposal::Proposal, hasher::Hash) = issuer(ack) == proposal.collector && state(ack).proposal == digest(proposal, hasher)
+
+isbinding(ack::CastAck, vote::Vote, hasher::Hash) = isbinding(ack.receipt, vote, hasher)
+
 
 function Base.show(io::IO, ack::CastAck)
 
@@ -356,8 +360,7 @@ root(ballotbox::BallotBox) = root(ballotbox.tree)
 record(ballotbox::BallotBox, N::Int) = ledger(ballotbox)[N]
 receipt(ballotbox::BallotBox, N::Int) = receipt(record(ballotbox, N), hasher(ballotbox.crypto))
 
-
-commit(ballotbox::BallotBox) = !isnothing(ballotbox.commit) ? ballotbox.commit : error("commitment not defined")
+commit(ballotbox::BallotBox) = !isnothing(ballotbox.commit) ? ballotbox.commit : error("ballotbox had not been commited yet")
 
 
 selections(votes::Vector{CastRecord}) = (i.vote.selection for i in votes) # Note that dublicates are removed at this stage
@@ -438,10 +441,10 @@ function state(ballotbox::BallotBox; with_tally::Union{Nothing, Bool} = nothing)
         _view = nothing
     end
 
-    return BallotBoxState(seed(ballotbox), index(ballotbox), root(ballotbox), _tally, _view)
+    proposal = digest(ballotbox.proposal, ballotbox.crypto)
+
+    return BallotBoxState(proposal, seed(ballotbox), index(ballotbox), root(ballotbox), _tally, _view)
 end
-
-
 
 
 function get_dublicate_index(ballotbox::BallotBox, vote::Vote)
@@ -456,10 +459,8 @@ function get_dublicate_index(ballotbox::BallotBox, vote::Vote)
 end
 
 
-
-
 function validate(ballotbox::BallotBox, vote::Vote)
-    
+
     @assert isconsistent(vote.selection, ballotbox.proposal.ballot)
     @assert isbinding(vote, ballotbox.proposal, ballotbox.crypto) # isbinding(proposal(ballotbox), vote, crypto) 
     @assert pseudonym(vote) in members(ballotbox)
@@ -468,7 +469,6 @@ function validate(ballotbox::BallotBox, vote::Vote)
 
     return
 end
-
 
 
 function record!(ballotbox::BallotBox, vote::Vote)
@@ -503,7 +503,6 @@ function record!(ballotbox::BallotBox, record::CastRecord)
     
     return N
 end
-
 
 
 function commit!(ballotbox::BallotBox, timestamp::DateTime, signer::Signer; with_tally::Union{Nothing, Bool} = nothing)
@@ -548,7 +547,6 @@ function Base.show(io::IO, station::PollingStation)
     end
 
 end
-
 
 
 function add!(station::PollingStation, proposal::Proposal, voters::Set{Pseudonym}, collector::Pseudonym)

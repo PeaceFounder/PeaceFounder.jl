@@ -29,8 +29,6 @@ isbinding(ack::AckInclusion{ChainState}, record::Transaction, hasher::Hash) = is
 isbinding(ack::AckInclusion{ChainState}, id::Pseudonym) = issuer(ack) == id
 
 
-
-
 function Base.show(io::IO, state::ChainState)
     
     println(io, "ChainState:")
@@ -39,8 +37,6 @@ function Base.show(io::IO, state::ChainState)
     print(io, "  generator : $(string(state.generator))")
     
 end
-
-
 
 
 mutable struct BraidChain

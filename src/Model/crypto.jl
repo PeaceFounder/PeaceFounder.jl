@@ -65,9 +65,9 @@ struct Pseudonym
     pk::Vector{UInt8}
 end
 
-bytes(x::Pseudonym) = x.pk
+@batteries Pseudonym # treats as immutable; 
 
-Base.:(==)(x::Pseudonym, y::Pseudonym) = x.pk == y.pk
+bytes(x::Pseudonym) = x.pk
 
 Base.convert(::Type{Vector{UInt8}}, p::Pseudonym) = p.pk
 
@@ -209,6 +209,7 @@ id(ack::AckInclusion) = id(ack.commit)
 issuer(ack::AckInclusion) = issuer(ack.commit)
 
 commit(ack::AckInclusion) = ack.commit
+state(ack::AckInclusion) = state(ack.commit)
 
 verify(ack::AckInclusion, crypto::Crypto) = HistoryTrees.verify(ack.proof, root(ack.commit), index(ack.commit); hash = hasher(crypto)) && verify(commit(ack), crypto)
 
@@ -219,11 +220,12 @@ struct AckConsistency{T}
     commit::Commit{T}
 end
 
-root(ack::AckConsistency) = root(ack.root)
+root(ack::AckConsistency) = root(ack.proof)
 id(ack::AckConsistency) = id(ack.commit)
 issuer(ack::AckConsistency) = issuer(ack.commit)
 
 commit(ack::AckConsistency) = ack.commit
+state(ack::AckConsistency) = state(ack.commit)
 
 verify(ack::AckConsistency, crypto::Crypto) = HistoryTrees.verify(ack.proof, root(ack.commit), index(ack.commit); hash = hasher(crypto)) && verify(commit(ack), crypto)
 

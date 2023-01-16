@@ -157,7 +157,6 @@ list_admissions() = [i.admission for i in RECRUITER[].tickets]
 get_chain_roll() = Model.roll(BRAID_CHAIN[])
 get_member(_id::Pseudonym) = filter(x -> Model.id(x) == _id, list_members())[1] # Model.select
 
-
 get_chain_commit() = Model.commit(BRAID_CHAIN[])
 
 function submit_chain_record!(transaction::Transaction) 
@@ -216,7 +215,8 @@ function submit_chain_record!(proposal::Proposal)
     return ack
 end
 
-function cast_vote!(uuid::UUID, vote::Vote; late_votes = false)
+
+function cast_vote(uuid::UUID, vote::Vote; late_votes = false)
 
     if !(Model.isstarted(proposal(uuid); time = Dates.now()))
 
@@ -232,10 +232,13 @@ function cast_vote!(uuid::UUID, vote::Vote; late_votes = false)
         N = Model.record!(POLLING_STATION[], uuid, vote)
         Model.commit!(POLLING_STATION[], uuid, GUARDIAN[])
 
-        ack = Model.ack_leaf(POLLING_STATION[], uuid, N)
+        ack = Model.ack_cast(POLLING_STATION[], uuid, N)
         return ack
     end
 end
+
+@deprecate cast_vote! cast_vote
+
 
 
 

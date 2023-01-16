@@ -61,9 +61,6 @@ function Base.show(io::IO, lot::Lot)
     
 end
 
-
-
-
 struct Dealer
     nonces::Vector{Digest}
     promises::Vector{Digest}
@@ -209,7 +206,6 @@ record!(chain::BraidChain, lot::Lot) = push!(chain, lot)
 
 
 function nonce_promise(chain::BraidChain, uuid::UUID) 
-    
 
     nonce_id_buffer = Digest[]
 

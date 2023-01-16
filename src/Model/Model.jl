@@ -80,9 +80,6 @@ Base.:(==)(x::Deme, y::Deme) = x.uuid == y.uuid && x.title == y.title && x.guard
 
 Deme(title::String, guardian::Pseudonym, crypto::Crypto) = Deme(UUID(rand(1:10000)), title, guardian, crypto, nothing)
 
-hasher(deme::Deme) = hasher(deme.crypto)
-
-
 function Base.show(io::IO, deme::Deme)
 
     println(io, "Deme:")
@@ -93,6 +90,9 @@ function Base.show(io::IO, deme::Deme)
     print(io, show_string(deme.crypto))
 
 end
+
+crypto(deme::Deme) = deme.crypto
+hasher(deme::Deme) = hasher(deme.crypto)
 
 isbinding(ack::AckInclusion{ChainState}, deme::Deme) = issuer(ack) == deme.guardian
 isbinding(record::Transaction, ack::AckInclusion{ChainState}, deme::Deme) = isbinding(ack, deme) && isbinding(record, ack, hasher(deme))
