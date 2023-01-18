@@ -22,13 +22,12 @@ This is a rest API for the PeaceFounder.
 GET /deme # returns a current manifest file
 GET /deme/{hash}
 
-POST /tickets : TicketID -> token::BigInt # resets token when repeated
+POST /tickets : Tuple{TicketID, DateTime, auth_code::Digest} -> Tuple{salt::Vector{UInt8}, auth_code::Digest} # resets token when repeated
 DELETE /tickets/{TicketID}
-PUT /tickets/{TicketID} : Tuple{Pseudonym, token::BigInt} -> Admission
-GET /tickets/{TicketID}/status # whether token is active
-GET /tickets/{TicketID}/admission : Admission
+PUT /tickets/{TicketID} : Tuple{Pseudonym, auth_code::Digest} -> Admission
+GET /tickets/{TicketID} : TicketStatus
 
-POST /braidchain/members : Member -> AckInclusion
+POST /braidchain/members : Member -> AckInclusion{ChainState}
 GET /braidchain/members : Vector{Tuple{Int, Member}}
 GET /braidchain/members?id={Pseudonym} : Tuple{Int, Member}
 GET /braidchain/members?pseudonym={Pseudonym} : Tuple{Int, Member}
@@ -38,9 +37,9 @@ GET /braidcahin/proposals/{UUID} : Tuple{Int, Proposal}
 GET /braidchain/proposals : Vector{Tuple{Int, Proposal}}
 
 GET /braidchain/{Int}/record : Transaction
-GET /braidchain/{Int}/leaf : AckInclusion
-GET /braidchain/{Int}/root : AckConsistency
-GET /braidchain/commit : Commit
+GET /braidchain/{Int}/leaf : AckInclusion{ChainState}
+GET /braidchain/{Int}/root : AckConsistency{ChainState}
+GET /braidchain/commit : Commit{ChainState}
 GET /braidchain/tar : BraidChainArchive
 
 POST /pollingstation/{UUID}/votes : Vote -> CastAck
@@ -49,8 +48,8 @@ GET /pollingstation/{UUID}/commit : Commit{BallotBoxState}
 GET /pollingstation/{UUID}/proposal : Tuple{Int, Proposal}
 GET /pollingstation/{UUID}/votes/{Int}/record : CastRecord
 GET /pollingstation/{UUID}/votes/{Int}/receipt : CastReceipt
-GET /pollingstation/{UUID}/votes/{Int}/leaf : AckInclusion
-GET /pollingstation/{UUID}/votes/{Int}/root : AckConsistency
+GET /pollingstation/{UUID}/votes/{Int}/leaf : AckInclusion{BallotBoxState}
+GET /pollingstation/{UUID}/votes/{Int}/root : AckConsistency{BallotBoxState}
 GET /pollingstation/{UUID}/tar : BallotBoxArchive
 GET /pollingstation/collectors # necessary to make a proposal
 ```

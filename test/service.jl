@@ -23,7 +23,6 @@ eve_token = Client.enlist_ticket(ROUTER, eve_ticketid, RECRUIT_HMAC)
 
 # ------------- token and ticketid gets sent over a QR code --------------
 
-
 deme = Client.get_deme(ROUTER) # If router have already retrieved that, no need to repepeat
 alice = Client.Voter(deme)
 
@@ -39,7 +38,7 @@ Client.enroll!(eve, ROUTER, eve_ticketid, eve_token)
 
 proposal_draft = Model.Proposal(
     uuid = Base.UUID(23445325),
-    summary = "Are you ready for democracy?",
+    summary = "Should the city ban all personal vehicle usage and invest in alternative forms of transportation such as public transit, biking and walking infrastructure?",
     description = "",
     ballot = Model.Ballot(["yes", "no"]),
     open = Dates.now() + Dates.Millisecond(100),
@@ -61,7 +60,7 @@ Client.cast_vote!(alice, ROUTER, proposal.uuid, Model.Selection(2))
 Client.cast_vote!(bob, ROUTER, proposal.uuid, Model.Selection(1))
 Client.cast_vote!(eve, ROUTER, proposal.uuid, Model.Selection(2))
 
-# Client.check_vote!(alice, ROUTER, proposal) # asks for consistency proof that previous commitment still holds. Also get's a tally and it's view 
+Client.check_vote!(alice, ROUTER, proposal.uuid) 
 
 chain_commit = Client.get_ballotbox_commit(ROUTER, proposal.uuid)
 @test Model.istallied(chain_commit) == false
@@ -70,3 +69,20 @@ Schedulers.waituntil(proposal.closed + Dates.Millisecond(100))
 
 chain_commit = Client.get_ballotbox_commit(ROUTER, proposal.uuid)
 @test Model.istallied(chain_commit) == true
+
+Client.check_vote!(eve, ROUTER, proposal.uuid) 
+
+@test typeof(Client.get_ballotbox_spine(ROUTER, proposal.uuid)) == Vector{Model.Digest}
+
+# ------------- collector maliciously drops Alice's vote --------------
+
+ballotbox = Mapper.ballotbox(proposal.uuid)
+deleteat!(ballotbox.ledger, 1) # deleting alice's vote
+Model.reset_tree!(ballotbox) 
+Model.commit!(Mapper.POLLING_STATION[], proposal.uuid, Mapper.GUARDIAN[])
+
+@test_throws ErrorException Client.check_vote!(bob, ROUTER, proposal.uuid) # bob finds out about misconduct
+
+blame = Client.blame(bob, proposal.uuid) # can be published anonymously without privacy concerns 
+@test Client.isbinding(blame, proposal, Model.hasher(crypto))
+@test Client.verify(blame, crypto)

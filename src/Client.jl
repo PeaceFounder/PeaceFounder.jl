@@ -8,7 +8,7 @@ using ..Model: Member, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admissi
 using Base: UUID
 
 
-using ..Model: id, hasher, pseudonym, isbinding, generator, isadmitted, state, verify, crypto
+using ..Model: id, hasher, pseudonym, isbinding, generator, isadmitted, state, verify, crypto, index, root, commit, isconsistent, istallied, issuer
 
 using HTTP: Router, Request, Response, Handler, HTTP, iserror, StatusError
 
@@ -199,17 +199,126 @@ function cast_vote(router::Router, uuid::UUID, vote::Vote)
 end
 
 
-struct CastGuard
-    proposal::Proposal
-    ack_proposal::AckInclusion
-    vote::Vote
-    ack_cast::CastAck # this also would contain a seed
-    ack_integrity::Vector{AckConsistency}
+function get_ballotbox_root(router::Router, uuid::UUID, N::Int)
+    
+    response = get(router, "/poolingstation/$uuid/votes/$N/root")
+    
+    ack = unmarshal(response.body, AckConsistency{BallotBoxState})
+    
+    return ack
 end
 
-CastGuard(proposal::Proposal, ack_proposal::AckInclusion, vote::Vote, ack_cast::CastAck) = CastGuard(proposal, ack_proposal, vote, ack_cast, AckConsistency[])
 
-root(guard::CastGuard) = isempty(guard.ack_integrity) ? root(guard.ack_cast) : root(guard.ack_integrity)
+function get_ballotbox_leaf(router::Router, uuid::UUID, N::Int)
+
+    response = get(router, "/poolingstation/$uuid/votes/$N/leaf")
+    
+    ack = unmarshal(response.body, AckInclusion{BallotBoxState})
+
+    return ack
+end
+
+
+function get_ballotbox_record(router::Router, uuid::UUID, N::Int)
+
+    response = get(router, "/poolingstation/$uuid/votes/$N/record")
+    
+    record = unmarshal(response.body, CastRecord)
+
+    return record
+end
+
+
+function get_ballotbox_receipt(router::Router, uuid::UUID, N::Int)
+
+    response = get(router, "/poolingstation/$uuid/votes/$N/receipt")
+    
+    receipt = unmarshal(response.body, CastReceipt)
+
+    return receipt
+end
+
+
+function get_ballotbox_proposal(router::Router, uuid::UUID)
+
+    response = get(router, "/poolingstation/$uuid/proposal")
+    
+    proposal = unmarshal(response.body, Proposal)
+
+    return proposal
+end
+
+
+function get_ballotbox_spine(router::Router, uuid::UUID)
+
+    response = get(router, "/poolingstation/$uuid/spine")
+    
+    spine = unmarshal(response.body, Vector{Digest})
+
+    return spine
+end
+
+
+struct Blame
+    commit::Commit{BallotBoxState}
+    ack::AckConsistency{BallotBoxState}
+end
+
+
+Model.issuer(blame::Blame) = issuer(blame.commit)
+
+function Model.verify(blame::Blame, crypto)
+
+    (; commit, ack) = blame
+    
+    isbinding(commit, ack) || return false
+
+    !isconsistent(commit, ack) || return false # if there is anything to blame on
+
+    verify(commit, crypto) || return false
+    verify(ack, crypto) || return false
+
+    return true
+end
+
+
+function Model.isbinding(blame::Blame, proposal::Proposal, hasher::Hash)
+    
+    blame.commit.state.proposal == Model.digest(proposal, hasher) || return false
+    issuer(blame) == proposal.collector || return false
+
+    return true
+end
+
+
+struct CastGuard
+    proposal::Proposal
+    ack_proposal::AckInclusion{ChainState}
+    vote::Vote
+    ack_cast::CastAck # this also would contain a seed
+    ack_integrity::Vector{AckConsistency{BallotBoxState}}
+    blame::Vector{Blame}
+end
+
+CastGuard(proposal::Proposal, ack_proposal::AckInclusion, vote::Vote, ack_cast::CastAck) = CastGuard(proposal, ack_proposal, vote, ack_cast, AckConsistency[], Blame[])
+
+#cast_index(guard::CastGuard) = index(guard.ack_cast)
+#cast_root(guard::CastGuard) = root(guard.ack_cast)
+
+Model.commit(guard::CastGuard) = isempty(guard.ack_integrity) ? commit(guard.ack_cast) : commit(guard.ack_integrity[end])
+
+#commit_index(ack_vector::Vector{AckConsistency}) = index(commit(ack_vector[end]))
+#commit_root(ack_vector::Vector{AckConsistency}) = root(commit(ack_vector[end]))
+
+#commit_index(guard::CastAck) = isempty(guard.ack_integrity) ? cast_index(guard) : commit_index(guard.ack_integrity)
+#commit_root(guard::CastGuard) = isempty(guard.ack_integrity) ? cast_root(guard.ack_cast) : commit_root(guard.ack_integrity)
+
+Model.index(guard::CastGuard) = index(guard.ack_cast)
+
+
+Model.isbinding(guard::CastGuard, ack::AckConsistency{BallotBoxState}) = isbinding(commit(guard), ack)
+Model.isconsistent(guard::CastGuard, ack::AckConsistency{BallotBoxState}) = isconsistent(commit(guard), ack)
+
 
 
 struct EnrollGuard
@@ -288,7 +397,8 @@ function enroll!(voter::Voter, router, ticketid, token) # EnrollGuard
 
     if !isadmitted(voter)
         admission = seek_admission(router, id(voter), ticketid, token, hasher(voter))
-        #@assert isbinding(admission, voter.deme)
+        @assert isbinding(admission, voter.deme) # checks the guardian
+        @assert verify(admission, crypto(voter.deme))
         voter.guard = EnrollGuard(admission)
     end
 
@@ -304,16 +414,17 @@ function enroll!(voter::Voter, router) # For continuing from the last place
     admission = voter.guard.admission
 
     commit = get_chain_commit(router)
-
-    # TODO: Add assertions 
-
-    #isbinding(commit, voter.deme)
+    @assert isbinding(commit, voter.deme)
+    @assert verify(commit, crypto(voter.deme))
     
     g = generator(commit)
 
     enrollee = Model.approve(Member(admission, g, pseudonym(voter, g)), voter.signer)
 
     ack = enroll_member(router, enrollee)
+
+    @assert isbinding(enrollee, ack, voter.deme)
+    @assert verify(enrollee, crypto(voter.deme))
     
     voter.guard = EnrollGuard(admission, enrollee, ack)
 
@@ -385,6 +496,61 @@ function cast_vote!(voter::Voter, router::Router, uuid::UUID, selection)
     return
 end
 
+
+function cast_guard(voter::Voter, uuid::UUID)
+
+    for guard in reverse(voter.casts)
+
+        if guard.proposal.uuid == uuid
+
+            return guard
+
+        end
+    end
+
+    error("guard not found")
+end
+
+
+
+function check_vote!(voter::Voter, router::Router, uuid::UUID)
+
+    guard = cast_guard(voter, uuid)
+    
+    current_commit = commit(guard)
+
+    ack = get_ballotbox_root(router, uuid, index(current_commit))
+
+    @assert isbinding(ack, current_commit) "Received acknowledgment is not bound to request."
+    
+    @assert verify(ack, crypto(voter.deme)) "Received acknowledgemnt is not genuine."
+
+    if isconsistent(ack, current_commit)
+        push!(guard.ack_integrity, ack)
+    else
+        blame = Blame(current_commit, ack)
+        push!(guard.blame, blame)
+        error("The integrity for the record of votes in the ballot box has been compromised. This occurs when the person collecting the ballots acts with bad intent, or if the key have been stolen. This undisputable evidence is recorded in the guard and is available as `blame(voter, uuid)` which should be delivered to observers, who will take action to resolve misconduct of the collector.")
+    end
+    
+    if istallied(state(ack))
+        @assert state(ack).view[index(guard)] == true "Your vote have not been included in the final tally. This may be because your unique key used to submit the vote has been exposed and someone else has used it to revote afterwards. To resolve this issue, you should reach out to the guardian and ask for new credentials, and also reconsider whether your device can be trusted."
+    end
+    
+    return 
+end
+
+
+function blame(voter::Voter, uuid::UUID)
+    
+    guard = cast_guard(voter, uuid)
+
+    if isempty(guard.blame)
+        return nothing
+    else
+        return guard.blame[end]
+    end
+end
 
 
 end

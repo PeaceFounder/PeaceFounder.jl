@@ -227,6 +227,28 @@ isbinding(state::BallotBoxState, proposal::Proposal, hasher::Hash) = state.propo
 isbinding(commit::Commit{BallotBoxState}, proposal::Proposal, hasher::Hash) = issuer(commit) == proposal.collector && isbinding(state(commit), proposal, hasher)
 
 
+function isbinding(commit::Commit{BallotBoxState}, ack::AckConsistency{BallotBoxState})
+    
+    issuer(commit) == issuer(ack) || return false
+    state(commit).proposal == state(ack).proposal || return false    
+    index(commit) == index(ack) || return false
+
+    return true
+end
+
+isbinding(ack::AckConsistency{BallotBoxState}, commit::Commit{BallotBoxState}) = isbinding(commit, ack)
+
+
+function isconsistent(commit::Commit{BallotBoxState}, ack::AckConsistency{BallotBoxState})
+
+    seed(commit) == seed(state(ack)) || return false
+    root(commit) == root(ack.proof) || return false
+
+    return true
+end
+
+isconsistent(ack::AckConsistency{BallotBoxState}, commit::Commit{BallotBoxState}) = isconsistent(commit, ack)
+
 
 function Base.show(io::IO, state::BallotBoxState)
     
@@ -284,6 +306,7 @@ struct CastAck
 end
 
 id(ack::CastAck) = id(ack.ack)
+index(ack::CastAck) = index(ack.ack)
 
 function verify(ack::CastAck, crypto::Crypto)
     isbinding(ack.receipt, ack.ack, hasher(crypto)) || return false
@@ -294,8 +317,15 @@ isbinding(ack::CastAck, proposal::Proposal, hasher::Hash) = isbinding(ack.ack, p
 
 isbinding(ack::AckInclusion{BallotBoxState}, proposal::Proposal, hasher::Hash) = issuer(ack) == proposal.collector && state(ack).proposal == digest(proposal, hasher)
 
+isbinding(ack::AckConsistency{BallotBoxState}, proposal::Proposal, hasher::Hash) = issuer(ack) == proposal.collector && state(ack).proposal == digest(proposal, hasher)
+
 isbinding(ack::CastAck, vote::Vote, hasher::Hash) = isbinding(ack.receipt, vote, hasher)
 
+isbinding(ack::CastAck, commit::Commit{BallotBoxState}) = isbinding(ack.ack, commit)
+
+
+
+commit(ack::CastAck) = commit(ack.ack)
 
 function Base.show(io::IO, ack::CastAck)
 
@@ -338,6 +368,15 @@ function Base.show(io::IO, ballotbox::BallotBox)
 
 end
 
+function reset_tree!(ballotbox::BallotBox)
+
+    d = Digest[digest(i, hasher(ballotbox.crypto)) for i in ballotbox.ledger]
+    tree = HistoryTree(d, hasher(ballotbox.crypto))
+
+    ballotbox.tree = tree
+
+    return
+end
 
 generator(ballotbox::BallotBox) = generator(ballotbox.proposal)
 uuid(ballotbox::BallotBox) = uuid(ballotbox.proposal)
@@ -390,7 +429,7 @@ end
 
 isbinding(vote::Vote, ack::CastAck, crypto::Crypto) = digest(vote, crypto) == ack.receipt.vote
 
-function ack_root(ballotbox::BallotBox, N::Int) 
+function ack_root(ballotbox::BallotBox, index::Int) 
 
     @assert commit_index(ballotbox) >= index
 
@@ -617,6 +656,5 @@ receipt(station::PollingStation, uuid::UUID, N::Int) = receipt(ballotbox(station
 ledger(station::PollingStation, uuid::UUID) = ledger(ballotbox(station, uuid))
 
 tally(station::PollingStation, uuid::UUID) = tally(ballotbox(station, uuid))
-
 
 set_seed!(station::PollingStation, uuid::UUID, seed::Digest) = set_seed!(ballotbox(station, uuid), seed)

@@ -76,7 +76,7 @@ commit = Mapper.get_chain_commit()
 
 proposal_draft = Proposal(
     uuid = Base.UUID(23445325),
-    summary = "Are you ready for democracy?",
+    summary = "Should the city ban all personal vehicle usage and invest in alternative forms of transportation such as public transit, biking and walking infrastructure?",
     description = "",
     ballot = Ballot(["yes", "no"]),
     open = Dates.now(),
@@ -110,13 +110,13 @@ _seed = seed(commit)
 
 v = vote(proposal, _seed, Selection(2), alice)
 
-ack = Mapper.cast_vote!(proposal.uuid, v)
+ack = Mapper.cast_vote(proposal.uuid, v)
 
 v = vote(proposal, _seed, Selection(1), bob)
-ack = Mapper.cast_vote!(proposal.uuid, v)
+ack = Mapper.cast_vote(proposal.uuid, v)
 
 v = vote(proposal, _seed, Selection(1), eve)
-ack = Mapper.cast_vote!(proposal.uuid, v)
+ack = Mapper.cast_vote(proposal.uuid, v)
 
 
 spine = Mapper.get_ballotbox_spine(proposal.uuid)

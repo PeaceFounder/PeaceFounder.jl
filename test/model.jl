@@ -111,7 +111,7 @@ c = commit(BRAID_CHAIN)
 
 proposal_draft = Proposal(
     uuid = Base.UUID(23445325),
-    summary = "Are you ready for democracy?",
+    summary = "Should the city ban all personal vehicle usage and invest in alternative forms of transportation such as public transit, biking and walking infrastructure?",
     description = "",
     ballot = Ballot(["yes", "no"]),
     open = now(),

@@ -2,6 +2,10 @@ using HistoryTrees: InclusionProof, ConsistencyProof
 import HistoryTrees: leaf, root
 
 
+index(proof::ConsistencyProof) = proof.index
+index(proof::InclusionProof) = proof.index
+
+
 struct Generator
     data::Vector{UInt8}
 end
@@ -208,6 +212,8 @@ leaf(ack::AckInclusion) = leaf(ack.proof)
 id(ack::AckInclusion) = id(ack.commit)
 issuer(ack::AckInclusion) = issuer(ack.commit)
 
+index(ack::AckInclusion) = index(ack.proof)
+
 commit(ack::AckInclusion) = ack.commit
 state(ack::AckInclusion) = state(ack.commit)
 
@@ -228,6 +234,8 @@ commit(ack::AckConsistency) = ack.commit
 state(ack::AckConsistency) = state(ack.commit)
 
 verify(ack::AckConsistency, crypto::Crypto) = HistoryTrees.verify(ack.proof, root(ack.commit), index(ack.commit); hash = hasher(crypto)) && verify(commit(ack), crypto)
+
+index(ack::AckConsistency) = index(ack.proof)
 
 
 function Base.show(io::IO, ack::AckConsistency)

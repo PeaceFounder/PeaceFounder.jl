@@ -181,6 +181,7 @@ get_peers() = Model.peers(BRAID_CHAIN[])
 
 get_constituents() = Model.constituents(BRAID_CHAIN[])
 
+reset_tree() = Model.reset_tree!(BRAID_CHAIN[])
 
 get_members(N::Int) = Model.members(BRAID_CHAIN[], N)
 get_members() = Model.members(BRAID_CHAIN[])
@@ -266,6 +267,8 @@ function get_ballotbox_record(uuid::UUID, N::Int; fairness::Bool = true)
     end
 
 end
+
+get_ballotbox_receipt(uuid::UUID, N::Int) = Model.receipt(POOLING_STATION[], uuid, N)
 
 
 function get_ballotbox_ledger(uuid::UUID; fairness::Bool = true, tally_trigger_delay::Union{Nothing, Int} = nothing)

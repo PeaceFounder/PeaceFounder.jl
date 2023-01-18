@@ -187,6 +187,18 @@ end
 HTTP.register!(ROUTER, "GET", "/poolingstation/{uuid}/proposal", get_ballotbox_proposal)
 
 
+function get_ballotbox_spine(req::Request)
+    
+    uuid_hex = HTTP.getparam(req, "uuid")
+    uuid = UUID(uuid_hex)
+
+    spine = Mapper.get_ballotbox_spine(uuid)
+    
+    return Response(200, marshal(spine))
+end
+
+HTTP.register!(ROUTER, "GET", "/poolingstation/{uuid}/spine", get_ballotbox_spine)
+
 
 function cast_vote(req::Request)
     
@@ -202,7 +214,61 @@ end
 HTTP.register!(ROUTER, "POST", "/poolingstation/{uuid}/votes", cast_vote)
 
 
+function get_ballotbox_record(req::Request)
+    
+    uuid_hex = HTTP.getparam(req, "uuid")
+    uuid = UUID(uuid_hex)
+    N = parse(Int, HTTP.getparam(req, "N"))
 
+    record = Mapper.get_ballotbox_record(uuid, N)
+    
+    return Response(200, marshal(record))
+end
+
+HTTP.register!(ROUTER, "GET", "/poolingstation/{uuid}/votes/{N:[0-9]+}/record", get_ballotbox_record)
+
+
+function get_ballotbox_receipt(req::Request)
+
+    uuid_hex = HTTP.getparam(req, "uuid")
+    uuid = UUID(uuid_hex)
+    N = parse(Int, HTTP.getparam(req, "N"))
+
+    receipt = Mapper.get_ballotbox_receipt(uuid, N)
+
+    return Response(200, marshal(receipt))
+end
+
+HTTP.register!(ROUTER, "GET", "/poolingstation/{uuid}/votes/{N:[0-9]+}/receipt", get_ballotbox_receipt)
+
+
+function get_ballotbox_leaf(req::Request)
+
+    uuid_hex = HTTP.getparam(req, "uuid")
+    uuid = UUID(uuid_hex)
+    N = parse(Int, HTTP.getparam(req, "N"))
+
+    ack = Mapper.get_ballotbox_ack_leaf(uuid, N)
+
+    return Response(200, marshal(ack))
+end
+
+HTTP.register!(ROUTER, "GET", "/poolingstation/{uuid}/votes/{N:[0-9]+}/leaf", get_ballotbox_leaf)
+
+
+function get_ballotbox_root(req::Request)
+    
+
+    uuid_hex = HTTP.getparam(req, "uuid")
+    uuid = UUID(uuid_hex)
+    N = parse(Int, HTTP.getparam(req, "N"))
+
+    ack = Mapper.get_ballotbox_ack_root(uuid, N)
+
+    return Response(200, marshal(ack))
+end
+
+HTTP.register!(ROUTER, "GET", "/poolingstation/{uuid}/votes/{N:[0-9]+}/root", get_ballotbox_root)
 
 
 end

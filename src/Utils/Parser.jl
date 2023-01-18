@@ -190,10 +190,11 @@ StructTypes.StructType(::Type{Commit}) = StructTypes.Struct()
 StructTypes.StructType(::Type{AckInclusion}) = StructTypes.Struct()
 
 
+StructTypes.StructType(::Type{ChainState}) = StructTypes.Struct()
+
+
 StructTypes.StructType(::Type{InclusionProof}) = StructTypes.CustomStruct()
-
 StructTypes.lower(proof::InclusionProof) = Dict(:index => proof.index, :leaf => proof.leaf, :path => proof.path)
-
 
 function StructTypes.construct(::Type{InclusionProof}, event)
 
@@ -205,7 +206,17 @@ function StructTypes.construct(::Type{InclusionProof}, event)
 end
 
 
-StructTypes.StructType(::Type{ChainState}) = StructTypes.Struct()
+StructTypes.StructType(::Type{ConsistencyProof}) = StructTypes.CustomStruct()
+StructTypes.lower(proof::ConsistencyProof) = Dict(:index => proof.index, :root => proof.root, :path => proof.path)
+
+function StructTypes.construct(::Type{ConsistencyProof}, event)
+
+    index = event["index"]
+    root = Digest(hex2bytes(event["root"]))
+    path = Digest[Digest(hex2bytes(i)) for i in event["path"]]
+
+    return ConsistencyProof(path, index, root)
+end
 
 
 export marshal, unmarshal

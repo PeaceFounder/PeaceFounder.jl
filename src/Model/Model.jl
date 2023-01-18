@@ -97,5 +97,9 @@ hasher(deme::Deme) = hasher(deme.crypto)
 isbinding(ack::AckInclusion{ChainState}, deme::Deme) = issuer(ack) == deme.guardian
 isbinding(record::Transaction, ack::AckInclusion{ChainState}, deme::Deme) = isbinding(ack, deme) && isbinding(record, ack, hasher(deme))
 
+isbinding(admission::Admission, deme::Deme) = issuer(admission) == deme.guardian
+
+isbinding(commit::Commit{ChainState}, deme::Deme) = issuer(commit) == deme.guardian
+
 
 end

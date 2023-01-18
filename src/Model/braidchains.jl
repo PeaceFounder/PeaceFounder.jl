@@ -74,8 +74,17 @@ function Base.show(io::IO, chain::BraidChain)
 end
 
 
-
 BraidChain(guardian::Pseudonym, crypto::Crypto) = BraidChain(Set{Pseudonym}(), Transaction[], crypto, generator(crypto), guardian, HistoryTree(Digest, hasher(crypto)), nothing)
+
+function reset_tree!(chain::BraidChain)
+
+    d = Digest[digest(i, hasher(chain.crypto)) for i in chain.ledger]
+    tree = HistoryTree(d, hasher(chain.crypto))
+
+    chain.tree = tree
+
+    return
+end
 
 function Base.push!(chain::BraidChain, t::Transaction)
     push!(chain.ledger, t)
