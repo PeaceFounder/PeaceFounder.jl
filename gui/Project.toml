@@ -1,0 +1,4 @@
+[deps]
+QML = "2db162a6-7e43-52c3-8d84-290c1c42d82a"
+Qt65Compat_jll = "f5784262-74e5-52be-b835-f3e8a3cf8710"
+Qt6Svg_jll = "6de9746b-f93d-5813-b365-ba18ad4a9cf3"
