@@ -1,11 +1,6 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
+import QtQuick
+import QtQuick.Controls
 
-//import QtQuick.Studio.Components 1.0
-//import Qt5Compat.GraphicalEffects
-//import QtQuick.Layouts
-
-import "."
 
 AppPage {
     
@@ -13,6 +8,17 @@ AppPage {
 
     title : "Guard"
     subtitle : "Guard your vote"
+
+    property alias demeUUID : status.demeUUID
+    property alias proposalIndex : status.proposalIndex
+    
+    property alias pseudonym : status.pseudonym
+    property alias timestamp : status.timestamp
+    property alias castIndex : status.castIndex
+
+    property alias commitIndex : status.commitIndex
+    property alias commitRoot : status.commitRoot
+        
 
     VScrollBar {
         
@@ -37,7 +43,7 @@ AppPage {
             spacing : 21
 
             GuardStatus {
-                
+                id : status
             }
             
             Text {
@@ -51,7 +57,7 @@ AppPage {
                 
                 lineHeight : 1.5
 
-                color : Style.textPrimary //"#D9A3A3"
+                color : Style.textPrimary
 
                 text : "Perhaps the guardian or collector acted maliciously, or the adversary obtained their credentials, which assured that the vote had been successfully recorded, whereas, in reality, it made to a black hole.
 

@@ -1,4 +1,4 @@
-import QtQuick 2.15
+import QtQuick
 import Qt5Compat.GraphicalEffects
 
 Item {
@@ -7,12 +7,9 @@ Item {
     height : 12
     property string color : "black"
 
-    //implicitHeight : parent.height
     implicitHeight : height
     implicitWidth : height * icon.sourceSize.width/icon.sourceSize.height
 
-    //implicitWidth : icon.width
-    
     Image {
         id : icon
 

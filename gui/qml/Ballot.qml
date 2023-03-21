@@ -1,5 +1,5 @@
-import QtQuick 6.2
-import QtQuick.Controls 6.2
+import QtQuick
+import QtQuick.Controls
 import Qt5Compat.GraphicalEffects
 
 AppPage {
@@ -7,35 +7,18 @@ AppPage {
     id : ballotPage
 
     title : "Ballot"
-    subtitle : "Are you ready for a change?"
+    subtitle : "SubTitle"
 
     preferencesVisible : false
     refreshVisible : false
     trashVisible : true
 
-    property var ballot 
 
-    signal cast //(list<int> selections)
+    property alias model : qlist.model
 
-    // var could be used in more general situation
-    property list<int> choices  
-    
-    onBallotChanged: {
-        choices = Array(ballot.length).fill(0) 
-    }
-
-
-    function reset_ballot() {
-        
-        var temp_ballot = ballotPage.ballot
-        ballotPage.ballot = [] 
-        ballotPage.ballot = temp_ballot
-        qlist.forceLayout()
-
-    }
+    signal cast
 
     
-
     ListView {
 
         id : qlist
@@ -48,23 +31,21 @@ AppPage {
 
         width : parent.width
         
-        model : ballotPage.ballot
 
         delegate : BallotQuestion {
 
-            property int entryIndex: index
+            width : qlist.width * 0.8
+            anchors.horizontalCenter : qlist.contentItem.horizontalCenter
 
+            text : question
+            model : options
 
-            width : parent.width * 0.8
-            anchors.horizontalCenter : parent.horizontalCenter
-            question : modelData.question // model.question when ListModel is used
-            options : modelData.options
+            onCurrentIndexChanged : choice = currentIndex
 
-            onIndexChanged : {
-                ballotPage.choices[entryIndex] = currentIndex
-            }
+            property int localChoice : choice // workaraound as role does not have attached signal
+            onLocalChoiceChanged : currentIndex = choice
+
         }
-
         
         footer :  Item {
             height : 175
@@ -76,7 +57,6 @@ AppPage {
             contentHeight : parent.contentHeight
             
         }
-
 
     }
 
@@ -117,7 +97,7 @@ AppPage {
 
         MouseArea {
             anchors.fill : parent
-            onClicked: ballotPage.cast()
+            onClicked : ballotPage.cast()
         }
     }
 

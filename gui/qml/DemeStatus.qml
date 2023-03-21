@@ -1,23 +1,27 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
+import QtQuick
+import QtQuick.Controls
 import Qt5Compat.GraphicalEffects
 import QtQuick.Layouts
 
-import "."
 
 Rectangle {
 
-    //id: rect
+    id : card
 
-    //anchors.top : parent.top
     anchors.horizontalCenter : parent.horizontalCenter
 
     height : 70
     width : parent.width * 0.8
-    //color : Style.cardPrimaryBackground//"#1C1C1C"
-    color : Style.statusCardBackground//"#1C1C1C"
+    color : Style.statusCardBackground
 
     radius: 5
+
+
+    property string demeUUID
+    property string demeSpec
+    property int memberIndex
+    property int commitIndex
+    property int memberCount
 
 
     GridLayout {
@@ -52,7 +56,7 @@ Rectangle {
                 width: 50
 
                 text : "Deme"
-                color : Style.textPrimary //"#D9A3A3"
+                color : Style.textPrimary
                 font.weight : Font.Light
                 font.pointSize: 14
             }
@@ -62,8 +66,8 @@ Rectangle {
 
         Text { 
 
-            text : "2AAE6C35 C94FCFB4 15DBE95F 408B9CE9 1EE846ED"
-            color : Style.textPrimary //"#D9A3A3"
+            text : card.demeUUID
+            color : Style.textPrimary 
             font.weight : Font.Light
             font.pointSize: 10
         }
@@ -77,7 +81,6 @@ Rectangle {
                 height: 14
                 source: "images/Spec.png"
                 color : Style.textPrimary
-                //fillMode: Image.PreserveAspectFit
             }
 
             Text {
@@ -93,10 +96,8 @@ Rectangle {
         }
 
         Text { 
-
-
-            text : "AAF4C61D DCC5E8A2 DABEDE0F 3B482CD9 AEA9434D"
-            color : Style.textPrimary //"#D9A3A3"
+            text : card.demeSpec
+            color : Style.textPrimary 
             font.weight : Font.Light
             font.pointSize: 10
         }
@@ -116,24 +117,22 @@ Rectangle {
 
         Row {
             
-            //anchors.bottom : parent.bottom
-
             Layout.alignment : Qt.AlignLeft
             spacing : 5
 
             Icon {
-                //anchors.verticalCenter : parent.verticalCenter
+
                 height: 18
                 source: "images/Member.png"
-                //fillMode: Image.PreserveAspectFit
                 color : Style.verified
+
             }
 
             Text {
 
                 anchors.bottom : parent.bottom
 
-                text : "Member: 57"
+                text : "Member: " + card.memberIndex
                 color : Style.verified //"#20741C"
                 font.pointSize: 14
 
@@ -143,17 +142,15 @@ Rectangle {
 
         Row {
 
-            //anchors.bottom : parent.bottom
-
             Layout.alignment : Qt.AlignCenter
             spacing : 5
 
             Icon {
-                //anchors.verticalCenter : parent.verticalCenter
+
                 height: 16
                 source: "images/State.png"
-                //fillMode: Image.PreserveAspectFit
                 color : Style.textPrimary
+
             }
 
 
@@ -161,8 +158,7 @@ Rectangle {
 
                 anchors.bottom : parent.bottom
 
-                text : "State: 260"
-                //color : "#D9A3A3"
+                text : "State: " + card.commitIndex
                 font.pointSize: 14
 
                 color : Style.textPrimary
@@ -174,25 +170,23 @@ Rectangle {
 
         Row { 
 
-            //anchors.bottom : parent.bottom
-
             Layout.alignment : Qt.AlignRight
             
             spacing : 5
 
             Icon {
-                //anchors.verticalCenter : parent.verticalCenter
+
                 height: 14
                 source: "images/GroupSize.png"
-                //fillMode: Image.PreserveAspectFit
                 color : Style.textPrimary
+
             }
 
             Text {
                 
                 anchors.bottom : parent.bottom
 
-                text : "GroupSize: 57"
+                text : "GroupSize: " + card.memberCount
                 color : Style.textPrimary //"#D9A3A3"
                 font.pointSize: 14
 

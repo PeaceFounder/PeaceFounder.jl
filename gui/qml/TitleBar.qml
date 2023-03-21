@@ -1,6 +1,6 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Studio.Components 1.0
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Studio.Components
 
 
 Item { // rectangle could be an option to change the color when stuff gets scrooled up

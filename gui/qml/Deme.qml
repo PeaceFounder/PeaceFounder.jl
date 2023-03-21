@@ -1,18 +1,32 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
+import QtQuick
+import QtQuick.Controls
 
-import "."
+//import "."
 
 AppPage {
 
-    id : deme_page
+    id : page
 
     anchors.fill: parent
     title : "Deme"
-    subtitle : "Local democratic community"
+    subtitle : "Subtitle"
 
 
-    property var proposal_list
+    property var demeProposals
+
+    // Does not work for some reason...
+    //property alias demeUUID : status.demeUUID
+    //property alias demeSpec : status.demeSpec
+    //property alias memberIndex : status.memberIndex
+    //property alias commitIndex : status.commitIndex
+    //property alias groupSize : status.groupSize
+
+    property string demeUUID
+    property string demeSpec
+    property int memberIndex
+    property int commitIndex
+    property int memberCount
+
 
     signal proposal(int record)
     signal tally(int record)
@@ -20,6 +34,8 @@ AppPage {
 
 
     ListView { 
+
+        id : listView
         
         anchors.top : parent.top
         anchors.horizontalCenter : parent.horizontalCenter
@@ -37,6 +53,13 @@ AppPage {
 
             DemeStatus {
                 id : status
+
+                demeUUID : page.demeUUID
+                demeSpec : page.demeSpec
+                memberIndex : page.memberIndex
+                commitIndex : page.commitIndex
+                memberCount : page.memberCount
+
                 anchors.top : parent.top
             }
         }
@@ -50,24 +73,25 @@ AppPage {
 
         spacing : 10
 
-        model : deme_page.proposal_list
+        model : page.demeProposals
         
         delegate : ProposalCard {
 
-            anchors.horizontalCenter : parent.horizontalCenter
+            anchors.horizontalCenter : listView.contentItem.horizontalCenter //parent.horizontalCenter
+            width : 0.8 * listView.width
 
-            isVotable : modelData.isVotable
-            isTallied : modelData.isTallied
-            isCast : modelData.isCast
-            record : modelData.record
-            voterCount : modelData.voterCount
-            castCount : modelData.castCount
-            title : modelData.title
-            timeWindow : modelData.timeWindow
+            isVotable : model.isVotable
+            isTallied : model.isTallied
+            isCast : model.isCast
+            index : model.index
+            voterCount : model.voterCount
+            castCount : model.castCount
+            title : model.title
+            timeWindow : model.timeWindow
 
-            onVote : deme_page.vote(modelData.record)
-            onTally : deme_page.tally(modelData.record)
-            onProposal : deme_page.proposal(modelData.record)
+            onVote : page.vote(model.index)
+            onTally : page.tally(model.index)
+            onProposal : page.proposal(model.index)
 
         }
 

@@ -1,12 +1,11 @@
-import QtQuick 6.2
-import QtQuick.Controls 6.2
+import QtQuick
+import QtQuick.Controls
 import Qt5Compat.GraphicalEffects
 
 Rectangle { 
 
     id : statusBar
 
-    //anchors.top : parent.top
     anchors.horizontalCenter : parent.horizontalCenter
     
     height : 110
@@ -15,15 +14,16 @@ Rectangle {
     radius : 5
     color : Style.statusCardBackground
 
+
+    property int proposalIndex    
+    property int stateAnchor
+    property int voterCount
     
-    property int record : 57
-    property int anchor : 43
-    property int voterCount : 40
-    property int castCount : 25
-    property bool isCast : false
-    property bool isTallied : false
-    property bool isVotable : false
-    property string timeWindowLong : "135 hours left to cast your vote"
+    property int castCount 
+    property bool isCast 
+    property bool isTallied 
+    property bool isVotable 
+    property string timeWindowLong 
 
     signal vote
     signal guard
@@ -43,8 +43,8 @@ Rectangle {
 
             source : "images/Proposal.png" 
             height : 11 
-            //color : "#976868" 
             color : Style.textSecondary
+
         } 
         
 
@@ -52,10 +52,11 @@ Rectangle {
             
             anchors.bottom : parent.bottom
 
-            text : "Record: " + statusBar.record
-            color : Style.textSecondary //"#976868"
+            text : "Record: " + statusBar.proposalIndex
+            color : Style.textSecondary 
             font.pointSize : 12
             height : 12
+
         }
 
     }
@@ -75,8 +76,8 @@ Rectangle {
 
             source : "images/Anchor.png" 
             height : 11
-            //color : "#976868" 
             color : Style.textSecondary
+
         } 
         
 
@@ -84,10 +85,11 @@ Rectangle {
             
             anchors.bottom : parent.bottom
 
-            text : "Anchor: " + statusBar.anchor
-            color : Style.textSecondary //"#976868"
+            text : "Anchor: " + statusBar.stateAnchor
+            color : Style.textSecondary
             font.pointSize : 12
             height : 12
+
         }
 
     }
@@ -103,7 +105,6 @@ Rectangle {
 
         property int radius : 5
 
-        
         
         Rectangle {
             
@@ -151,17 +152,13 @@ Rectangle {
                 visible : statusBar.isCast
 
                 anchors.right : parent.right
-                //anchors.top : parent.top
                 anchors.verticalCenter : parent.verticalCenter
 
                 anchors.rightMargin : 7
-                //anchors.topMargin : 5
-
-                //source : "images/VotingStatus.png"
                 source : "images/Done.png"
 
                 height : 20
-                color : "#B8C2BF"//Style.creamVerified
+                color : "#B8C2BF"
 
             }
 
@@ -190,6 +187,7 @@ Rectangle {
             font.weight : Font.Bold
 
             text : statusBar.voterCount + " voters"
+        
         }
 
 
@@ -209,7 +207,7 @@ Rectangle {
         width : 200
         height : 30
         
-        color : Style.active //"#960000"
+        color : Style.active
         radius : 5
 
         property string buttonText
@@ -230,8 +228,8 @@ Rectangle {
         Text {
 
             anchors.centerIn : parent
-            text : parent.buttonText //"Vote Now"
-            color : parent.textColor //Style.textIcon //textPrimary //"#D9A3A3"
+            text : parent.buttonText 
+            color : parent.textColor 
             font.pointSize : 14
 
         }
@@ -294,7 +292,6 @@ Rectangle {
 
             anchors.fill : parent
             
-            //color : 
             radius : 5
 
             property color textColor 
@@ -303,7 +300,7 @@ Rectangle {
 
                 anchors.centerIn : parent
                 text : "Guard"
-                color : parent.textColor //"white"
+                color : parent.textColor
                 font.pointSize : 14
 
             }
@@ -321,6 +318,7 @@ Rectangle {
                         target : guard_button
                         color : "#9C4649" 
                         textColor : "white"
+                        border.width : 0
                     }
                 },
 
@@ -330,9 +328,9 @@ Rectangle {
                     PropertyChanges {
                         target : guard_button
                         color : "transparent"
-                        textColor : "#BABCBD" //"#535859"
+                        textColor : "#BABCBD" 
                         border.width : 2
-                        border.color : "#BABCBD" //"#989B9B"//"#535859"
+                        border.color : "#BABCBD" 
                     }
                 }
 
@@ -348,7 +346,6 @@ Rectangle {
         anchors.verticalCenter : parent.verticalCenter
         anchors.right : parent.left
 
-        //anchors.bottomMargin : -5
         anchors.rightMargin : -15
 
         rotation : 90
@@ -362,7 +359,6 @@ Rectangle {
 
             anchors.fill : parent
             
-            //color : "#66797E" //"#469C6E"//"#9C4649" 
             radius : 5
 
             property color textColor
@@ -371,7 +367,7 @@ Rectangle {
 
                 anchors.centerIn : parent
                 text : "Tally"
-                color : parent.textColor //"white"
+                color : parent.textColor
                 font.pointSize : 14
 
             }
@@ -390,6 +386,7 @@ Rectangle {
                         target : tally_button
                         color : "#66797E"
                         textColor : "white"
+                        border.width : 0
                     }
                 },
 
@@ -399,9 +396,9 @@ Rectangle {
                     PropertyChanges {
                         target : tally_button
                         color : "transparent"
-                        textColor : "#BABCBD" //"#535859"
+                        textColor : "#BABCBD" 
                         border.width : 2
-                        border.color : "#BABCBD" //"#989B9B"//"#535859"
+                        border.color : "#BABCBD"
                     }
                 }
 

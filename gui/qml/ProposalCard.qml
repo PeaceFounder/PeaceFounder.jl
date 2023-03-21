@@ -1,5 +1,5 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
+import QtQuick
+import QtQuick.Controls
 import Qt5Compat.GraphicalEffects
 import QtQuick.Layouts
 
@@ -8,7 +8,6 @@ Rectangle {
     id : base
 
     height : 110
-    width : 0.8 * parent.width
     color : Style.cardCreamBackground
 
     radius : 5
@@ -16,7 +15,7 @@ Rectangle {
     property bool isVotable : true
     property bool isTallied : true
     property bool isCast : true
-    property int record : 57
+    property int index : 57
     property int voterCount : 243
     property int castCount : 80
     property string title : "Are you ready for a chnage or other kinds of things?"
@@ -103,7 +102,7 @@ Rectangle {
         sweepAngle : -(360 - 2 * startAngle)
 
         strokeWidth: 10
-        strokeColor: Style.progressBarBacground //"#E6E7E8" 
+        strokeColor: Style.progressBarBacground
         fillColor: "transparent" 
     }
 
@@ -121,7 +120,7 @@ Rectangle {
         sweepAngle : -(360 - 2 * startAngle) * Math.min(base.castCount/base.voterCount, 1)
 
         strokeWidth: 10
-        strokeColor: Style.progressBar //"#8798AC" //"#8D96A4" 
+        strokeColor: Style.progressBar
         fillColor: "transparent" 
     }
 
@@ -136,18 +135,17 @@ Rectangle {
         wrapMode : Text.WordWrap
         text : base.timeWindow
 
-        //font.weight : Font.Light
         font.pointSize : 14
 
         horizontalAlignment: Text.AlignHCenter
 
-        color : Style.progressBar //"#8798AC" //Style.textTeritary //"#7F6363"
+        color : Style.progressBar
 
     }
 
 
     Row {
-        anchors.horizontalCenter : base_arc.horizontalCenter //clock_rect.horizontalCenter
+        anchors.horizontalCenter : base_arc.horizontalCenter
         anchors.bottom : clock_rect.bottom 
         anchors.bottomMargin : 9
 
@@ -182,7 +180,7 @@ Rectangle {
         anchors.topMargin : 2
 
         text : base.title
-        color: Style.textPrimary //"#D9A3A3"
+        color: Style.textPrimary
 
         wrapMode : Text.WordWrap
         font.pointSize : 18
@@ -201,12 +199,13 @@ Rectangle {
         spacing : 2
 
         Icon {
+
             anchors.bottom : parent.bottom 
 
             source : "images/Proposal.png" 
             height : 11 
-            //color : "#976868" 
             color : Style.textSecondary
+
         } 
         
 
@@ -214,8 +213,8 @@ Rectangle {
             
             anchors.bottom : parent.bottom
 
-            text : "Record: " + base.record
-            color : Style.textSecondary //"#976868"
+            text : "Record: " + base.index
+            color : Style.textSecondary
             font.pointSize : 12
             height : 12
         }
@@ -233,7 +232,7 @@ Rectangle {
         source : "images/Approval.png"
 
         height : 22
-        color : if (base.isCast) {Style.creamVerified} else {"#EEEDEC"} //{"#E5E4E2"}
+        color : if (base.isCast) {Style.creamVerified} else {"#EEEDEC"}
 
     }
 
@@ -262,7 +261,7 @@ Rectangle {
                 
                 anchors.centerIn : parent
                 text : "Vote Now"
-                color : parent.textColor //Style.textIcon //textPrimary //"#D9A3A3"
+                color : parent.textColor
                 font.pointSize : 14
 
             }
@@ -304,7 +303,7 @@ Rectangle {
                         target : vote_button
                         color : "transparent"
                         textColor: Style.textInactive
-                        border.color: Style.textInactive //"#D9A3A3"
+                        border.color: Style.textInactive
                         border.width: 1
                         shadow : false
                     }
@@ -331,7 +330,7 @@ Rectangle {
 
                 anchors.centerIn : parent
                 text : "Tally"
-                color : parent.textColor //Style.textInactive //"#D9A3A3"
+                color : parent.textColor
                 font.pointSize : 14
 
             }
@@ -357,7 +356,7 @@ Rectangle {
                     name: "enabled"
                     when: base.isTallied 
                     PropertyChanges { 
-                        target: tally_button // can parent work instead
+                        target: tally_button
                         color : "#66797E"
                         textColor: "white"
                         shadow : false
@@ -370,7 +369,7 @@ Rectangle {
                         target: tally_button
                         color : "transparent"
                         textColor: Style.textInactive
-                        border.color: Style.textInactive //"#D9A3A3"
+                        border.color: Style.textInactive
                         border.width: 1
                         shadow : false
                     }

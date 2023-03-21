@@ -40,8 +40,6 @@ ComboBox {
                 anchors.left : parent.left
                 anchors.right : parent.right
                 
-                //leftPadding : 3
-
                 text: modelData
                 color : "black"
 

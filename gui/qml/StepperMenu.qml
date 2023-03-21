@@ -1,7 +1,5 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-
-import "."
+import QtQuick
+import QtQuick.Controls
 
 Rectangle {
 
@@ -10,10 +8,10 @@ Rectangle {
     property int mwidth: 40
     property int border_width: 3
 
-    property string active_color: Style.active //"#960000"
-    property string inactive_color: Style.inactive //"#683d3d"
-    property string text_color: Style.textStepperMenu//"#976868"
-    property string icon_color: Style.stepperMenuIcon//"#976868"
+    property string active_color: Style.active 
+    property string inactive_color: Style.inactive 
+    property string text_color: Style.textStepperMenu
+    property string icon_color: Style.stepperMenuIcon
 
     property color iconDisabled : "transparent"
 
@@ -85,14 +83,12 @@ Rectangle {
 
         color: parent.active_color
 
-        //strokeWidth: -1
 
         Icon {
             height: 28
             anchors.verticalCenter: parent.verticalCenter
             anchors.horizontalCenter: parent.horizontalCenter
-            //fillMode: Image.PreserveAspectFit
-            color : Style.stepperMenuIcon //textPrimary
+            color : Style.stepperMenuIcon
             source: "images/Home.png"
         }
 
@@ -129,10 +125,8 @@ Rectangle {
             height: 24
             anchors.verticalCenter: parent.verticalCenter
             anchors.horizontalCenter: parent.horizontalCenter
-            //fillMode: Image.PreserveAspectFit
             color :  if (parent.parent.page >= 2) {Style.stepperMenuIcon} else {Style.stepperMenuIconDisabled}
             source: "images/Deme.png"
-            //source: "images/Deme.svg"
         }
 
         Text {
@@ -168,7 +162,6 @@ Rectangle {
             height: 24
             anchors.verticalCenter: parent.verticalCenter
             anchors.horizontalCenter: parent.horizontalCenter
-            //fillMode: Image.PreserveAspectFit
             source: "images/Proposal.png"
             color : if (parent.parent.page >= 3) {Style.stepperMenuIcon} else {Style.stepperMenuIconDisabled}
         }
@@ -206,7 +199,6 @@ Rectangle {
             height: 28
             anchors.verticalCenter: parent.verticalCenter
             anchors.horizontalCenter: parent.horizontalCenter
-            //fillMode: Image.PreserveAspectFit
             source: "images/Vote.png"
             color : if (parent.parent.page >= 4 && parent.parent.votable) {Style.stepperMenuIcon} else {Style.stepperMenuIconDisabled}         }
 
@@ -244,7 +236,7 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             anchors.horizontalCenter: parent.horizontalCenter
              source: "images/Observe.png"
-            color : if (parent.parent.page == 5) {Style.stepperMenuIcon} else {Style.stepperMenuIconDisabled} //Style.stepperIcon //textPrimary
+            color : if (parent.parent.page == 5) {Style.stepperMenuIcon} else {Style.stepperMenuIconDisabled} 
         }
 
         Text {

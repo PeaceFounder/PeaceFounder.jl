@@ -1,26 +1,32 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-//import Qt5Compat.GraphicalEffects
+import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 
-import "."
 
 Rectangle {
 
     id : card
 
-    //anchors.top : parent.top
     anchors.horizontalCenter : parent.horizontalCenter
 
     height : 250
     width : parent.width * 0.8
 
-    color : Style.statusCardBackground //Style.cardPrimaryBackground //"#1C1C1C" 
+    color : Style.statusCardBackground
     radius : 5
 
-    //property color textColor : "#D9A3A3" //Style.textPrimary
     property color textColor : Style.textPrimary
+
+    property string demeUUID
+    property int proposalIndex
     
+    property string pseudonym
+    property string timestamp
+    property int castIndex
+
+    property int commitIndex
+    property string commitRoot
+        
 
     Column {
 
@@ -49,7 +55,7 @@ Rectangle {
                 anchors.top : parent.top
                 anchors.horizontalCenter : parent.horizontalCenter
 
-                color : card.textColor //"#D9A3A3"
+                color : card.textColor
                 text : "Ballot Box"
                 
                 font.pointSize: 14
@@ -61,7 +67,6 @@ Rectangle {
             GridLayout {
                 
                 anchors.topMargin : 7
-                //anchors.leftMargin : 7
 
                 columns: 2
                 
@@ -90,9 +95,7 @@ Rectangle {
                         width: 50
 
                         text : "Deme"
-                        //color : "#D9A3A3"
                         color : card.textColor
-                        //font.weight : Font.Light
                         font.pointSize: 14
                     }
 
@@ -101,10 +104,10 @@ Rectangle {
 
                 Text { 
 
-                    text : "2AAE6C35 C94FCFB4 15DBE95F 408B9CE9 1EE846ED"
-                    color : card.textColor //"#D9A3A3"
-                    //font.weight : Font.Light
+                    text : card.demeUUID
+                    color : card.textColor
                     font.pointSize: 10
+
                 }
 
                 Row {
@@ -115,7 +118,6 @@ Rectangle {
                         anchors.verticalCenter : parent.verticalCenter
                         height: 16
                         source: "images/Proposal.png"
-                        //fillMode: Image.PreserveAspectFit
                         color : card.textColor
                     }
 
@@ -124,8 +126,7 @@ Rectangle {
                         width : 80
 
                         text : "Proposal"
-                        color : card.textColor //"#D9A3A3"
-                        //font.weight : Font.Light
+                        color : card.textColor
                         font.pointSize: 14
                     }
 
@@ -133,14 +134,11 @@ Rectangle {
 
                 Text { 
 
-
-                    text : "43"
-                    color : card.textColor //"#D9A3A3"
-                    //font.weight : Font.Light
+                    text : card.proposalIndex
+                    color : card.textColor
                     font.pointSize: 14
+
                 }
-
-
                 
             }
 
@@ -160,7 +158,7 @@ Rectangle {
                 anchors.top : parent.top
                 anchors.horizontalCenter : parent.horizontalCenter
 
-                color : card.textColor //"#D9A3A3"
+                color : card.textColor 
                 text : "Receipt"
                 
                 font.pointSize: 14
@@ -172,7 +170,6 @@ Rectangle {
             GridLayout {
                 
                 anchors.topMargin : 7
-                //anchors.leftMargin : 7
 
                 columns: 2
                 
@@ -201,7 +198,7 @@ Rectangle {
                         width: 50
 
                         text : "Pseudonym"
-                        color : card.textColor//"#D9A3A3"
+                        color : card.textColor
                         //font.weight : Font.Light
                         font.pointSize: 14
                     }
@@ -211,8 +208,8 @@ Rectangle {
 
                 Text { 
 
-                    text : "2AAE6C35 C94FCFB4 15DBE95F 408B9CE9 1EE846ED"
-                    color : card.textColor//"#D9A3A3"
+                    text : card.pseudonym
+                    color : card.textColor
                     //font.weight : Font.Light
                     font.pointSize: 10
                 }
@@ -244,33 +241,33 @@ Rectangle {
                 Text { 
 
 
-                    text : "June 15, 2009 1:45 PM"
+                    text : card.timestamp
                     color : card.textColor //"#D9A3A3"
-                    //font.weight : Font.Light
                     font.pointSize: 14
-                }
-                
 
+                }
 
                 Row {
 
                     spacing : 6
 
                     Icon {
+
                         anchors.verticalCenter : parent.verticalCenter
                         height: 16
                         source: "images/CastRecord.png"
-                        //fillMode: Image.PreserveAspectFit
                         color : card.textColor
+
                     }
 
                     Text {
+
                         anchors.verticalCenter : parent.verticalCenter
                         width : 80
 
                         text : "CastRecord"
-                        color : card.textColor //"#D9A3A3"
-                        //font.weight : Font.Light
+                        color : card.textColor
+
                         font.pointSize: 14
                     }
 
@@ -278,11 +275,10 @@ Rectangle {
 
                 Text { 
 
-
-                    text : "13"
-                    color : card.textColor //"#D9A3A3"
-                    //font.weight : Font.Light
+                    text : card.castIndex
+                    color : card.textColor
                     font.pointSize: 14
+
                 }
             }
 
@@ -302,7 +298,7 @@ Rectangle {
                 anchors.top : parent.top
                 anchors.horizontalCenter : parent.horizontalCenter
 
-                color : card.textColor //"#D9A3A3"
+                color : card.textColor
                 text : "Commit"
                 
                 font.pointSize: 14
@@ -312,7 +308,6 @@ Rectangle {
             GridLayout {
                 
                 anchors.topMargin : 7
-                //anchors.leftMargin : 7
 
                 columns: 2
                 
@@ -331,21 +326,20 @@ Rectangle {
                         
                         height: 16
                         source: "images/Root.png"
-                        //fillMode: Image.PreserveAspectFit
                         color : card.textColor
+
                     }
 
 
                     Text { 
                         
                         anchors.bottom : parent.bottom
-                        //anchors.verticalCenter : parent.verticalCenter
                         width: 50
 
                         text : "Root"
-                        color : card.textColor //"#D9A3A3"
-                        //font.weight : Font.Light
+                        color : card.textColor
                         font.pointSize: 14
+
                     }
 
                 }
@@ -353,10 +347,10 @@ Rectangle {
 
                 Text { 
 
-                    text : "2AAE6C35 C94FCFB4 15DBE95F 408B9CE9 1EE846ED"
-                    color : card.textColor //"#D9A3A3"
-                    //font.weight : Font.Light
+                    text : card.commitRoot
+                    color : card.textColor
                     font.pointSize: 10
+
                 }
 
                 Row {
@@ -364,23 +358,22 @@ Rectangle {
                     spacing : 6
 
                     Icon {
+
                         anchors.verticalCenter : parent.verticalCenter
                         height: 16
                         source: "images/State.png"
-                        //fillMode: Image.PreserveAspectFit
                         color : card.textColor
+
                     }
 
                     Text {
                         
                         anchors.bottom : parent.bottom
 
-                        //anchors.verticalCenter : parent.verticalCenter
                         width : 80
 
                         text : "Count"
-                        color : card.textColor //"#D9A3A3"
-                        //font.weight : Font.Light
+                        color : card.textColor
                         font.pointSize: 14
                     }
 
@@ -388,12 +381,11 @@ Rectangle {
 
                 Text { 
 
-                    text : "23"
-                    color : card.textColor //"#D9A3A3"
-                    //font.weight : Font.Light
+                    text : card.commitIndex 
+                    color : card.textColor
                     font.pointSize: 14
+
                 }
-                
 
             }
 
@@ -401,6 +393,5 @@ Rectangle {
 
 
     }
-
     
 }

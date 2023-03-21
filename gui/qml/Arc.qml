@@ -1,5 +1,5 @@
-import QtQuick 2.11
-import QtQuick.Shapes 1.15
+import QtQuick
+import QtQuick.Shapes
 
 Shape {
     

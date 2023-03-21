@@ -1,9 +1,8 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-//import QtQuick.Studio.Components 1.0
+import QtQuick
+import QtQuick.Controls
 import Qt5Compat.GraphicalEffects
 
-import "."
+//import "."
 
 AppPage {
     
@@ -11,7 +10,9 @@ AppPage {
     title : "Home"
     backVisible : false
     
-    property ListModel demes
+    signal demeCard(string uuid)
+
+    property alias userDemes : demes_view.model
 
     Item {
 
@@ -31,7 +32,6 @@ AppPage {
                     spacing: 10
                     
                     delegate: demes_delegate
-                    model: demes
 
                     footer: Item{
 
@@ -103,9 +103,8 @@ AppPage {
                     id : view_rect
                     
                     anchors.fill : parent
-                    
 
-                    color: Style.cardPrimaryBackground //"#1C1C1C"
+                    color: Style.cardPrimaryBackground
                     
                     radius: 5
 
@@ -115,7 +114,8 @@ AppPage {
                         anchors.horizontalCenter: parent.horizontalCenter
                         anchors.verticalCenter: parent.verticalCenter
                         font.pointSize: 18
-                        text: model.title
+                        //text: model.title
+                        text : title
                         color : Style.textPrimary
                     }
 
@@ -123,7 +123,8 @@ AppPage {
                         anchors.top: parent.top
                         anchors.right: parent.right
                         font.pointSize: 9 
-                        text: model.uuid
+                        //text: model.uuid
+                        text : uuid
                         anchors.topMargin: 4
                         anchors.rightMargin: 4
                         color : Style.textTeritary
@@ -144,7 +145,8 @@ AppPage {
                         Text {
                             font.pointSize: 12
                             color : Style.textSecondary
-                            text: "" + model.groupsize
+                            //text: "" + model.groupsize
+                            text : memberCount
                         }
 
                         Icon {
@@ -157,7 +159,12 @@ AppPage {
 
                     }
                     
-                    
+
+                    MouseArea {
+                        anchors.fill : parent
+                        onClicked : demeCard(uuid)
+                    }
+
                 }
 
 

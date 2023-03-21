@@ -1,92 +1,96 @@
-import QtQuick 6.2
-import QtQuick.Window 6.2
-import QtQuick.Controls 6.2
-
-//import QtQuick.Studio.Components 1.0
-//import Qt5Compat.GraphicalEffects
+import QtQuick
+import QtQuick.Window
+import QtQuick.Controls
 
 import Qt5Compat.GraphicalEffects
 
-
-
 Window {
-    id: window
+    id: app
     width: 550
     height: 700
 
     visible: true
     color: Style.pageBackground 
-    title: "Navigation"
-
-    property string deme : "AE1342 B57225" 
-    property int proposal : 53
+    title: "PeaceFounder"
 
 
-    property Record.Deme demeData : Record.Deme {
-        title : "A local democratic community"
-        proposals : [
-            
-            { isVotable : true, isTallied : false, isCast : true, record : 47, voterCount : 243, castCount : 80, title : "Are you ready for a chnage or other kinds of things?", timeWindow : "23 hours remaining" },
-
-            { isVotable : true, isTallied : false, isCast : false, record : 53, voterCount : 249, castCount : 20, title : "Vote for your representative", timeWindow : "93 hours remaining" }
-            
-        ]
-    }
+    property var userDemes
 
 
-    property Record.Proposal proposalData : Record.Proposal {
-
-        title : "Are you ready for a change"
-        descryption : "A long description for otivation"
-        voterCount : 56 // This is a data which could be stored with in Proposal as it is dependant on the freely chosen anchor
-        status : Record.Status {
-            isVotable : true
-            isCast : false
-            isTallied : false
-            timeWindowShort : "23 hours remaining"
-            timeWindowLong : "23 hours remaining to cast your choice"
-            castCount : 23
-        }
-
-        //tally 
-        //guard
+    component DemeStatusType : QtObject {
         
-        ballot : [
-            Record.Question {
-                question : "Which change you would be willing to see?"
-                options : ["Not Selected", "Banana", "Apple", "Coconut"]
-            },
-            Record.Question {
-                question : "When should the change be implemented?"
-                options : ["Not Selected", "Banana", "Apple", "Coconut"]
-            },
-            Record.Question {
-                question : "What budget would you be willing to allocatte for the change?"
-                options : ["Not Selected", "Banana", "Apple", "Coconut"]
-            },
-            Record.Question {
-                question : "Who will be responsable for the change?"
-                options : ["Not Selected", "Banana", "Apple", "Coconut"]
-            }
-        ]
-    }
-    
-    
-    property int page : 1
-    
-    // I will need to update this on change of proposalData
-    property bool isvotable : true
-    property bool iscast : false
-
-
-    property ListModel deme_list : ListModel {
-        
-        ListElement { commit: 11; title: "Workplace"; uuid: "2AAE6C35 C94FCFB4 15DBE95F 408B9CE9 1EE846ED"; groupsize: 15} // 00000-3928c-00000-3928c-00000-3928c-00000-3928c
-        ListElement { commit: 19; title: "Sustainability association"; uuid: "2AAE6C35 C94FCFB4 15DBE95F 408B9CE9 1EE846ED"; groupsize: 120}
-        ListElement { commit: 112; title: "Local city concil"; uuid: "2AAE6C35 C94FCFB4 15DBE95F 408B9CE9 1EE846ED"; groupsize: 100}
-        ListElement { commit: 1145; title: "Local school"; uuid: "2AAE6C35 C94FCFB4 15DBE95F 408B9CE9 1EE846ED"; groupsize: 300}
+        property string uuid
+        property string title
+        property string demeSpec
+        property int memberIndex
+        property int commitIndex
+        property int memberCount
         
     }
+
+    property DemeStatusType demeStatus : DemeStatusType { }
+
+
+    component ProposalMetadataType : QtObject {
+
+        property int index
+        property string title
+        property string description
+        property int stateAnchor
+        property int voterCount
+
+    }
+    
+    property ProposalMetadataType proposalMetadata : ProposalMetadataType { }
+
+
+    component ProposalStatusType : QtObject {
+
+        property bool isVotable
+        property bool isCast
+        property bool isTallied
+        property string timeWindowShort
+        property string timeWindowLong
+        property int castCount
+
+    }
+
+    property ProposalStatusType proposalStatus : ProposalStatusType { }
+    
+
+    component GuardStatusType : QtObject {
+
+        property string pseudonym
+        property string timestamp
+        property int castIndex
+
+        property int commitIndex
+        property string commitRoot
+
+    }
+
+    property GuardStatusType guardStatus : GuardStatusType { }
+    
+
+    property var demeProposals
+    property var proposalBallot
+
+
+    signal castBallot
+    signal resetBallot
+
+    signal setDeme(string uuid)
+    signal setProposal(int index)
+    
+    signal refreshHome
+    signal refreshDeme
+    signal refreshProposal
+
+    signal addDeme(string invite)
+    
+
+    property int page : 1 
+
 
     Item {
 
@@ -97,81 +101,117 @@ Window {
             id : home
             state : "home"
 
-            demes : window.deme_list
+            userDemes : app.userDemes
 
-            onRefresh : menu.trod = false
+            onRefresh : app.refreshHome() 
+
+            onDemeCard : uuid => {
+                app.setDeme(uuid)
+                app.page = 2
+            }
         }
 
 
         Deme {
             id : deme
             state : "deme"
-            onBack : menu.page = 1
+            onBack : app.page = 1
 
-            //proposal_list : window.proposal_list
-            proposal_list : window.demeData.proposals
-            //proposal_list //: window.proposals
+            demeUUID : app.demeStatus.uuid
+            subtitle : app.demeStatus.title
+            demeProposals : app.demeProposals
+
+            demeSpec : app.demeStatus.demeSpec
+            memberIndex : app.demeStatus.memberIndex
+            commitIndex : app.demeStatus.commitIndex
+            memberCount : app.demeStatus.memberCount
 
 
-            onProposal : record => {
-                console.log("Proposal " + record)
-                window.proposal = record
-                window.page = 3
-            }
-            onTally : record => {
-                console.log("Tally " + record)
-                window.proposal = record
-                window.page = 3
-                // tally view
+            onProposal : index => {
+                app.setProposal(index)
+                app.page = 3
             }
 
-            onVote : record => {
-                console.log("Vote " + record)
-                window.proposal = record
-                window.page = 4
+            onTally : index => {
+                console.log("Tally not implemented")
+                app.setProposal(index)
+                app.page = 3
+            }
+
+            onVote : index => {
+                app.setProposal(index)
+                app.page = 4
             }
 
         }
 
 
         Proposal {
+
             id : proposal
             state : "proposal"
-            onBack : menu.page = 2
+            onBack : app.page = 2
 
-            onVote : menu.page = 4
-            onGuard : menu.page = 5
-                
+            proposalIndex : app.proposalMetadata.index
+            subtitle : app.proposalMetadata.title
+            description : app.proposalMetadata.description
+            stateAnchor : app.proposalMetadata.stateAnchor
+            voterCount : app.proposalMetadata.voterCount
+
+            castCount : app.proposalStatus.castCount
+            isCast : app.proposalStatus.isCast
+            isTallied : app.proposalStatus.isTallied
+            isVotable : app.proposalStatus.isVotable
+            timeWindowLong : app.proposalStatus.timeWindowLong
+            
+            onVote : app.page = 4
+            onGuard : app.page = 5
         }
 
 
         Ballot {
             id : vote
             state : "vote"
-            onBack : menu.page = 3
-            
-            ballot : window.proposalData.ballot
+            onBack : app.page = 3
+
+
+            subtitle : app.proposalMetadata.title
+            model : app.proposalBallot
 
             onCast : {
-                console.log(choices)
-                reset_ballot()
-                menu.page = 5
+                
+                app.castBallot()
+
+                // To cover errror states I will do a pattern matching with states 
+                // on a new castStatus property
+                app.resetBallot()
+                app.page = 5
+                                
             }
 
             onTrash : {
-                reset_ballot()
-                //menu.page = 4
+                app.resetBallot()
             }
+
         }
 
-        
         Guard {
             id : observe
             state : "observe"
-            onBack : menu.page = 3
-        }
-        
+            onBack : app.page = 3
 
+            demeUUID : app.demeStatus.uuid
+            proposalIndex : app.proposalMetadata.index
+            subtitle : app.proposalMetadata.title
+
+            pseudonym : app.guardStatus.pseudonym
+            timestamp : app.guardStatus.timestamp
+            castIndex : app.guardStatus.castIndex
+
+            commitIndex : app.guardStatus.commitIndex
+            commitRoot : app.guardStatus.commitRoot
+            
+        }
 
     }
         
@@ -180,7 +220,7 @@ Window {
     Rectangle {
         id: rect
         anchors.fill: fastBlur
-        color: Style.stepperBackground //"#241b1b"
+        color: Style.stepperBackground 
     }
 
 
@@ -200,12 +240,11 @@ Window {
         height: 72
         width: parent.width
         anchors.bottom: parent.bottom
-        //height: 72
         radius: 32
         opacity: 0.55
         source: ShaderEffectSource {
             sourceItem: content
-            sourceRect: Qt.rect(0, window.height - fastBlur.height, fastBlur.width, fastBlur.height)
+            sourceRect: Qt.rect(0, app.height - fastBlur.height, fastBlur.width, fastBlur.height)
         }
     }
 
@@ -215,42 +254,40 @@ Window {
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 45
 
-        page : 1
-        trod : false
-        votable : true
-        observable : true
+        page : app.page
+
+        trod : !(app.proposalMetadata.index == 0)
+        votable : app.proposalStatus.isVotable 
+        observable : app.proposalStatus.isCast
 
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.horizontalCenterOffset: -140
 
         onHome: {
-            page = 1
-
-            window.page = 3
-            window.deme = 0
-            window.proposal = 0
-            window.isvotable = true
-            window.iscast = 0
+            app.page = 1
         }
 
         onDeme: {
-            page = 2
+            if (trod) {
+                app.page = 2
+            }
         }
 
         onProposal: {
-            page = 3
-            trod = true
+            if (trod) {
+                app.page = 3
+            }
         }
 
         onVote: {
             if (votable) {
-                page = 4
+                app.page = 4
             }
         }
 
         onObserve: {
             if (observable) {
-                page = 5
+                app.page = 5
             }
         }
     }
@@ -268,14 +305,6 @@ Window {
                 PropertyChanges { target: proposal; visible:false; }
                 PropertyChanges { target: vote; visible:false; }
                 PropertyChanges { target: observe; visible:false; }
-                //PropertyChanges { target: back; visible:false; }
-
-                /* PropertyChanges {  */
-                /*     target: content */
-                /*     onRefresh: { */
-                /*         menu.trod = false */
-                /*     } */
-                /* } */
             },
             State {
                 name: "deme"
@@ -318,5 +347,3 @@ Window {
     }
 
 }
-
-
