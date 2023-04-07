@@ -112,7 +112,7 @@ end
 
 function Base.push!(chain::BraidChain, p::Proposal)
     push!(chain.ledger, p)
-    push!(chain.tree, digest(p, hasher(chain.crypto)))
+    push!(chain.tree, digest(p, hasher(chain.spec)))
     return
 end
 
@@ -131,8 +131,8 @@ function record!(chain::BraidChain, p::Proposal)
     end
 
     @assert isbinding(chain, state(p))
-    @assert pseudonym(p.approval) == chain.guardian
-    @assert verify(p, chain.crypto)
+    @assert pseudonym(p.approval) == chain.spec.proposer
+    @assert verify(p, crypto(chain.spec))
     
     push!(chain, p)
 
@@ -188,10 +188,10 @@ function vote(proposal::Proposal, seed::Digest, selection::Selection, signer::Si
     return @set vote.approval = approval
 end
 
-isbinding(vote::Vote, proposal::Proposal, crypto::Crypto) = vote.proposal == digest(proposal, hasher(crypto))
+isbinding(vote::Vote, proposal::Proposal, crypto::CryptoSpec) = vote.proposal == digest(proposal, hasher(crypto))
 
 
-isbinding(record, spine::Vector{Digest}, crypto::Crypto) = isbinding(record, spine, hasher(crypto))
+isbinding(record, spine::Vector{Digest}, crypto::CryptoSpec) = isbinding(record, spine, hasher(crypto))
 
 pseudonym(vote::Vote) = isnothing(vote.approval) ? nothing : pseudonym(vote.approval)
 
@@ -308,7 +308,7 @@ end
 id(ack::CastAck) = id(ack.ack)
 index(ack::CastAck) = index(ack.ack)
 
-function verify(ack::CastAck, crypto::Crypto)
+function verify(ack::CastAck, crypto::CryptoSpec)
     isbinding(ack.receipt, ack.ack, hasher(crypto)) || return false
     return verify(ack.ack, crypto)
 end
@@ -341,7 +341,7 @@ mutable struct BallotBox
     voters::Set{Pseudonym} # better than members
     collector::Pseudonym
     seed::Union{Digest, Nothing}
-    crypto::Crypto # on the other hand the inclusion of a vote should be binding enough as it includes proposal hash.
+    crypto::CryptoSpec # on the other hand the inclusion of a vote should be binding enough as it includes proposal hash.
     queue::Vector{Vote}
     ledger::Vector{CastRecord}
     tree::HistoryTree
@@ -349,7 +349,7 @@ mutable struct BallotBox
 end
 
 
-BallotBox(proposal::Proposal, voters::Set{Pseudonym}, collector::Pseudonym, crypto::Crypto) = BallotBox(proposal, voters, collector, nothing, crypto, Vote[], CastRecord[], HistoryTree(Digest, hasher(crypto)), nothing)
+BallotBox(proposal::Proposal, voters::Set{Pseudonym}, collector::Pseudonym, crypto::CryptoSpec) = BallotBox(proposal, voters, collector, nothing, crypto, Vote[], CastRecord[], HistoryTree(Digest, hasher(crypto)), nothing)
 
 
 function Base.show(io::IO, ballotbox::BallotBox)
@@ -427,7 +427,7 @@ end
 #isbinding(vote::Vote, ack::AckInclusion{BallotBoxState}, crypto::Crypto) = digest(vote, crypto) == leaf(ack)
 
 
-isbinding(vote::Vote, ack::CastAck, crypto::Crypto) = digest(vote, crypto) == ack.receipt.vote
+isbinding(vote::Vote, ack::CastAck, crypto::CryptoSpec) = digest(vote, crypto) == ack.receipt.vote
 
 function ack_root(ballotbox::BallotBox, index::Int) 
 
@@ -570,10 +570,10 @@ commit!(ballotbox::BallotBox, signer::Signer; with_tally::Union{Nothing, Bool} =
 
 struct PollingStation
     halls::Vector{BallotBox}
-    crypto::Crypto
+    crypto::CryptoSpec
 end
 
-PollingStation(crypto::Crypto) = PollingStation(BallotBox[], crypto)
+PollingStation(crypto::CryptoSpec) = PollingStation(BallotBox[], crypto)
 
 
 function Base.show(io::IO, station::PollingStation)

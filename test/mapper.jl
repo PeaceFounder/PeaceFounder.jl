@@ -2,16 +2,40 @@ using Test
 
 import PeaceFounder.Model
 import PeaceFounder.Mapper
-using PeaceFounder.Model: Crypto, gen_signer, pseudonym, TicketID, Member, Proposal, Ballot, Selection, generator, state, id, vote, seed, tally, approve, istallied, Deme, hasher, HMAC, auth, token, isbinding, Generator
+using PeaceFounder.Model: CryptoSpec, pseudonym, TicketID, Member, Proposal, Ballot, Selection, generator, state, id, vote, seed, tally, approve, istallied, DemeSpec, hasher, HMAC, auth, token, isbinding, Generator, generate, Signer
 
 import Dates: Dates, Date
 
-crypto = Crypto("SHA-256", "MODP", UInt8[1, 2, 3, 6])
-GUARDIAN = gen_signer(crypto)
-DEME = Deme("Community", id(GUARDIAN), crypto)
+crypto = CryptoSpec("SHA-256", "MODP", UInt8[1, 2, 3, 6])
+
+GUARDIAN = generate(Signer, crypto)
+PROPOSER = generate(Signer, crypto)
 
 
-Mapper.setup!(DEME, GUARDIAN)
+Mapper.initialize!(crypto)
+
+roles = Mapper.system_roles()
+
+
+demespec = DemeSpec(;
+                    uuid = Base.UUID(121432),
+                    title = "A local democratic communituy",
+                    crypto = crypto,
+                    guardian = id(GUARDIAN),
+                    recorder = roles.recorder,
+                    recruiter = roles.recruiter,
+                    braider = roles.braider,
+                    proposer = id(PROPOSER),
+                    collector = roles.collector
+) |> approve(GUARDIAN) 
+
+
+#GUARDIAN = gen_signer(crypto)
+#DEME = DemeSpec("Community", id(GUARDIAN), crypto)
+
+Mapper.capture!(demespec)
+
+
 RECRUIT_AUTHORIZATION_KEY = Mapper.get_recruit_key() # Similarly I could have a method for a recruit authorization key. 
 RECRUIT_HMAC = HMAC(RECRUIT_AUTHORIZATION_KEY, hasher(crypto))
 
@@ -41,11 +65,13 @@ function enlist_ticket(ticketid)
 
     # ---- evesdropers listening --------
     
-    salt, salt_auth_code = Mapper.enlist_ticket(ticketid, timestamp, ticket_auth_code) # ouptut is sent to main server    
+    metadata, salt, reply_auth_code = Mapper.enlist_ticket(ticketid, timestamp, ticket_auth_code) # ouptut is sent to main server    
 
     # ---- evesdropers listening --------
 
-    @test isbinding(ticketid, salt, salt_auth_code, RECRUIT_HMAC)  # done on the server
+    @test isbinding(metadata, ticketid, salt, reply_auth_code, RECRUIT_HMAC)  # done on the server
+    @test isbinding(demespec, metadata, hasher(RECRUIT_HMAC)) 
+
     return token(ticketid, salt, RECRUIT_HMAC)
 end
 
@@ -59,13 +85,16 @@ ticketid_eve = TicketID("Eve")
 token_eve = enlist_ticket(ticketid_eve)
 
 
-alice = gen_signer(crypto)
+#alice = gen_signer(crypto)
+alice = generate(Signer, crypto)
 access_alice, ack = enroll(alice, ticketid_alice, token_alice)
 
-bob = gen_signer(crypto)
+#bob = gen_signer(crypto)
+bob = generate(Signer, crypto)
 access_bob, ack = enroll(bob, ticketid_bob, token_bob)
 
-eve = gen_signer(crypto)
+#eve = gen_signer(crypto)
+eve = generate(Signer, crypto)
 access_eve, ack = enroll(eve, ticketid_eve, token_eve)
 
 
@@ -74,21 +103,19 @@ admission = Mapper.get_ticket_admission(ticketid_alice)
 
 commit = Mapper.get_chain_commit()
 
-proposal_draft = Proposal(
+proposal = Proposal(
     uuid = Base.UUID(23445325),
     summary = "Should the city ban all personal vehicle usage and invest in alternative forms of transportation such as public transit, biking and walking infrastructure?",
     description = "",
     ballot = Ballot(["yes", "no"]),
     open = Dates.now(),
     closed = Dates.now() + Dates.Second(1),
-    collector = id(GUARDIAN),
+    collector = roles.collector,
 
     state = state(commit)
-)
+) |> approve(PROPOSER)
 
-proposal = approve(proposal_draft, GUARDIAN)
 
-# I could also improve matters here
 ack = Mapper.submit_chain_record!(proposal) # I could integrate ack 
 # A lot of stuff going behind the scenes here regarding the dealer and etc
 member_list = Mapper.get_chain_roll()

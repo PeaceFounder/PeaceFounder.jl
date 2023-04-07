@@ -2,7 +2,7 @@ module Parser
 
 using Infiltrator
 
-using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Member, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, NonceCommitment, Lot, CastReceipt, CastRecord, Model, bytes, Admission, Deme, Crypto, Hash, TicketStatus, Commit, AckInclusion, Generator
+using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Member, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, NonceCommitment, Lot, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Hash, TicketStatus, Commit, AckInclusion, Generator, CryptoSpec, DemeSpec, Hash
 using HistoryTrees: InclusionProof, ConsistencyProof
 
 
@@ -113,23 +113,25 @@ end
 
 
 
-function marshal(event::Tuple{Vector{UInt8}, Digest})
+function marshal(event::Tuple{Vector{UInt8}, Vector{UInt8}, Digest})
     
-    salt, auth_code = event
-    payload = Dict(:salt => bytes2hex(salt), :auth_code => auth_code)
+    metadata, salt, auth_code = event
+    payload = Dict(:metadata => bytes2hex(metadata), :salt => bytes2hex(salt), :auth_code => auth_code)
 
     return marshal(payload)
 end
 
+using Infiltrator
 
-function unmarshal(bytes, ::Type{Tuple{Vector{UInt8}, Digest}})
+function unmarshal(bytes, ::Type{Tuple{Vector{UInt8}, Vector{UInt8}, Digest}})
     
     payload = unmarshal(bytes)
 
+    metadata = hex2bytes(payload.metadata)
     salt = hex2bytes(payload.salt)
     auth_code = constructfrom(Digest, payload.auth_code)
     
-    return (salt, auth_code)
+    return (metadata, salt, auth_code)
 end
 
 
@@ -156,22 +158,24 @@ function unmarshal(bytes, ::Type{Tuple{TicketID, Digest}})
 end
 
 
+StructTypes.StructType(::Type{CryptoSpec}) = StructTypes.CustomStruct()
+StructTypes.lower(crypto::CryptoSpec) = Dict(:hash => crypto.hasher, :group => crypto.group, :generator => bytes2hex(bytes(crypto.generator)))
 
-StructTypes.StructType(::Type{Crypto}) = StructTypes.CustomStruct()
-StructTypes.lower(crypto::Crypto) = Dict(:hash => crypto.hasher, :group => crypto.group, :generator => bytes2hex(bytes(crypto.generator)))
-
-function StructTypes.construct(::Type{Crypto}, x)
+function StructTypes.construct(::Type{CryptoSpec}, x)
     
     hasher = Hash(x["hash"])
     group = x["group"]
     generator = Generator(hex2bytes(x["generator"]))
 
-    return Crypto(hasher, group, generator)
+    return CryptoSpec(hasher, group, generator)
 end
 
 
-StructTypes.StructType(::Type{Deme}) = StructTypes.Struct()
-StructTypes.omitempties(::Type{Deme}) = (:cert,)
+StructTypes.StructType(::Type{DemeSpec}) = StructTypes.Struct()
+StructTypes.omitempties(::Type{DemeSpec}) = (:timestamp, :signature)
+
+#StructTypes.StructType(::Type{DemeSpec}) = StructTypes.Struct()
+#StructTypes.omitempties(::Type{DemeSpec}) = (:cert,)
 
 StructTypes.StructType(::Type{Hash}) = StructTypes.StringType()
 Base.string(hasher::Hash) = hasher.spec

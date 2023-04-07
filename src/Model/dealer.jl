@@ -7,9 +7,9 @@ struct Pulse end
 # verify(pulse, crypto)
 
 struct BeaconClient
-    id::Pseudonym
-    crypto::Crypto
-    source # IP address and source
+    #id::Pseudonym
+    #crypto::CryptoSpec
+    #source # IP address and source
 end
 
 # The pulse is verified as necessary. 
@@ -74,7 +74,8 @@ end
 
 hasher(dealer::Dealer) = dealer.hasher
 
-Dealer(crypto, beacon; delay = 5) = Dealer(Digest[], Digest[], hasher(crypto), beacon, DealerJob[], Lot[], delay)
+# delay is only operational parameter and thus needs to be stored seperatelly
+Dealer(spec; delay = 5) = Dealer(Digest[], Digest[], hasher(spec), BeaconClient(), DealerJob[], Lot[], delay)
 
 # timestamp could be actual time when it should be run, calculated from the proposal alone. 
 function schedule!(dealer::Dealer, uuid, timestamp, nonceid) 

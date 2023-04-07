@@ -17,3 +17,7 @@ end
 module ServiceTest
 include("service.jl")
 end
+
+module ClientTest
+include("client.jl")
+end

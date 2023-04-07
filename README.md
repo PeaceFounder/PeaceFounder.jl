@@ -70,7 +70,7 @@ PUT /braider/jobs/{JobID} : Tuple{Vector{Pseudonym}, Generator} -> JobStatus
 Note that at this level I also need to implement authetification. 
 
 ```
-POST /admin/ticket : Tuple{Pseudonym, Crypto, token::BigInt} # sets up the guardian
+POST /admin/ticket : Tuple{Pseudonym, CryptoSpec, token::BigInt} # sets up the guardian
 GET /admin/ticket : Pseudonym
 
 GET /admin/braider : BraiderStatus

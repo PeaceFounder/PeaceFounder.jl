@@ -1,12 +1,69 @@
 using HistoryTrees: HistoryTree, InclusionProof, ConsistencyProof
+using Base: UUID, @kwdef
 
 
 abstract type Transaction end # an alternative name is Transaction
+
+@kwdef struct DemeSpec <: Transaction
+    uuid::UUID
+    title::String
+    crypto::CryptoSpec
+
+    guardian::Pseudonym
+    recorder::Pseudonym
+    recruiter::Pseudonym
+    braider::Pseudonym
+    proposer::Pseudonym 
+    collector::Pseudonym
+
+    timestamp::Union{DateTime, Nothing} = nothing
+
+    # If an adversary can pinpoint the address from which a message was sent and its effect on the system, 
+    # then they already know the contents of the message. Therefore, a TLS connection only marginally 
+    # helps ensure the confidentiality of the cast vote. Phising and Tampering is dealt with signatures on tree roots and
+    # data theft is nonissue as everything is public. 
+
+    # cert::Nothing # An optional TLS certificate used for communication
+
+    signature::Union{Signature, Nothing} = nothing
+end
+
+# Need to improve this
+Base.:(==)(x::DemeSpec, y::DemeSpec) = x.uuid == y.uuid && x.title == y.title && x.guardian == y.guardian && x.crypto == y.crypto 
+
+DemeSpec(title::String, guardian::Pseudonym, crypto::CryptoSpec) = DemeSpec(UUID(rand(1:10000)), title, guardian, crypto, nothing)
+
+function Base.show(io::IO, deme::DemeSpec)
+
+    println(io, "DemeSpec:")
+    println(io, "  title : $(deme.title)")
+    println(io, "  uuid : $(deme.uuid)")
+    println(io, "  guardian : $(string(deme.guardian))")
+    println(io, "  recorder : $(string(deme.recorder))")
+    println(io, "  recruiter : $(string(deme.recruiter))")
+    println(io, "  proposer : $(string(deme.proposer))")
+    println(io, "  braider : $(string(deme.braider))")
+    #println(io, "  cert : $(deme.cert)")
+    print(io, show_string(deme.crypto))
+
+end
+
+crypto(deme::DemeSpec) = deme.crypto
+hasher(deme::DemeSpec) = hasher(deme.crypto)
+
+
+generator(spec::DemeSpec) = generator(crypto(spec))
+
+
+isbinding(spec::DemeSpec, hash::Digest, hasher::Hash) = digest(spec, hasher) == hash
+isbinding(spec::DemeSpec, hash::Vector{UInt8}, hasher::Hash) = isbinding(spec, Digest(hash), hasher)
+
 
 struct ChainState
     index::Int
     root::Digest
     generator::Generator
+    member_count::Int
     #proot::Digest # Noinvasive way to make sure that every member get's the latest set of proposals.
 end
 
@@ -20,7 +77,7 @@ generator(commit::Commit{ChainState}) = generator(commit.state)
 index(state::ChainState) = state.index
 root(state::ChainState) = state.root
 
-isbinding(record::Transaction, ack::AckInclusion{ChainState}, crypto::Crypto) = digest(record, crypto) == leaf(ack)
+isbinding(record::Transaction, ack::AckInclusion{ChainState}, crypto::CryptoSpec) = digest(record, crypto) == leaf(ack)
 
 isbinding(record::Transaction, ack::AckInclusion{ChainState}, hasher::Hash) = digest(record, hasher) == leaf(ack)
 isbinding(ack::AckInclusion{ChainState}, record::Transaction, hasher::Hash) = isbinding(record, ack, hasher)
@@ -28,13 +85,22 @@ isbinding(ack::AckInclusion{ChainState}, record::Transaction, hasher::Hash) = is
 
 isbinding(ack::AckInclusion{ChainState}, id::Pseudonym) = issuer(ack) == id
 
+isbinding(ack::AckInclusion{ChainState}, deme::DemeSpec) = issuer(ack) == deme.recorder
+
+isbinding(record::Transaction, ack::AckInclusion{ChainState}, deme::DemeSpec) = isbinding(ack, deme) && isbinding(record, ack, hasher(deme))
+
+isbinding(admission::Admission, deme::DemeSpec) = issuer(admission) == deme.recruiter
+
+isbinding(commit::Commit{ChainState}, deme::DemeSpec) = issuer(commit) == deme.recorder
+
 
 function Base.show(io::IO, state::ChainState)
     
     println(io, "ChainState:")
     println(io, "  index : $(state.index)")
     println(io, "  root : $(string(state.root))")
-    print(io, "  generator : $(string(state.generator))")
+    println(io, "  generator : $(string(state.generator))")
+    print(io, "  member_count : $(state.member_count)")
     
 end
 
@@ -42,9 +108,10 @@ end
 mutable struct BraidChain
     members::Set{Pseudonym}
     ledger::Vector{Transaction}
-    crypto::Crypto
+    #crypto::CryptoSpec
+    spec::DemeSpec
     generator::Generator
-    guardian::Pseudonym
+    #guardian::Pseudonym
     tree::HistoryTree
     commit::Union{Commit{ChainState}, Nothing}
 end
@@ -64,7 +131,8 @@ function Base.show(io::IO, chain::BraidChain)
     println(io, "BraidChain:")
     println(io, "  members : $(length(chain.members)) entries")
     println(io, "  generator : $(string(chain.generator))")
-    println(io, "  guardian : $(string(chain.guardian))")
+    println(io, "  guardian : $(string(chain.spec.guardian))")
+    println(io, "  recorder : $(string(chain.spec.recorder))")
     println(io, "")
     #println(io, show_string(chain.ledger))
     print_vector(io, chain.ledger)
@@ -74,7 +142,17 @@ function Base.show(io::IO, chain::BraidChain)
 end
 
 
-BraidChain(guardian::Pseudonym, crypto::Crypto) = BraidChain(Set{Pseudonym}(), Transaction[], crypto, generator(crypto), guardian, HistoryTree(Digest, hasher(crypto)), nothing)
+#BraidChain(guardian::Pseudonym, crypto::CryptoSpec) = BraidChain(Set{Pseudonym}(), Transaction[], crypto, generator(crypto), guardian, HistoryTree(Digest, hasher(crypto)), nothing)
+
+function BraidChain(spec::DemeSpec) 
+    
+    chain = BraidChain(Set{Pseudonym}(), Transaction[], spec, generator(spec), HistoryTree(Digest, hasher(spec)), nothing)
+    push!(chain, spec)
+
+    return chain
+end
+    
+
 
 function reset_tree!(chain::BraidChain)
 
@@ -88,7 +166,8 @@ end
 
 function Base.push!(chain::BraidChain, t::Transaction)
     push!(chain.ledger, t)
-    push!(chain.tree, digest(t, chain.crypto))
+    #push!(chain.tree, digest(t, crypto(chain)))
+    push!(chain.tree, digest(t, hasher(chain.spec)))
     return
 end
 
@@ -158,7 +237,7 @@ end
 
 function generator(chain::BraidChain, n::Int)
     
-    g = generator(chain.crypto)
+    g = generator(chain.spec)
     for i in view(chain.ledger, 1:n)
         # only braid can make a change here. 
     end
@@ -185,11 +264,12 @@ end
 members(chain::BraidChain) = chain.members
 
 
-
-state(chain::BraidChain) = ChainState(length(chain), root(chain), generator(chain))
+state(chain::BraidChain) = ChainState(length(chain), root(chain), generator(chain), length(members(chain)))
 
 
 function commit!(chain::BraidChain, signer::Signer) 
+
+    @assert chain.spec.recorder == id(signer)
 
     _state = state(chain)
     chain.commit = Commit(_state, seal(_state, signer))
@@ -236,13 +316,11 @@ end
 
 
 
-
-
 function Base.push!(chain::BraidChain, m::Member)
 
     push!(chain.ledger, m)
     push!(chain.members, pseudonym(m))
-    push!(chain.tree, digest(m, chain.crypto))
+    push!(chain.tree, digest(m, hasher(chain.spec)))
     
     return
 end
@@ -256,9 +334,9 @@ function record!(chain::BraidChain, m::Member)
     
     @assert generator(chain) == generator(m)
     @assert !(pseudonym(m) in members(chain))
-    @assert pseudonym(m.admission.approval) == chain.guardian
+    @assert pseudonym(m.admission.approval) == chain.spec.recruiter
 
-    @assert verify(m, chain.crypto) # verifies also admission 
+    @assert verify(m, crypto(chain.spec)) # verifies also admission 
 
     push!(chain, m)
     N = length(chain)

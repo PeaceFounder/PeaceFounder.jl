@@ -8,13 +8,17 @@ import Dates: Dates, DateTime
 import ..Schedulers: Schedulers, Scheduler
 
 using ..Model
-using ..Model: Crypto, gen_signer, pseudonym, BraidChain, TokenRecruiter, PollingStation, TicketID, Member, Proposal, Ballot, Selection, Transaction, Signer, Dealer, BraidBroker, Pseudonym, Vote, id, Deme, Digest, Admission
+using ..Model: CryptoSpec, pseudonym, BraidChain, TokenRecruiter, PollingStation, TicketID, Member, Proposal, Ballot, Selection, Transaction, Signer, Dealer, BraidBroker, Pseudonym, Vote, id, DemeSpec, Digest, Admission
 using Base: UUID
 
-const DEME = Ref{Deme}()
+#const DEME = Ref{DemeSpec}()
 
-const GUARDIAN = Ref{Signer}()
+#const GUARDIAN = Ref{Signer}()
+const RECORDER = Ref{Signer}()
 const RECRUITER = Ref{TokenRecruiter}()
+const BRAIDER = Ref{Signer}()
+const COLLECTOR = Ref{Signer}()
+
 const BRAID_CHAIN = Ref{BraidChain}()
 
 # to prevent members registering while braiding happens and other way around.
@@ -53,11 +57,11 @@ function dealer_process_loop(; force = false)
 
     lot = Model.draw(DEALER[], job.uuid)
     Model.record!(BRAID_CHAIN[], lot)
-    Model.commit!(BRAID_CHAIN[], GUARDIAN[])
+    Model.commit!(BRAID_CHAIN[], RECORDER[])
 
     _seed = Model.seed(lot)
     Model.set_seed!(POLLING_STATION[], job.uuid, _seed)
-    Model.commit!(POLLING_STATION[], job.uuid, GUARDIAN[]; with_tally = false)
+    Model.commit!(POLLING_STATION[], job.uuid, COLLECTOR[]; with_tally = false)
 
     return
 end
@@ -82,13 +86,13 @@ function broker_process_loop(; force = false)
 
 
     record!(BRAID_CHAIN[], _braid)
-    commit!(BRAID_CHAIN[], GUARDIAN[])
+    commit!(BRAID_CHAIN[], RECORDER[])
 
     return
 end
 
 
-tally_votes!(uuid::UUID) = Model.commit!(POLLING_STATION[], uuid, GUARDIAN[]; with_tally = true);
+tally_votes!(uuid::UUID) = Model.commit!(POLLING_STATION[], uuid, COLLECTOR[]; with_tally = true);
 
 function tally_process_loop()
     
@@ -99,27 +103,36 @@ function tally_process_loop()
 end
 
 
-function setup!(deme::Deme, guardian::Signer)
+function initialize!(spec::CryptoSpec)
 
-    crypto = guardian.spec
+    RECORDER[] = Model.generate(Signer, spec)
+    RECRUITER[] = Model.generate(TokenRecruiter, spec)
+    BRAIDER[] = Model.generate(Signer, spec)
+    COLLECTOR[] = Model.generate(Signer, spec)
 
-    DEME[] = deme
+    return
+end
 
-    GUARDIAN[] = guardian
-    BRAID_CHAIN[] = BraidChain(id(guardian), crypto)
+system_roles() = (; recorder = id(RECORDER[]), recruiter = id(RECRUITER[]), braider = id(BRAIDER[]), collector = id(COLLECTOR[]))
 
-    recruiter_auth_key = rand(UInt8, 16) # For a simple access
-    RECRUITER[] = TokenRecruiter(guardian, recruiter_auth_key)
-    
-    beacon = Model.BeaconClient(id(guardian), crypto, Sockets.ip"0.0.0.0") # ToDo
-    DEALER[] = Dealer(crypto, beacon; delay = 5)
 
-    POLLING_STATION[] = PollingStation(crypto)
+#function setup!()
+
+function capture!(spec::DemeSpec)
+
+    BRAID_CHAIN[] = BraidChain(spec)
+
+    RECRUITER[].metadata[] = Model.bytes(Model.digest(spec, Model.hasher(spec))) 
+
+
+    DEALER[] = Dealer(spec; delay = 5)
+
+    POLLING_STATION[] = PollingStation(Model.crypto(spec))
 
     promises = Model.charge_nonces!(DEALER[], 100; reset = true)
     Model.record!(BRAID_CHAIN[], promises)
 
-    Model.commit!(BRAID_CHAIN[], GUARDIAN[]) # Errors if the braidchain server is not accepted. An option override=true could be provided 
+    Model.commit!(BRAID_CHAIN[], RECORDER[]) # Errors if the braidchain server is not accepted. An option override=true could be provided 
 
     DEALER_PROCESS[] = @async while true
         dealer_process_loop()
@@ -139,7 +152,7 @@ end
 
 get_recruit_key() = Model.key(RECRUITER[])
 
-get_deme() = DEME[]
+get_deme() = BRAID_CHAIN[].spec
 
 enlist_ticket(ticketid::TicketID, timestamp::DateTime, auth_code::Digest; expiration_time = nothing) = Model.enlist!(RECRUITER[], ticketid, timestamp, auth_code)
 #delete_ticket!(ticketid::TicketID) = Model.remove!(RECRUITER[], ticketid) # 
@@ -162,7 +175,7 @@ get_chain_commit() = Model.commit(BRAID_CHAIN[])
 function submit_chain_record!(transaction::Transaction) 
 
     N = Model.record!(BRAID_CHAIN[], transaction)
-    Model.commit!(BRAID_CHAIN[], GUARDIAN[])
+    Model.commit!(BRAID_CHAIN[], RECORDER[])
 
     ack = Model.ack_leaf(BRAID_CHAIN[], N)
     return ack
@@ -201,7 +214,7 @@ end
 function submit_chain_record!(proposal::Proposal)
 
     N = Model.record!(BRAID_CHAIN[], proposal)
-    Model.commit!(BRAID_CHAIN[], GUARDIAN[])
+    Model.commit!(BRAID_CHAIN[], RECORDER[])
 
     Model.add!(POLLING_STATION[], proposal, Model.members(BRAID_CHAIN[], proposal))
 
@@ -231,7 +244,7 @@ function cast_vote(uuid::UUID, vote::Vote; late_votes = false)
         # need to bounce back if not within window. It could still be allowed to 
 
         N = Model.record!(POLLING_STATION[], uuid, vote)
-        Model.commit!(POLLING_STATION[], uuid, GUARDIAN[])
+        Model.commit!(POLLING_STATION[], uuid, COLLECTOR[])
 
         ack = Model.ack_cast(POLLING_STATION[], uuid, N)
         return ack

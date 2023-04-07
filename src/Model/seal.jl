@@ -75,6 +75,8 @@ digest(record::CastRecord, hasher::Hash) = digest(receipt(record, hasher), hashe
 
 digest(receipt::CastReceipt, hasher::Hash) = digest(canonicalize(receipt), hasher)
 
+digest(spec::DemeSpec, hasher::Hash) = digest(canonicalize(spec), hasher)
+
 
 function body(proposal::Proposal)
     proposal = @set proposal.approval = nothing
@@ -93,6 +95,32 @@ end
 # The body method is actually pretty interesting 
 body(admission::Admission) = @set admission.approval = nothing
 
+
+function body(spec::DemeSpec)
+
+    _spec = @set spec.signature = nothing
+    _spec = @set _spec.timestamp = nothing
+
+    return _spec
+end
+
+
+function approve(spec::DemeSpec, signer::Signer)
+
+    spec = @set spec.signature = nothing
+    spec = @set spec.timestamp = Dates.now()
+    spec = @set spec.signature = sign(canonicalize(spec), signer)
+
+    return spec
+end
+
+approve(signer::Signer) = x -> approve(x, signer) # late evaluation
+
+
+verify(spec::DemeSpec, crypto::CryptoSpec) = verify(canonicalize(@set spec.signature = nothing), spec.guardian, spec.signature, crypto)
+
+
+
 # canonicalize, seal, verify shall be put in a serate file
 function seal(admission::Admission, signer::Signer)
 
@@ -110,7 +138,7 @@ function seal(state::ChainState, signer::Signer)
 end
 
 
-verify(state::ChainState, seal::Seal, crypto::Crypto) = verify(canonicalize(state), seal, crypto)
+verify(state::ChainState, seal::Seal, crypto::CryptoSpec) = verify(canonicalize(state), seal, crypto)
 
 
 function seal(state::BallotBoxState, signer::Signer)
@@ -120,7 +148,7 @@ function seal(state::BallotBoxState, signer::Signer)
     return seal(bytes, signer)
 end
 
-verify(state::BallotBoxState, seal::Seal, crypto::Crypto) = verify(canonicalize(state), seal, crypto)
+verify(state::BallotBoxState, seal::Seal, crypto::CryptoSpec) = verify(canonicalize(state), seal, crypto)
 
 
 body(vote::Vote) = @set vote.approval = nothing
@@ -137,7 +165,7 @@ function seal(vote::Vote, generator::Generator, signer::Signer)
 end
 
 
-function verify(vote::Vote, generator::Generator, crypto::Crypto)
+function verify(vote::Vote, generator::Generator, crypto::CryptoSpec)
     
     bytes = canonicalize(body(vote))
 
@@ -146,7 +174,7 @@ end
 
 
 
-function verify(admission::Admission, crypto::Crypto)
+function verify(admission::Admission, crypto::CryptoSpec)
 
     bytes = canonicalize(admission)
     
@@ -154,7 +182,7 @@ function verify(admission::Admission, crypto::Crypto)
 end
 
 
-function verify(member::Member, crypto::Crypto)
+function verify(member::Member, crypto::CryptoSpec)
     return verify(member.admission, crypto) && verify(canonicalize(body(member)), id(member.admission), member.approval, crypto)
 end
 
@@ -167,7 +195,7 @@ function approve(proposal::Proposal, signer::Signer)
 end
 
 
-function verify(proposal::Proposal, crypto::Crypto)
+function verify(proposal::Proposal, crypto::CryptoSpec)
     
     bytes = canonicalize(body(proposal))
 

@@ -53,18 +53,30 @@ mutable struct Ticket
 end
 
 struct TokenRecruiter
+    metadata::Ref{Vector{UInt8}} # A piece of information which is passed with hmac 
     tickets::Vector{Ticket}
     signer::Signer
     hmac::HMAC
 end
 
-TokenRecruiter(signer::Signer, hmac::HMAC) = TokenRecruiter(Ticket[], signer, hamc)
-TokenRecruiter(signer::Signer, key::Vector{UInt8}) = TokenRecruiter(Ticket[], signer, HMAC(key, hasher(signer)))
+TokenRecruiter(signer::Signer, hmac::HMAC) = TokenRecruiter(Ref{Vector{UInt8}}(UInt8[]), Ticket[], signer, hmac)
+TokenRecruiter(signer::Signer, key::Vector{UInt8}) = TokenRecruiter(Ref{Vector{UInt8}}(UInt8[]), Ticket[], signer, HMAC(key, hasher(signer)))
+
+
+function generate(::Type{TokenRecruiter}, spec::CryptoSpec)
+    
+    key = UInt8[1, 2, 3, 6, 7, 8]
+    recruiter = generate(Signer, spec)
+
+    return TokenRecruiter(recruiter, key)
+end
 
 
 hmac(recruiter::TokenRecruiter) = recruiter.hmac
 hasher(recruiter::TokenRecruiter) = hasher(hmac(recruiter))
 key(recruiter::TokenRecruiter) = key(hmac(recruiter))
+id(recruiter::TokenRecruiter) = id(recruiter.signer)
+
 
 
 function select(::Type{Ticket}, f::Function, recruiter::TokenRecruiter)
@@ -89,11 +101,8 @@ select(::Type{Admission}, id::Pseudonym, recruiter::TokenRecruiter) = select(Adm
 
 ticket_ids(recruiter::TokenRecruiter) = tickets(recruiter)
 tickets(recruiter::TokenRecruiter) = (i.ticketid for i in recruiter.tickets)
-#admission(recruiter::TokenRecruiter, ticketid::TicketID) = recruiter[ticketid].admission
-
 
 Base.in(ticketid::TicketID, recruiter::TokenRecruiter) = ticketid in ticket_ids(recruiter)
-
 
 # I will need to add also a date to avoid creation of old tickets
 
@@ -101,7 +110,8 @@ bytes(time::DateTime) = reinterpret(UInt8, [time.instant.periods.value])
 
 
 auth(ticketid::TicketID, time::DateTime, hmac::HMAC) = digest(UInt8[1, bytes(ticketid)..., bytes(time)...], hmac)
-auth(ticketid::TicketID, salt::Vector{UInt8}, hmac::HMAC) = digest(UInt8[2, bytes(ticketid)..., salt...], hmac)
+auth(metadata::Vector{UInt8}, ticketid::TicketID, salt::Vector{UInt8}, hmac::HMAC) = digest(UInt8[2, metadata..., bytes(ticketid)..., salt...], hmac)
+
 
 token(ticketid::TicketID, salt::Vector{UInt8}, hmac::HMAC) = digest(UInt8[0, bytes(ticketid)..., salt...], hmac)
 token(ticket::Ticket, hmac::HMAC) = token(ticket.ticketid, ticket.salt, hmac)
@@ -112,11 +122,13 @@ auth(id::Pseudonym, token::Digest, hasher::Hash) = auth(id, HMAC(bytes(token), h
 
 
 isbinding(ticketid::TicketID, time::DateTime, auth_code::Digest, hmac::HMAC) = auth(ticketid, time, hmac) == auth_code
-isbinding(ticketid::TicketID, salt::Vector{UInt8}, auth_code::Digest, hmac::HMAC) = auth(ticketid, salt, hmac) == auth_code
+
+isbinding(metadata::Vector{UInt8}, ticketid::TicketID, salt::Vector{UInt8}, auth_code::Digest, hmac::HMAC) = auth(metadata, ticketid, salt, hmac) == auth_code
 
 isbinding(id::Pseudonym, auth_code::Digest, token::Digest, hasher::Hash) = auth(id, token, hasher) == auth_code
 
 
+set_metadata!(recruiter::TokenRecruiter, metadata::Vector{UInt8}) = recruiter.metadata[] = metadata
 
 function enlist!(recruiter::TokenRecruiter, ticketid::TicketID, timestamp::DateTime, ticket_auth_code::Digest)
    
@@ -133,11 +145,13 @@ function enlist!(recruiter::TokenRecruiter, ticketid::TicketID, timestamp::DateT
     salt = rand(UInt8, 16) # Needs a real random number generator
     _token = token(ticketid, salt, hmac(recruiter))
     
-    salt_auth_code = auth(ticketid, salt, hmac(recruiter))
+    metadata = recruiter.metadata[]
 
-    push!(recruiter.tickets, Ticket(ticketid, timestamp, salt, salt_auth_code, _token, nothing))
+    reply_auth_code = auth(metadata, ticketid, salt, hmac(recruiter))
 
-    return salt, salt_auth_code
+    push!(recruiter.tickets, Ticket(ticketid, timestamp, salt, reply_auth_code, _token, nothing))
+
+    return metadata, salt, reply_auth_code
 end
 
 

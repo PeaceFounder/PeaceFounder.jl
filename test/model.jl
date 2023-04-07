@@ -1,27 +1,46 @@
 using Dates
 using Test
-import Sockets
 import PeaceFounder.Model
 
-import .Model: Crypto, gen_signer, pseudonym, BraidChain, commit!, TokenRecruiter, PollingStation, TicketID, add!, id, admit!, commit, verify, generator, Member, approve, record!, ack_leaf, isbinding, roll, constituents, members, state, Proposal, vote, Ballot, Selection, uuid, record, spine, tally, BeaconClient, Dealer, charge_nonces!, pulse_timestamp, nonce_promise, schedule!, next_job, pass!, draw, seed, set_seed!, ack_cast, hasher, HMAC, enlist!, token, auth
+import .Model: CryptoSpec, pseudonym, BraidChain, commit!, TokenRecruiter, PollingStation, TicketID, add!, id, admit!, commit, verify, generator, Member, approve, record!, ack_leaf, isbinding, roll, constituents, members, state, Proposal, vote, Ballot, Selection, uuid, record, spine, tally, BeaconClient, Dealer, charge_nonces!, pulse_timestamp, nonce_promise, schedule!, next_job, pass!, draw, seed, set_seed!, ack_cast, hasher, HMAC, enlist!, token, auth, DemeSpec, generate, Signer, key
 
 
-crypto = Crypto("SHA-256", "MODP", UInt8[1, 2, 3, 6])
-GUARDIAN = gen_signer(crypto)
+crypto = CryptoSpec("SHA-256", "MODP", UInt8[1, 2, 3, 6])
 
-BRAID_CHAIN = BraidChain(id(GUARDIAN), crypto)
-# The commitment could be on a zero state
-# an alternative is making the first transaction a Manifest
-commit!(BRAID_CHAIN, GUARDIAN)
+#GUARDIAN = gen_signer(crypto)
+GUARDIAN = generate(Signer, crypto)
+PROPOSER = generate(Signer, crypto)
+COLLECTOR = generate(Signer, crypto)
 
-RECRUIT_AUTHORIZATION_KEY = UInt8[1, 2, 3, 6, 7, 8]
-RECRUIT_HMAC = HMAC(RECRUIT_AUTHORIZATION_KEY, hasher(crypto))
-RECRUITER = TokenRecruiter(GUARDIAN, RECRUIT_AUTHORIZATION_KEY)
+RECRUITER = generate(TokenRecruiter, crypto)
+RECRUIT_HMAC = HMAC(key(RECRUITER), hasher(crypto))
+RECRUITER.metadata[] = UInt8[1, 2, 3, 4] # Optional
+
+BRAIDER = generate(Signer, crypto)
+
+BRAID_CHAIN_RECORDER = generate(Signer, crypto)
+
+
+demespec = DemeSpec(;
+                    uuid = Base.UUID(121432),
+                    title = "A local democratic communituy",
+                    crypto = crypto,
+                    guardian = id(GUARDIAN),
+                    recorder = id(BRAID_CHAIN_RECORDER),
+                    recruiter = id(RECRUITER),
+                    braider = id(BRAIDER),
+                    proposer = id(PROPOSER),
+                    collector = id(COLLECTOR)
+) |> approve(PROPOSER) 
+
+
+BRAID_CHAIN = BraidChain(demespec)
+
+commit!(BRAID_CHAIN, BRAID_CHAIN_RECORDER)
 
 POLLING_STATION = PollingStation(crypto)
 
-beacon = BeaconClient(id(gen_signer(crypto)), crypto, Sockets.ip"0.0.0.0")
-DEALER = Dealer(crypto, beacon; delay = 5)
+DEALER = Dealer(demespec)
 
 promises = charge_nonces!(DEALER, 100)
 record!(BRAID_CHAIN, promises)
@@ -38,12 +57,13 @@ function enroll(signer, ticketid, token)
     admission = admit!(RECRUITER, id(signer), ticketid, auth_code)
     @test verify(admission, crypto)
     _commit = commit(BRAID_CHAIN)
-    @test id(_commit) == id(GUARDIAN)
+    @test id(_commit) == id(BRAID_CHAIN_RECORDER)
     @test verify(_commit, crypto)
     g = generator(_commit)
     access = approve(Member(admission, g, pseudonym(signer, g)), signer)
     N = record!(BRAID_CHAIN, access)
-    commit!(BRAID_CHAIN, GUARDIAN)
+
+    commit!(BRAID_CHAIN, BRAID_CHAIN_RECORDER)
     ack = ack_leaf(BRAID_CHAIN, N)
     
     return access, ack
@@ -56,11 +76,12 @@ function enlist(ticketid)
 
     # ---- evesdropers listening --------
     
-    salt, salt_auth_code = enlist!(RECRUITER, ticketid, timestamp, ticket_auth_code) # ouptut is sent to main server    
+    metadata, salt, salt_auth_code = enlist!(RECRUITER, ticketid, timestamp, ticket_auth_code) # ouptut is sent to main server    
 
     # ---- evesdropers listening --------
     
-    @test isbinding(ticketid, salt, salt_auth_code, RECRUIT_HMAC)  # done on the server
+    #@test isbinding(ticketid, salt, salt_auth_code, RECRUIT_HMAC)  # done on the server
+    @test isbinding(metadata, ticketid, salt, salt_auth_code, RECRUIT_HMAC)  # done on the server
     return token(ticketid, salt, RECRUIT_HMAC)    
 end
 
@@ -74,11 +95,11 @@ token_bob = enlist(ticketid_bob)
 ticketid_eve = TicketID("Eve")
 token_eve = enlist(ticketid_eve)
 
-alice = gen_signer(crypto)
+alice = generate(Signer, crypto)
 access, ack = enroll(alice, ticketid_alice, token_alice)
 
 @test isbinding(access, ack, crypto) # true if acknolwedgemnt is a witness for access; perhaps iswitness could be a better one
-@test id(ack) == id(GUARDIAN)
+@test id(ack) == id(BRAID_CHAIN_RECORDER)
 @test verify(ack, crypto)
 
 # At this point 
@@ -91,11 +112,10 @@ access, ack = enroll(alice, ticketid_alice, token_alice)
 @test id(access) in constituents(BRAID_CHAIN)
 @test pseudonym(access) in members(BRAID_CHAIN)
 
-
-bob = gen_signer(crypto)
+bob = generate(Signer, crypto)
 access, ack = enroll(bob, ticketid_bob, token_bob)
 
-eve = gen_signer(crypto)
+eve = generate(Signer, crypto)
 access, ack = enroll(eve, ticketid_eve, token_eve)
 
 ### Now I have a three members
@@ -109,30 +129,24 @@ access, ack = enroll(eve, ticketid_eve, token_eve)
 c = commit(BRAID_CHAIN)
 @test verify(c, crypto)
 
-proposal_draft = Proposal(
+proposal = Proposal(
     uuid = Base.UUID(23445325),
     summary = "Should the city ban all personal vehicle usage and invest in alternative forms of transportation such as public transit, biking and walking infrastructure?",
     description = "",
     ballot = Ballot(["yes", "no"]),
     open = now(),
     closed = now() + Second(5),
-    #open = Date("2020-01-01", "yyy-mm-dd"),
-    #closed = Date("2020-01-02", "yyy-mm-dd"),
-    collector = id(GUARDIAN),
-
+    collector = demespec.collector
     state = state(c)
-)
+) |> approve(PROPOSER)
 
 
-proposal = approve(proposal_draft, GUARDIAN)
-
-# I could also improve matters here
 N = record!(BRAID_CHAIN, proposal)
-commit!(BRAID_CHAIN, GUARDIAN)
+commit!(BRAID_CHAIN, BRAID_CHAIN_RECORDER)
 ack = ack_leaf(BRAID_CHAIN, N)
 
 @test isbinding(proposal, ack, crypto)
-@test id(ack) == id(GUARDIAN)
+@test id(ack) == id(BRAID_CHAIN_RECORDER)
 @test verify(ack, crypto)
 
 timestamp = pulse_timestamp(BRAID_CHAIN, proposal.uuid)
@@ -155,24 +169,23 @@ set_seed!(POLLING_STATION, job.uuid, _seed)
 
 v = vote(proposal, _seed, Selection(2), alice)
 N = record!(POLLING_STATION, uuid(proposal), v)
-commit!(POLLING_STATION, uuid(proposal), GUARDIAN)
+commit!(POLLING_STATION, uuid(proposal), COLLECTOR)
 
 @test verify(commit(POLLING_STATION, uuid(proposal)), crypto)
 
-#ack = ack_leaf(POLLING_STATION, uuid(proposal), N)
 ack = ack_cast(POLLING_STATION, uuid(proposal), N)
 
 @test isbinding(v, ack, crypto)
-@test id(ack) == id(GUARDIAN)
+@test id(ack) == id(COLLECTOR)
 @test verify(ack, crypto)
 
 v = vote(proposal, _seed, Selection(1), bob)
 record!(POLLING_STATION, uuid(proposal), v)
-commit!(POLLING_STATION, uuid(proposal), GUARDIAN)
+commit!(POLLING_STATION, uuid(proposal), COLLECTOR)
 
 v = vote(proposal, _seed, Selection(2), eve)
 record!(POLLING_STATION, uuid(proposal), v)
-commit!(POLLING_STATION, uuid(proposal), GUARDIAN)
+commit!(POLLING_STATION, uuid(proposal), COLLECTOR)
 
 
 _record = record(POLLING_STATION, uuid(proposal), 3)
@@ -181,4 +194,4 @@ _record = record(POLLING_STATION, uuid(proposal), 3)
 
 r = tally(POLLING_STATION, uuid(proposal)) 
 
-commit!(POLLING_STATION, uuid(proposal), GUARDIAN; with_tally = true) 
+commit!(POLLING_STATION, uuid(proposal), COLLECTOR; with_tally = true) 
