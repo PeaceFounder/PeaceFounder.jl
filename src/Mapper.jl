@@ -11,9 +11,6 @@ using ..Model
 using ..Model: CryptoSpec, pseudonym, BraidChain, TokenRecruiter, PollingStation, TicketID, Member, Proposal, Ballot, Selection, Transaction, Signer, Dealer, BraidBroker, Pseudonym, Vote, id, DemeSpec, Digest, Admission
 using Base: UUID
 
-#const DEME = Ref{DemeSpec}()
-
-#const GUARDIAN = Ref{Signer}()
 const RECORDER = Ref{Signer}()
 const RECRUITER = Ref{TokenRecruiter}()
 const BRAIDER = Ref{Signer}()
@@ -31,16 +28,18 @@ const TALLY_SCHEDULER = Scheduler(UUID, retry_interval = 5)
 const TALLY_PROCESS = Ref{Task}()
 
 const DEALER = Ref{Dealer}()
-const DEALER_SCHEDULER = Scheduler(retry_interval = 5)
+const DEALER_SCHEDULER = Scheduler(retry_interval = 1)
 const DEALER_PROCESS = Ref{Task}()
 
 const BRAID_BROKER = Ref{BraidBroker}
 const BRAID_BROKER_SCHEDULER = Scheduler(retry_interval = 5)
 const BRAID_BROKER_PROCESS = Ref{Task}()
 
+using Infiltrator
+
 
 function dealer_process_loop(; force = false)
-    
+
     force || isready(DEALER[]) || wait(DEALER_SCHEDULER)
     isready(DEALER[]) || return # for false triggers with pooling interval
 
@@ -116,8 +115,6 @@ end
 system_roles() = (; recorder = id(RECORDER[]), recruiter = id(RECRUITER[]), braider = id(BRAIDER[]), collector = id(COLLECTOR[]))
 
 
-#function setup!()
-
 function capture!(spec::DemeSpec)
 
     BRAID_CHAIN[] = BraidChain(spec)
@@ -125,7 +122,7 @@ function capture!(spec::DemeSpec)
     RECRUITER[].metadata[] = Model.bytes(Model.digest(spec, Model.hasher(spec))) 
 
 
-    DEALER[] = Dealer(spec; delay = 5)
+    DEALER[] = Dealer(spec; delay = 1)
 
     POLLING_STATION[] = PollingStation(Model.crypto(spec))
 

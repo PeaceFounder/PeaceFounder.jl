@@ -1,7 +1,7 @@
 using Test
 import PeaceFounder: Client, Service, Mapper, Model, Schedulers
 import .Model: CryptoSpec, DemeSpec, Signer, id, approve
-import .Service: ROUTER
+#import .Service: ROUTER
 import Dates
 
 crypto = CryptoSpec("SHA-256", "MODP", UInt8[1, 2, 3, 6])
@@ -9,6 +9,7 @@ crypto = CryptoSpec("SHA-256", "MODP", UInt8[1, 2, 3, 6])
 GUARDIAN = Model.generate(Signer, crypto)
 PROPOSER = Model.generate(Signer, crypto)
 
+SERVER = Client.route(Service.ROUTER)
 
 Mapper.initialize!(crypto)
 roles = Mapper.system_roles()
@@ -29,18 +30,18 @@ Mapper.capture!(demespec)
 
 RECRUIT_HMAC = Model.HMAC(Mapper.get_recruit_key(), Model.hasher(demespec))
 
-alice_invite = Client.enlist_ticket(ROUTER, Model.TicketID("Alice"), RECRUIT_HMAC) 
-bob_invite = Client.enlist_ticket(ROUTER, Model.TicketID("Bob"), RECRUIT_HMAC) 
-eve_invite = Client.enlist_ticket(ROUTER, Model.TicketID("Eve"), RECRUIT_HMAC) 
+alice_invite = Client.enlist_ticket(SERVER, Model.TicketID("Alice"), RECRUIT_HMAC) 
+bob_invite = Client.enlist_ticket(SERVER, Model.TicketID("Bob"), RECRUIT_HMAC) 
+eve_invite = Client.enlist_ticket(SERVER, Model.TicketID("Eve"), RECRUIT_HMAC) 
 
 # ------------- invite gets sent over a QR code --------------
 
-@test !Model.isadmitted(Client.get_ticket_status(ROUTER, alice_invite.ticketid))
-alice = Client.enroll!(alice_invite)
-@test Model.isadmitted(Client.get_ticket_status(ROUTER, alice_invite.ticketid))
+@test !Model.isadmitted(Client.get_ticket_status(SERVER, alice_invite.ticketid))
+alice = Client.enroll!(alice_invite; server = SERVER)
+@test Model.isadmitted(Client.get_ticket_status(SERVER, alice_invite.ticketid))
 
-bob = Client.enroll!(bob_invite) 
-eve = Client.enroll!(eve_invite)
+bob = Client.enroll!(bob_invite; server = SERVER) 
+eve = Client.enroll!(eve_invite; server = SERVER)
 
 proposal = Model.Proposal(
     uuid = Base.UUID(23445325),
@@ -49,10 +50,10 @@ proposal = Model.Proposal(
     ballot = Model.Ballot(["yes", "no"]),
     open = Dates.now() + Dates.Millisecond(100),
     closed = Dates.now() + Dates.Second(3)
-) |> Client.configure(ROUTER) |> approve(PROPOSER)
+) |> Client.configure(SERVER) |> approve(PROPOSER)
 
 
-ack = Client.enlist_proposal(ROUTER, proposal)
+ack = Client.enlist_proposal(SERVER, proposal)
 
 @test Model.isbinding(proposal, ack, demespec)
 @test Model.verify(ack, crypto)
@@ -81,7 +82,7 @@ Client.get_ballotbox_commit!(alice, proposal.uuid)
 
 Client.check_vote!(eve, proposal.uuid) 
 
-@test typeof(Client.get_ballotbox_spine(ROUTER, proposal.uuid)) == Vector{Model.Digest}
+@test typeof(Client.get_ballotbox_spine(SERVER, proposal.uuid)) == Vector{Model.Digest}
 
 # ------------- collector maliciously drops Alice's vote --------------
 

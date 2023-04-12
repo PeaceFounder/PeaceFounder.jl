@@ -136,7 +136,7 @@ proposal = Proposal(
     ballot = Ballot(["yes", "no"]),
     open = now(),
     closed = now() + Second(5),
-    collector = demespec.collector
+    collector = demespec.collector,
     state = state(c)
 ) |> approve(PROPOSER)
 

@@ -1,7 +1,7 @@
 using Test
 using PeaceFounder: Client, Service, Mapper, Model, Schedulers
 import .Model: CryptoSpec, DemeSpec, Signer, id, approve, Selection
-using .Service: ROUTER
+#using .Service: ROUTER
 import Dates
 
 crypto = CryptoSpec("SHA-256", "MODP", UInt8[1, 2, 3, 6])
@@ -9,6 +9,7 @@ crypto = CryptoSpec("SHA-256", "MODP", UInt8[1, 2, 3, 6])
 GUARDIAN = Model.generate(Signer, crypto)
 PROPOSER = Model.generate(Signer, crypto)
 
+SERVER = Client.route(Service.ROUTER)
 
 Mapper.initialize!(crypto)
 roles = Mapper.system_roles()
@@ -27,22 +28,21 @@ demespec = DemeSpec(;
 
 Mapper.capture!(demespec)
 
-
 RECRUIT_HMAC = Model.HMAC(Mapper.get_recruit_key(), Model.hasher(demespec))
 
-alice_invite = Client.enlist_ticket(ROUTER, Model.TicketID("Alice"), RECRUIT_HMAC) 
-bob_invite = Client.enlist_ticket(ROUTER, Model.TicketID("Bob"), RECRUIT_HMAC) 
-eve_invite = Client.enlist_ticket(ROUTER, Model.TicketID("Eve"), RECRUIT_HMAC) 
+alice_invite = Client.enlist_ticket(SERVER, Model.TicketID("Alice"), RECRUIT_HMAC) 
+bob_invite = Client.enlist_ticket(SERVER, Model.TicketID("Bob"), RECRUIT_HMAC) 
+eve_invite = Client.enlist_ticket(SERVER, Model.TicketID("Eve"), RECRUIT_HMAC) 
 
 
 alice = Client.DemeClient()
-Client.enroll!(alice, alice_invite)
+Client.enroll!(alice, alice_invite; server = SERVER)
 
 bob = Client.DemeClient()
-Client.enroll!(bob, bob_invite)
+Client.enroll!(bob, bob_invite; server = SERVER)
 
 eve = Client.DemeClient()
-Client.enroll!(eve, eve_invite)
+Client.enroll!(eve, eve_invite; server = SERVER)
 
 
 ### A simple proposal submission
@@ -54,10 +54,10 @@ proposal = Model.Proposal(
     ballot = Model.Ballot(["yes", "no"]),
     open = Dates.now() + Dates.Millisecond(100),
     closed = Dates.now() + Dates.Second(3)
-) |> Client.configure(ROUTER) |> approve(PROPOSER)
+) |> Client.configure(SERVER) |> approve(PROPOSER)
 
 
-ack = Client.enlist_proposal(ROUTER, proposal)
+ack = Client.enlist_proposal(SERVER, proposal)
 
 ### Now simple voting can be done
 

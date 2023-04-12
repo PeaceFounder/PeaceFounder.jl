@@ -2,7 +2,6 @@ module Schedulers
 
 using Dates
 
-# In place of NOTIFY object
 mutable struct Scheduler
     condition::Condition
     pool_interval::Union{Int, Nothing}
@@ -13,7 +12,6 @@ mutable struct Scheduler
     schedule::Vector{Tuple{DateTime, <:Any}}
 end
 
-
 Scheduler(T; pool_interval=nothing, retry_interval=nothing, delay=0) = Scheduler(Condition(), pool_interval, retry_interval, delay, false, false, Tuple{DateTime, T}[])
 Scheduler(; pool_interval=nothing, retry_interval=nothing, delay=0) = Scheduler(Nothing; pool_interval, retry_interval, delay)
 
@@ -21,6 +19,8 @@ Scheduler(; pool_interval=nothing, retry_interval=nothing, delay=0) = Scheduler(
 Base.notify(scheduler::Scheduler) = notify(scheduler.condition)
 Base.notify(scheduler::Scheduler, value) = notify(scheduler.condition, value)
 
+Base.lock(scheduler::Scheduler) = lock(scheduler.condition)
+Base.unlock(scheduler::Scheduler) = unlock(scheduler.condition)
 
 # This seems something interesting to put in the code
 function waituntil(time::DateTime)
@@ -39,6 +39,8 @@ function waituntil(time::DateTime)
 end
 
 function next_event(scheduler::Scheduler)
+
+    length(scheduler.schedule) == 0 && return nothing
 
     timestamp, value = scheduler.schedule[1]
 
@@ -65,12 +67,15 @@ function Base.wait(scheduler::Scheduler)
     end
 
     if isnothing(next_event(scheduler))
-        wait(scheduler.condition)
+        wait(scheduler.condition) # It should be here
     end
-    
+
     time, value = next_event(scheduler)
 
     if isstarted(scheduler) && !isfinished(scheduler)
+
+        scheduler.started = true
+        scheduler.finished = true
 
         if isnothing(scheduler.retry_interval)
             error("Retry interval not set")
@@ -84,9 +89,11 @@ function Base.wait(scheduler::Scheduler)
         scheduler.started = true
         scheduler.finished = true
         
-        if time > 0 
+        if time > 0
+        
             Timer(timer -> notify(scheduler), time) 
             wait(scheduler.condition) 
+
         end
     else
         error("Impossible scheduler state")
@@ -100,6 +107,8 @@ function schedule!(scheduler::Scheduler, timestamp::DateTime, value)
     
     push!(scheduler.schedule, (timestamp, value))
     sort!(scheduler.schedule; lt = (x, y) -> isless(x[1], y[1]))
+
+    notify(scheduler)
     
     return
 end
@@ -108,7 +117,6 @@ schedule!(scheduler::Scheduler, timestamp::DateTime) = schedule!(scheduler, time
 
 
 retry!(scheduler::Scheduler) = scheduler.finished = false;
-
 
 
 export Scheduler, schedule!, retry!, wait, notify # wait and notify as extension from base

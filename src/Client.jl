@@ -20,47 +20,70 @@ using ..Parser: marshal, unmarshal
 
 using ..Model: base16encode, base16decode
 
-destination(route::Router) = route
 
-post(route::String, target::String, body) = HTTP.post(route * target, body)
-put(route::String, target::String, body) = HTTP.put(route * target, body)
+using URIs: URI
 
-function request(method::String, router::Router, target::String, body::Vector{UInt8})
+abstract type Route end
+
+struct LocalRoute <: Route
+    router::Router
+end
+
+(server::LocalRoute)(req::Request)::Response = server.router(req)
+
+destination(route::LocalRoute) = URI()
+
+struct RemoteRoute <: Route
+    url::URI
+end
+
+
+(server::RemoteRoute)(req::Request)::Response = HTTP.request(req.method, URI(server.url; path = req.target), req.headers, req.body)
+
+destination(route::RemoteRoute) = route.url
+
+struct OnionRoute <: Route
+    url::URI
+    # circuit
+end
+
+
+route(str::String) = route(URI(str))
+route(url::URI) = url == URI() ? error("Empty url not allowed") : RemoteRoute(url)
+route(router::Router) = LocalRoute(router)
+
+
+function request(server::Route, method::String, target::String, body::Vector{UInt8})::Response
 
     request = Request(method, target, [], body)
-    response = router(request)
+    response = server(request) # seens natural that it is callable as function
 
     iserror(response) && throw(StatusError(response.status, method, target, response))
 
     return response
 end
 
-
-request(method::String, route::String, target::String, body::Vector{UInt8}) = HTTP.request(method, route * target, body)
-
-
-post(route, target, body) = request("POST", route, target, body)
-put(route, target, body) = request("PUT", route, target, body)
-get(route, target) = request("GET", route, target, UInt8[])
+post(server::Route, target, body)::Response = request(server, "POST", target, body)
+put(server::Route, target, body)::Response = request(server, "PUT", target, body)
+get(server::Route, target)::Response = request(server, "GET", target, UInt8[])
 
 
+function get_deme(server::Route)
 
-function get_deme(router::Router)
-
-    response = get(router, "/deme")
+    response = get(server, "/deme")
     deme = unmarshal(response.body, DemeSpec)
 
     return deme
 end
 
 
-function enlist_ticket(router::Router, ticketid::TicketID, hmac::HMAC; dest = destination(router))
+function enlist_ticket(server::Route, ticketid::TicketID, hmac::HMAC; dest = destination(server))
 
     timestamp = Dates.now()
     ticket_auth_code = Model.auth(ticketid, timestamp, hmac)
     body = marshal((ticketid, timestamp, ticket_auth_code))
 
-    response = post(router, "/tickets", body)
+    response = post(server, "/tickets", body)
 
     metadata, salt, reply_auth_code = unmarshal(response.body, Tuple{Vector{UInt8}, Vector{UInt8}, Digest})
 
@@ -72,12 +95,12 @@ function enlist_ticket(router::Router, ticketid::TicketID, hmac::HMAC; dest = de
 end
 
 
-function seek_admission(router::Router, id::Pseudonym, ticketid::TicketID, token::Digest, hasher::Hash)
+function seek_admission(server::Route, id::Pseudonym, ticketid::TicketID, token::Digest, hasher::Hash)
 
     auth_code = Model.auth(id, token, hasher)
     body = marshal((id, auth_code))
     tid = bytes2hex(bytes(ticketid))
-    response = put(router, "/tickets/$tid", body)
+    response = put(server, "/tickets/$tid", body)
 
     admission = unmarshal(response.body, Admission)
 
@@ -88,10 +111,10 @@ function seek_admission(router::Router, id::Pseudonym, ticketid::TicketID, token
 end
 
 
-function get_ticket_status(router::Router, ticketid::TicketID)
+function get_ticket_status(server::Route, ticketid::TicketID)
 
     tid = bytes2hex(bytes(ticketid))
-    response = get(router, "/tickets/$tid")
+    response = get(server, "/tickets/$tid")
 
     status = unmarshal(response.body, TicketStatus)
 
@@ -99,36 +122,37 @@ function get_ticket_status(router::Router, ticketid::TicketID)
 end
 
 
-function enroll_member(router::Router, member::Member)
+function enroll_member(server::Route, member::Member)
     
-    response = post(router, "/braidchain/members", marshal(member))
+    response = post(server, "/braidchain/members", marshal(member))
     ack = unmarshal(response.body, AckInclusion{ChainState})
 
     return ack
 end
 
 
-function get_chain_commit(router::Router)
+function get_chain_commit(server::Route)
 
-    response = get(router, "/braidchain/commit")
+    response = get(server, "/braidchain/commit")
     commit = unmarshal(response.body, Commit{ChainState})
 
     return commit
 end
 
-function enlist_proposal(router::Router, proposal::Proposal)
 
-    response = post(router, "/braidchain/proposals", marshal(proposal))
+function enlist_proposal(server::Route, proposal::Proposal)
+
+    response = post(server, "/braidchain/proposals", marshal(proposal))
     ack = unmarshal(response.body, AckInclusion{ChainState})
 
     return ack
 end
 
 
-function configure(router::Router, proposal::Proposal)
+function configure(server::Route, proposal::Proposal)
 
-    commit = get_chain_commit(router)
-    spec = get_deme(router)
+    commit = get_chain_commit(server)
+    spec = get_deme(server)
 
     # Consistency checks need to done here
     
@@ -138,12 +162,13 @@ function configure(router::Router, proposal::Proposal)
     return proposal
 end
 
-configure(router::Router) = proposal -> configure(router, proposal)
+
+configure(server::Route) = proposal -> configure(server, proposal)
 
 
-function get_proposal_list(router::Router)
+function get_proposal_list(server::Route)
 
-    response = get(router, "/braidchain/proposals")
+    response = get(server, "/braidchain/proposals")
     
     proposal_list = unmarshal(response.body, Vector{Tuple{Int, Proposal}})
 
@@ -156,27 +181,27 @@ function get_proposal_list(router::Router)
 end
 
 
-function get_chain_leaf(router::Router, N::Int)
+function get_chain_leaf(server::Route, N::Int)
 
-    response = get(router, "/braidchain/$N/leaf")
+    response = get(server, "/braidchain/$N/leaf")
     ack = unmarshal(response.body, AckInclusion{ChainState})
 
     return ack
 end
 
 
-function get_chain_root(router::Router, N::Int)
+function get_chain_root(server::Route, N::Int)
 
-    response = get(router, "/braidchain/$N/root")
+    response = get(server, "/braidchain/$N/root")
     ack = unmarshal(response.body, AckConsistency{ChainState})
 
     return ack
 end
 
 
-function get_chain_record(router::Router, N::Int)
+function get_chain_record(server::Route, N::Int)
 
-    response = get(router, "/braidchain/$N/record")
+    response = get(server, "/braidchain/$N/record")
     
     @show response # Need a way to get a type information
     
@@ -184,18 +209,19 @@ function get_chain_record(router::Router, N::Int)
 end
 
 
-function get_ballotbox_commit(router::Router, uuid::UUID)
+function get_ballotbox_commit(server::Route, uuid::UUID)
 
-    response = get(router, "/poolingstation/$uuid/commit")
+    response = get(server, "/poolingstation/$uuid/commit")
     
     commit = unmarshal(response.body, Commit{BallotBoxState})
     
     return commit
 end
 
-function cast_vote(router::Router, uuid::UUID, vote::Vote)
 
-    response = post(router, "/poolingstation/$(uuid)/votes", marshal(vote))
+function cast_vote(server::Route, uuid::UUID, vote::Vote)
+
+    response = post(server, "/poolingstation/$(uuid)/votes", marshal(vote))
 
     ack = unmarshal(response.body, CastAck)
 
@@ -203,9 +229,9 @@ function cast_vote(router::Router, uuid::UUID, vote::Vote)
 end
 
 
-function get_ballotbox_root(router::Router, uuid::UUID, N::Int)
+function get_ballotbox_root(server::Route, uuid::UUID, N::Int)
     
-    response = get(router, "/poolingstation/$uuid/votes/$N/root")
+    response = get(server, "/poolingstation/$uuid/votes/$N/root")
     
     ack = unmarshal(response.body, AckConsistency{BallotBoxState})
     
@@ -213,9 +239,9 @@ function get_ballotbox_root(router::Router, uuid::UUID, N::Int)
 end
 
 
-function get_ballotbox_leaf(router::Router, uuid::UUID, N::Int)
+function get_ballotbox_leaf(server::Route, uuid::UUID, N::Int)
 
-    response = get(router, "/poolingstation/$uuid/votes/$N/leaf")
+    response = get(server, "/poolingstation/$uuid/votes/$N/leaf")
     
     ack = unmarshal(response.body, AckInclusion{BallotBoxState})
 
@@ -223,9 +249,9 @@ function get_ballotbox_leaf(router::Router, uuid::UUID, N::Int)
 end
 
 
-function get_ballotbox_record(router::Router, uuid::UUID, N::Int)
+function get_ballotbox_record(server::Route, uuid::UUID, N::Int)
 
-    response = get(router, "/poolingstation/$uuid/votes/$N/record")
+    response = get(server, "/poolingstation/$uuid/votes/$N/record")
     
     record = unmarshal(response.body, CastRecord)
 
@@ -233,9 +259,9 @@ function get_ballotbox_record(router::Router, uuid::UUID, N::Int)
 end
 
 
-function get_ballotbox_receipt(router::Router, uuid::UUID, N::Int)
+function get_ballotbox_receipt(server::Route, uuid::UUID, N::Int)
 
-    response = get(router, "/poolingstation/$uuid/votes/$N/receipt")
+    response = get(server, "/poolingstation/$uuid/votes/$N/receipt")
     
     receipt = unmarshal(response.body, CastReceipt)
 
@@ -243,9 +269,9 @@ function get_ballotbox_receipt(router::Router, uuid::UUID, N::Int)
 end
 
 
-function get_ballotbox_proposal(router::Router, uuid::UUID)
+function get_ballotbox_proposal(server::Route, uuid::UUID)
 
-    response = get(router, "/poolingstation/$uuid/proposal")
+    response = get(server, "/poolingstation/$uuid/proposal")
     
     proposal = unmarshal(response.body, Proposal)
 
@@ -253,9 +279,9 @@ function get_ballotbox_proposal(router::Router, uuid::UUID)
 end
 
 
-function get_ballotbox_spine(router::Router, uuid::UUID)
+function get_ballotbox_spine(server::Route, uuid::UUID)
 
-    response = get(router, "/poolingstation/$uuid/spine")
+    response = get(server, "/poolingstation/$uuid/spine")
     
     spine = unmarshal(response.body, Vector{Digest})
 
@@ -270,6 +296,7 @@ end
 
 
 Model.issuer(blame::Blame) = issuer(blame.commit)
+
 
 function Model.verify(blame::Blame, crypto)
 
@@ -315,7 +342,6 @@ Model.isbinding(guard::CastGuard, ack::AckConsistency{BallotBoxState}) = isbindi
 Model.isconsistent(guard::CastGuard, ack::AckConsistency{BallotBoxState}) = isconsistent(commit(guard), ack)
 
 
-
 struct EnrollGuard
     admission::Union{Admission, Nothing}
     enrollee::Union{Member, Nothing}
@@ -356,17 +382,15 @@ iscast(instance::ProposalInstance) = !isnothing(instance.guard)
 Model.isopen(instance::ProposalInstance) = Model.isopen(instance.proposal)
 Model.status(instance::ProposalInstance) = Model.status(instance.proposal)
 
+
 mutable struct DemeAccount # mutable because it also needs to deal with storage
     deme::DemeSpec
     signer::Signer
     guard::EnrollGuard
-    #casts::Vector{CastGuard}
-    #cache::Vector{Tuple{Int, Proposal}} # 
     proposals::Vector{ProposalInstance}
     commit::Union{Commit{ChainState}, Nothing}
     route # 
 end
-
 
 function DemeAccount(deme::DemeSpec, route = nothing) 
     signer = Model.generate(Signer, crypto(deme))
@@ -397,6 +421,7 @@ function get_ballotbox_commit!(account::DemeAccount, identifier::Union{UUID, Int
 
     return
 end
+
 
 function get_proposal(account::DemeAccount, index::Int)
 
@@ -429,10 +454,6 @@ function Base.show(io::IO, voter::DemeAccount)
 end
 
 
-
-#router = connect(route, gate, hasher)
-
-
 function enroll!(voter::DemeAccount, router, ticketid, token) # EnrollGuard 
 
     if !isadmitted(voter)
@@ -463,12 +484,12 @@ end
 update_commit!(voter::DemeAccount) = update_commit!(voter, voter.route)
 
 
-function enroll!(voter::DemeAccount, router) # For continuing from the last place
+function enroll!(voter::DemeAccount, route::Route) # For continuing from the last place
 
     @assert isadmitted(voter)
     admission = voter.guard.admission
 
-    update_commit!(voter, router)
+    update_commit!(voter, route)
 
     # commit = get_chain_commit(router)
     # @assert isbinding(commit, voter.deme)
@@ -480,7 +501,7 @@ function enroll!(voter::DemeAccount, router) # For continuing from the last plac
 
     enrollee = Model.approve(Member(admission, g, pseudonym(voter, g)), voter.signer)
 
-    ack = enroll_member(router, enrollee)
+    ack = enroll_member(route, enrollee)
 
     @assert isbinding(enrollee, ack, voter.deme) # 
     @assert verify(enrollee, crypto(voter.deme))
@@ -491,9 +512,9 @@ function enroll!(voter::DemeAccount, router) # For continuing from the last plac
 end
 
 
-function update_proposal_cache!(voter::DemeAccount, router)
+function update_proposal_cache!(voter::DemeAccount, route::Route)
 
-    proposal_list = get_proposal_list(router)
+    proposal_list = get_proposal_list(route)
     
     for (index, proposal) in proposal_list
 
@@ -517,10 +538,10 @@ end
 update_proposal_cache!(voter::DemeAccount) = update_proposal_cache!(voter, voter.route)
 
 
-function update_deme!(voter::DemeAccount, router)
+function update_deme!(voter::DemeAccount, route::Route)
 
-    update_proposal_cache!(voter, router)
-    update_commit!(voter, router)
+    update_proposal_cache!(voter, route)
+    update_commit!(voter, route)
 
     return
 end
@@ -570,32 +591,29 @@ end
 list_proposal_instances(voter::DemeAccount) = voter.proposals
 
 
-
-
-function cast_vote!(instance::ProposalInstance, deme::DemeSpec, selection, signer::Signer; router)
+function cast_vote!(instance::ProposalInstance, deme::DemeSpec, selection, signer::Signer; server::Route)
 
     (; index, proposal) = instance
 
-    ack_leaf = get_chain_leaf(router, index)
+    ack_leaf = get_chain_leaf(server, index)
 
     @assert isbinding(proposal, ack_leaf, deme)
     @assert verify(ack_leaf, deme.crypto)
     
-    commit = get_ballotbox_commit(router, proposal.uuid)
+    commit = get_ballotbox_commit(server, proposal.uuid)
 
 
     @assert isbinding(commit, proposal, hasher(deme))
     @assert verify(commit, Model.crypto(deme))
     
     vote = Model.vote(proposal, Model.seed(commit), selection, signer)
-    ack = cast_vote(router, proposal.uuid, vote)
+    ack = cast_vote(server, proposal.uuid, vote)
 
     @assert isbinding(ack, proposal, hasher(deme))
     @assert isbinding(ack, vote, hasher(deme))
     @assert verify(ack, crypto(deme))
 
     guard = CastGuard(proposal, ack_leaf, vote, ack)
-    #push!(voter.casts, guard)
     instance.guard = guard
 
     return
@@ -608,7 +626,7 @@ function cast_vote!(voter::DemeAccount, identifier::Union{UUID, Int}, selection)
 
     #@warn "Imagine a TOR circuit being created..."
     
-    cast_vote!(instance, voter.deme, selection, voter.signer; router = voter.route)
+    cast_vote!(instance, voter.deme, selection, voter.signer; server = voter.route)
 
     return
 end
@@ -623,15 +641,13 @@ end
 
 
 
-function check_vote!(instance::ProposalInstance; deme::DemeSpec, router)
+function check_vote!(instance::ProposalInstance; deme::DemeSpec, server::Route)
 
     guard = instance.guard
     
-    #guard = cast_guard(voter, uuid)
-    
     current_commit = commit(guard)
 
-    ack = get_ballotbox_root(router, instance.proposal.uuid, index(current_commit))
+    ack = get_ballotbox_root(server, instance.proposal.uuid, index(current_commit))
 
     @assert isbinding(ack, current_commit) "Received acknowledgment is not binding to request."
     
@@ -653,8 +669,8 @@ function check_vote!(instance::ProposalInstance; deme::DemeSpec, router)
 end
 
 
-check_vote!(voter::DemeAccount, uuid::UUID) = check_vote!(get_proposal_instance(voter, uuid); deme = voter.deme, router = voter.route)
-check_vote!(voter::DemeAccount, index::Int) = check_vote!(get_proposal_instance(voter, index); deme = voter.deme, router = voter.route)
+check_vote!(voter::DemeAccount, uuid::UUID) = check_vote!(get_proposal_instance(voter, uuid); deme = voter.deme, server = voter.route)
+check_vote!(voter::DemeAccount, index::Int) = check_vote!(get_proposal_instance(voter, index); deme = voter.deme, server = voter.route)
 
 
 function Model.istallied(voter::DemeAccount, identifier::Union{UUID, Int})
@@ -663,8 +679,6 @@ function Model.istallied(voter::DemeAccount, identifier::Union{UUID, Int})
 
     return istallied(instance)
 end
-
-
 
 
 function blame(voter::DemeAccount, uuid::UUID)
@@ -684,31 +698,26 @@ struct Invite
     ticketid::TicketID
     token::Digest
     hasher::Hash # HashSpec
-    route # I will need to type this in. IPv4 or IPv6 format?
+    #route # I will need to type this in. IPv4 or IPv6 format?
+    route::URI
 end
 
 
 Model.isbinding(spec::DemeSpec, invite::Invite) = Model.digest(spec, invite.hasher) == invite.demehash
 
 
-
-
-function enroll!(router::Router, invite::Invite)
+function enroll!(invite::Invite; server::Route = route(invite.route))
     
-    spec = get_deme(router)
+    spec = get_deme(server)
 
     @assert isbinding(spec, invite)
 
-    account = DemeAccount(spec, router)
+    account = DemeAccount(spec, server)
 
-    enroll!(account, router, invite.ticketid, invite.token)
+    enroll!(account, server, invite.ticketid, invite.token)
     
     return account
 end
-
-
-enroll!(invite::Invite) = enroll!(invite.route, invite) # Add a connect method could be useful here
-
 
 
 struct DemeClient
@@ -719,16 +728,13 @@ end
 DemeClient() = DemeClient(DemeAccount[])
 
 
-function enroll!(client::DemeClient, router::Router, invite::Invite)
+function enroll!(client::DemeClient, invite::Invite; server::Route = route(invite.route)) #; server::Route = route(invite.route))
 
-    account = enroll!(router, invite)
+    account = enroll!(invite; server)
     push!(client.accounts, account)
 
     return
 end
-
-
-enroll!(client::DemeClient, invite::Invite) = enroll!(client, invite.route, invite)
 
 
 function select(client::DemeClient, uuid::UUID)
@@ -746,25 +752,17 @@ function select(client::DemeClient, uuid::UUID)
 end
 
 
-
 update_deme!(client::DemeClient, uuid::UUID) = update_deme!(select(client, uuid))
 
 list_proposal_instances(client::DemeClient, uuid::UUID) = list_proposal_instances(select(client, uuid))
 
-#proposals(client::DemeClient, uuid::UUID) = proposals(select(client, uuid))
-
 cast_vote!(client::DemeClient, uuid::UUID, index::Int, selection) = cast_vote!(select(client, uuid), index, selection)
-
 
 check_vote!(client::DemeClient, uuid::UUID, index::Int) = check_vote!(select(client, uuid), index)
 
 Model.istallied(client::DemeClient, uuid::UUID, index::Int) = istallied(select(client, uuid), index)
 
 get_ballotbox_commit!(client::DemeClient, uuid::UUID, index::Int) = get_ballotbox_commit!(select(client, uuid), index)
-
-
-
-
 
 
 end

@@ -21,3 +21,7 @@ end
 module ClientTest
 include("client.jl")
 end
+
+module RemoteTest
+include("remote.jl")
+end
