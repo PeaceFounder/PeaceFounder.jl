@@ -80,8 +80,8 @@ isdone(proposal::Proposal; time) = proposal.closed < time
 isopen(proposal::Proposal; time) = proposal.open < time && proposal.closed > time
 isstarted(proposal::Proposal; time) = proposal.open < time
 
-
 issuer(proposal::Proposal) = isnothing(proposal.approval) ? nothing : pseudonym(proposal.approval)
+
 
 function status(proposal::Proposal)
     
@@ -425,7 +425,6 @@ function ack_leaf(ballotbox::BallotBox, index::Int)
 end
 
 #isbinding(vote::Vote, ack::AckInclusion{BallotBoxState}, crypto::Crypto) = digest(vote, crypto) == leaf(ack)
-
 
 isbinding(vote::Vote, ack::CastAck, crypto::CryptoSpec) = digest(vote, crypto) == ack.receipt.vote
 

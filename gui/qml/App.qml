@@ -116,6 +116,7 @@ Window {
             id : deme
             state : "deme"
             onBack : app.page = 1
+            onRefresh : app.refreshDeme()
 
             demeUUID : app.demeStatus.uuid
             subtitle : app.demeStatus.title
@@ -125,7 +126,6 @@ Window {
             memberIndex : app.demeStatus.memberIndex
             commitIndex : app.demeStatus.commitIndex
             memberCount : app.demeStatus.memberCount
-
 
             onProposal : index => {
                 app.setProposal(index)
@@ -151,7 +151,8 @@ Window {
             id : proposal
             state : "proposal"
             onBack : app.page = 2
-
+            onRefresh : app.refreshProposal()
+            
             proposalIndex : app.proposalMetadata.index
             subtitle : app.proposalMetadata.title
             description : app.proposalMetadata.description
@@ -173,7 +174,6 @@ Window {
             id : vote
             state : "vote"
             onBack : app.page = 3
-
 
             subtitle : app.proposalMetadata.title
             model : app.proposalBallot
@@ -199,6 +199,7 @@ Window {
             id : observe
             state : "observe"
             onBack : app.page = 3
+            onRefresh : app.refreshProposal()
 
             demeUUID : app.demeStatus.uuid
             proposalIndex : app.proposalMetadata.index

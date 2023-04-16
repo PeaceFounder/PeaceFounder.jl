@@ -4,7 +4,7 @@ module Client
 using Infiltrator
 
 using ..Model
-using ..Model: Member, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, Hash, AckConsistency, AckInclusion, CastAck, DemeSpec, Signer, TicketStatus, Commit, ChainState, Proposal, BallotBoxState, isbinding
+using ..Model: Member, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, Hash, AckConsistency, AckInclusion, CastAck, DemeSpec, Signer, TicketStatus, Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen
 using Base: UUID
 
 using ..Model: id, hasher, pseudonym, isbinding, generator, isadmitted, state, verify, crypto, index, root, commit, isconsistent, istallied, issuer
@@ -375,12 +375,55 @@ end
 
 ProposalInstance(index::Int, proposal::Proposal) = ProposalInstance(index, proposal, nothing, nothing)
 
-Model.istallied(instance::ProposalInstance) = istallied(instance.commit)
+#Model.istallied(instance::ProposalInstance) = isnothing(instance.commit) ? false : istallied(instance.commit)
+
+Model.istallied(instance::ProposalInstance) = isnothing(Model.commit(instance)) ? false : istallied(Model.commit(instance)) # This is where pattern matching would be useful to have
 
 iscast(instance::ProposalInstance) = !isnothing(instance.guard)
 
-Model.isopen(instance::ProposalInstance) = Model.isopen(instance.proposal)
+Model.isopen(instance::ProposalInstance) = Model.isopen(instance.proposal; time = Dates.now())
 Model.status(instance::ProposalInstance) = Model.status(instance.proposal)
+
+
+# This logic would be unnecessary if commit would only be available in the guard
+function Model.commit(instance::ProposalInstance)
+    
+    _commit_instance = instance.commit
+    _commit_guard = isnothing(instance.guard) ? nothing : commit(instance.guard)
+
+    if !isnothing(_commit_instance) && !isnothing(_commit_guard)
+
+        if _commit_instance.state.index > _commit_guard.state.index
+
+            return _commit_instance
+
+        elseif _commit_instance.state.index == _commit_guard.state.index
+
+            if !isnothing(_commit_instance.state.tally)
+                return _commit_instance
+            else
+                return _commit_guard
+            end
+
+        else
+            return _commit_guard
+        end
+
+    elseif !isnothing(_commit_instance)
+
+        return _commit_instance
+
+    elseif !isnothing(_commit_guard)
+
+        return _commit_guard
+
+    else
+
+        return nothing
+
+    end
+
+end
 
 
 mutable struct DemeAccount # mutable because it also needs to deal with storage
@@ -402,6 +445,8 @@ Model.id(voter::DemeAccount) = Model.id(voter.signer)
 
 Model.pseudonym(voter::DemeAccount) = pseudonym(voter.signer) # I could drop this method in favour of identity
 Model.pseudonym(voter::DemeAccount, g) = pseudonym(voter.signer, g)
+Model.pseudonym(voter::DemeAccount, proposal::Proposal) = pseudonym(voter.signer, Model.generator(proposal))
+Model.pseudonym(voter::DemeAccount, instance::ProposalInstance) = pseudonym(voter, instance.proposal)
 
 Model.isadmitted(voter::DemeAccount) = !isnothing(voter.guard.admission)
 
@@ -441,14 +486,14 @@ function Base.show(io::IO, voter::DemeAccount)
     println(io, Model.show_string(voter.deme))
     println(io, Model.show_string(voter.signer))
     println(io, Model.show_string(voter.guard))
-    println(io, "  casts : $(voter.casts)")
+    #println(io, "  casts : $(voter.casts)")
 
 
-    for (i, p) in voter.cache
+    for instance in voter.proposals
 
         println(io, "")
-        print(io, "  $i\t")
-        print(io, Model.show_string(p))
+        print(io, "  $(instance.index)\t")
+        print(io, Model.show_string(instance.proposal))
 
     end
 end
@@ -590,6 +635,7 @@ end
 
 list_proposal_instances(voter::DemeAccount) = voter.proposals
 
+using Infiltrator
 
 function cast_vote!(instance::ProposalInstance, deme::DemeSpec, selection, signer::Signer; server::Route)
 
@@ -597,6 +643,7 @@ function cast_vote!(instance::ProposalInstance, deme::DemeSpec, selection, signe
 
     ack_leaf = get_chain_leaf(server, index)
 
+    #@infiltrate
     @assert isbinding(proposal, ack_leaf, deme)
     @assert verify(ack_leaf, deme.crypto)
     
@@ -764,5 +811,7 @@ Model.istallied(client::DemeClient, uuid::UUID, index::Int) = istallied(select(c
 
 get_ballotbox_commit!(client::DemeClient, uuid::UUID, index::Int) = get_ballotbox_commit!(select(client, uuid), index)
 
+
+reset!(client::DemeClient) = empty!(client.accounts)
 
 end

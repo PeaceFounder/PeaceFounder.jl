@@ -24,6 +24,12 @@ App {
 
     onRefreshHome : Julia.refreshHome()
 
+    onRefreshDeme : Julia.refreshDeme()
+
+    onRefreshProposal : Julia.refreshProposal()
+
+    onResetBallot : Julia.resetBallot()
+
     demeProposals : _DEME_PROPOSALS
 
     demeStatus {

@@ -77,6 +77,8 @@ digest(receipt::CastReceipt, hasher::Hash) = digest(canonicalize(receipt), hashe
 
 digest(spec::DemeSpec, hasher::Hash) = digest(canonicalize(spec), hasher)
 
+digest(pseudonym::Pseudonym, hasher::Hash) = digest(bytes(pseudonym), hasher)
+
 
 function body(proposal::Proposal)
     proposal = @set proposal.approval = nothing

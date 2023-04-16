@@ -1,14 +1,34 @@
-using Test
+ENV["QT_QUICK_CONTROLS_STYLE"] = "Basic"
+
+# A simple test for time_window
+include("../gui/src/GUI.jl")
+import .GUI: time_period, time_window
+import Dates: Dates, Hour, Minute
+
+@show time_period(Hour(24))
+@show time_period(Hour(37))
+
+@show time_period(Minute(70))
+@show time_period(Minute(15))
+@show time_period(Minute(1))
+
+time_window(Dates.now(), Dates.now() + Dates.Day(1); time = Dates.now() + Dates.Hour(12)) |> println
+time_window(Dates.now(), Dates.now() + Dates.Day(1); time = Dates.now() + Dates.Hour(25)) |> println
+time_window(Dates.now(), Dates.now() + Dates.Day(1); time = Dates.now() + Dates.Hour(48)) |> println
+time_window(Dates.now(), Dates.now() + Dates.Day(1); time = Dates.now() - Dates.Hour(12)) |> println
+
+# Testing of GUI functions
+
 using PeaceFounder: Client, Service, Mapper, Model, Schedulers
 import .Model: CryptoSpec, DemeSpec, Signer, id, approve, Selection
-import Dates
 import HTTP
+import QML # Needed for @qmlfunction
+
 
 crypto = CryptoSpec("SHA-256", "MODP", UInt8[1, 2, 3, 6])
 
 GUARDIAN = Model.generate(Signer, crypto)
 PROPOSER = Model.generate(Signer, crypto)
-
 
 Mapper.initialize!(crypto)
 roles = Mapper.system_roles()
@@ -29,7 +49,6 @@ Mapper.capture!(demespec)
 
 service = HTTP.serve!(Service.ROUTER, "0.0.0.0", 80)
 
-
 try
     SERVER = Client.route("http://0.0.0.0:80")
 
@@ -39,9 +58,8 @@ try
     bob_invite = Client.enlist_ticket(SERVER, Model.TicketID("Bob"), RECRUIT_HMAC) 
     eve_invite = Client.enlist_ticket(SERVER, Model.TicketID("Eve"), RECRUIT_HMAC) 
 
-
-    alice = Client.DemeClient()
-    Client.enroll!(alice, alice_invite) # internally instantiates a RemoteRouter for the client
+    Client.reset!(GUI.CLIENT)
+    Client.enroll!(GUI.CLIENT, alice_invite) # internally instantiates a RemoteRouter for the client
 
     bob = Client.DemeClient()
     Client.enroll!(bob, bob_invite)
@@ -53,45 +71,36 @@ try
 
     proposal = Model.Proposal(
         uuid = Base.UUID(23445325),
-        summary = "Should the city ban all personal vehicle usage and invest in alternative forms of transportation such as public transit, biking and walking infrastructure?",
-        description = """
- A very long description
-    """,
-        ballot = Model.Ballot(["yes", "no"]),
+        summary = "Should the city ban all personal vehicle usage?",
+        description = "",
+        ballot = Model.Ballot(["Yes", "No"]),
         open = Dates.now() + Dates.Millisecond(200),
-        closed = Dates.now() + Dates.Second(7)
+        closed = Dates.now() + Dates.Second(10)
     ) |> Client.configure(SERVER) |> approve(PROPOSER)
 
 
     ack = Client.enlist_proposal(SERVER, proposal)
 
     ### Now simple voting can be done
-
-    Client.update_deme!(alice, demespec.uuid)
+    Client.update_deme!(GUI.CLIENT, demespec.uuid)
     Client.update_deme!(bob, demespec.uuid)
-    Client.update_deme!(eve, demespec.uuid)
+        
+    
+    sleep(1)
 
+    GUI.setDeme(demespec.uuid)
 
-    uuid = alice.accounts[1].deme.uuid
-    instances = Client.list_proposal_instances(alice, uuid)
+    instances = Client.list_proposal_instances(GUI.CLIENT, demespec.uuid)
     (; index, proposal) = instances[1]
 
-    Schedulers.waituntil(proposal.open + Dates.Millisecond(4000))
+    GUI.setProposal(index)
 
-    Client.cast_vote!(alice, uuid, index, Selection(2))
-    Client.cast_vote!(bob, uuid, index, Selection(1))
-    Client.cast_vote!(eve, uuid, index, Selection(2))
+    Client.cast_vote!(GUI.CLIENT, demespec.uuid, index, Model.Selection(2))
 
-    Client.check_vote!(alice, uuid, index) # asks for consistency proof that previous commitment still holds. 
-
-    Client.get_ballotbox_commit!(alice, uuid, index)
-    @test Client.istallied(alice, uuid, index) == false
-
-    Schedulers.waituntil(proposal.closed + Dates.Millisecond(200))
-
-    Client.get_ballotbox_commit!(alice, uuid, index)
-    @test Client.istallied(alice, uuid, index) == true
-
-finally
+    GUI.refreshDeme()
+    GUI.refreshProposal()
+    GUI.refreshHome()
+        
+finally 
     close(service)
 end
