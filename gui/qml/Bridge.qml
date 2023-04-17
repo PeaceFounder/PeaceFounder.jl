@@ -4,20 +4,11 @@ App {
 
     userDemes : _USER_DEMES
 
-    //demeUUID : _OBSERVABLES.DEME_UUID
-    //onDemeUUIDChanged : _OBSERVABLES.DEME_UUID = demeUUID
+    onAddDeme : invite => Julia.addDeme(invite)
 
-    onSetDeme : uuid => {
-        
-        Julia.setDeme(uuid)
+    onSetDeme : uuid => Julia.setDeme(uuid)
 
-    }
-
-    onSetProposal : index => {
-
-        Julia.setProposal(index)
-
-    }
+    onSetProposal : index => Julia.setProposal(index)
 
     onCastBallot : Julia.castBallot()
 
@@ -43,8 +34,6 @@ App {
 
     }
 
-    //proposalIndex : _OBSERVABLES.PROPOSAL_INDEX
-    //onProposalIndexChanged : _OBSERVABLES.PROPOSAL_INDEX = proposalIndex
 
     proposalMetadata {
 

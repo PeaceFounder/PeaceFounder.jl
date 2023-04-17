@@ -109,6 +109,9 @@ Window {
                 app.setDeme(uuid)
                 app.page = 2
             }
+
+            onAddDeme : invite => app.addDeme(invite)
+
         }
 
 

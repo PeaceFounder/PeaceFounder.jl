@@ -27,6 +27,8 @@ App {
 
     }
 
+    onAddDeme : invite => console.log(invite)
+
     demeStatus {
 
         uuid : "1AAE6C35 C94FCFB4 15DBE95F 408B9CE9 1EE846ED"

@@ -1,6 +1,6 @@
 ENV["QT_QUICK_CONTROLS_STYLE"] = "Basic"
 
-using PeaceFounder: Client, Service, Mapper, Model, Schedulers
+using PeaceFounder: Client, Service, Mapper, Model, Schedulers, Parser
 import .Model: CryptoSpec, DemeSpec, Signer, id, approve, Selection
 import Dates
 import HTTP
@@ -47,8 +47,10 @@ try
     bob_invite = Client.enlist_ticket(SERVER, Model.TicketID("Bob"), RECRUIT_HMAC) 
     eve_invite = Client.enlist_ticket(SERVER, Model.TicketID("Eve"), RECRUIT_HMAC) 
 
-    Client.reset!(GUI.CLIENT)
-    Client.enroll!(GUI.CLIENT, alice_invite) # internally instantiates a RemoteRouter for the client
+    alice_invite |> Parser.marshal |> String |> println
+
+    #Client.reset!(GUI.CLIENT)
+    #Client.enroll!(GUI.CLIENT, alice_invite) # internally instantiates a RemoteRouter for the client
 
     bob = Client.DemeClient()
     Client.enroll!(bob, bob_invite)
@@ -98,16 +100,16 @@ CREDITS to ChatGPT
     ack = Client.enlist_proposal(SERVER, proposal)
 
     ### Now simple voting can be done
-    Client.update_deme!(GUI.CLIENT, demespec.uuid)
+    #Client.update_deme!(GUI.CLIENT, demespec.uuid)
     Client.update_deme!(bob, demespec.uuid)
     
     sleep(1)
 
-    uuid = CLIENT.accounts[1].deme.uuid
-    instances = Client.list_proposal_instances(CLIENT, uuid)
-    (; index, proposal) = instances[1]
+    #uuid = CLIENT.accounts[1].deme.uuid
+    #instances = Client.list_proposal_instances(CLIENT, uuid)
+    #(; index, proposal) = instances[1]
 
-    Client.cast_vote!(bob, uuid, index, Model.Selection(2))
+    #Client.cast_vote!(bob, uuid, index, Model.Selection(2))
 
     
     GUI.load_view() do

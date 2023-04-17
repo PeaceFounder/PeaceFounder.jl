@@ -1,5 +1,5 @@
 using Test
-using PeaceFounder: Client, Service, Mapper, Model, Schedulers
+import PeaceFounder: Client, Service, Mapper, Model, Schedulers, Parser
 import .Model: CryptoSpec, DemeSpec, Signer, id, approve, Selection
 #using .Service: ROUTER
 import Dates
@@ -34,6 +34,7 @@ alice_invite = Client.enlist_ticket(SERVER, Model.TicketID("Alice"), RECRUIT_HMA
 bob_invite = Client.enlist_ticket(SERVER, Model.TicketID("Bob"), RECRUIT_HMAC) 
 eve_invite = Client.enlist_ticket(SERVER, Model.TicketID("Eve"), RECRUIT_HMAC) 
 
+@test Parser.unmarshal(Parser.marshal(eve_invite), Client.Invite) == eve_invite
 
 alice = Client.DemeClient()
 Client.enroll!(alice, alice_invite; server = SERVER)

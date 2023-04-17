@@ -3,7 +3,7 @@ module GUI
 using Dates: Dates, DateTime, TimePeriod
 using Infiltrator
 using PeaceFounder
-using PeaceFounder: Client, Model
+using PeaceFounder: Client, Model, Parser
 using QML
 
 using Qt65Compat_jll
@@ -469,7 +469,22 @@ function resetBallot()
 end
 
 
-@qmlfunction setDeme setProposal castBallot refreshHome refreshDeme refreshProposal resetBallot
+
+function addDeme(invite_str::QString)
+
+    invite = Parser.unmarshal(invite_str |> String, Client.Invite)
+
+    account = Client.enroll!(CLIENT, invite)
+
+    Client.update_deme!(account)
+    
+    setHome()
+    
+    return
+end
+
+
+@qmlfunction setDeme setProposal castBallot refreshHome refreshDeme refreshProposal resetBallot addDeme
 
 
 end

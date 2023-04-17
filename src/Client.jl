@@ -15,6 +15,8 @@ using JSON3
 using Dates
 using Setfield
 
+import StructTypes
+using StructHelpers
 
 using ..Parser: marshal, unmarshal
 
@@ -749,8 +751,28 @@ struct Invite
     route::URI
 end
 
+@batteries Invite
 
 Model.isbinding(spec::DemeSpec, invite::Invite) = Model.digest(spec, invite.hasher) == invite.demehash
+
+# Parsing to string and back
+StructTypes.StructType(::Type{Invite}) = StructTypes.CustomStruct()
+
+StructTypes.lower(invite::Invite) = Dict(:demehash => invite.demehash, :ticketid => invite.ticketid, :token => invite.token, :hasher => invite.hasher, :route => string(invite.route))
+
+function StructTypes.construct(::Type{Invite}, data::Dict)
+
+    demehash = StructTypes.constructfrom(Digest, data["demehash"])
+    ticketid = StructTypes.constructfrom(TicketID, data["ticketid"])
+    token = StructTypes.constructfrom(Digest, data["token"])
+    hasher = StructTypes.constructfrom(Hash, data["hasher"])
+    route = URI(data["route"])
+    
+    return Invite(demehash, ticketid, token, hasher, route)
+end
+
+
+# Parser.marshal, Parser.unmarshal ; Client.enroll method seems like a good fit where to do parsing 
 
 
 function enroll!(invite::Invite; server::Route = route(invite.route))
@@ -780,7 +802,7 @@ function enroll!(client::DemeClient, invite::Invite; server::Route = route(invit
     account = enroll!(invite; server)
     push!(client.accounts, account)
 
-    return
+    return account
 end
 
 

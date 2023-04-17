@@ -5,12 +5,14 @@ import Qt5Compat.GraphicalEffects
 //import "."
 
 AppPage {
-    
+    id : homePage
+
     anchors.fill : parent
     title : "Home"
     backVisible : false
     
     signal demeCard(string uuid)
+    signal addDeme(string invite)
 
     property alias userDemes : demes_view.model
 
@@ -33,50 +35,9 @@ AppPage {
                     
                     delegate: demes_delegate
 
-                    footer: Item{
-
-                        width: parent.width * 0.8
-                        anchors.horizontalCenter : parent.horizontalCenter
-
-                        height : 200
-
-                        Rectangle { 
-                            
-                            anchors.top: parent.top
-                            anchors.topMargin: 10
-
-                            width: parent.width
-                            height: 80
-                            
-                            color: Style.cardPrimaryBackground
-                            
-                            radius: 5
-
-                            layer {
-                                enabled: true
-                                effect: DropShadow {
-                                    horizontalOffset: 0
-                                    verticalOffset: 0
-                                    radius: 8.0
-                                    samples: 16
-                                    color: "#80000000"
-                                }
-                            }
-
-
-                            Icon {
-
-                                anchors.centerIn : parent
-                                
-                                source : "images/Plus.png"
-                                height : 48
-
-                                color : "#BBC3C5"
-                            }
-                            
-                        }
-                    
-                }
+                    footer: PlusDeme {
+                        onAddDeme : invite => homePage.addDeme(invite)
+                    }
 
                     VScrollBar {
 
