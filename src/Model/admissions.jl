@@ -6,6 +6,7 @@ end
 
 
 bytes(ticketid::TicketID) = ticketid.id
+Base.bytes2hex(ticketid::TicketID) = bytes2hex(bytes(ticketid))
 
 Base.:(==)(x::TicketID, y::TicketID) = x.id == y.id
 
@@ -52,6 +53,8 @@ mutable struct Ticket
     admission::Union{Admission, Nothing}
 end
 
+isadmitted(ticket::Ticket) = !isnothing(ticket.admission)
+
 struct TokenRecruiter
     metadata::Ref{Vector{UInt8}} # A piece of information which is passed with hmac 
     tickets::Vector{Ticket}
@@ -76,7 +79,6 @@ hmac(recruiter::TokenRecruiter) = recruiter.hmac
 hasher(recruiter::TokenRecruiter) = hasher(hmac(recruiter))
 key(recruiter::TokenRecruiter) = key(hmac(recruiter))
 id(recruiter::TokenRecruiter) = id(recruiter.signer)
-
 
 
 function select(::Type{Ticket}, f::Function, recruiter::TokenRecruiter)
@@ -136,9 +138,10 @@ function enlist!(recruiter::TokenRecruiter, ticketid::TicketID, timestamp::DateT
 
     @assert isbinding(ticketid, timestamp, ticket_auth_code, hmac(recruiter)) # need to be aware of replay attack and bouncing back
 
-    for i in recruiter.tickets
-        if i.ticketid == ticketid
-            return (i.salt, i.auth_code)
+    for ticket in recruiter.tickets
+        if ticket.ticketid == ticketid
+            @show ticket
+            return ticket.metadata, ticket.salt, ticket.auth_code
         end
     end
     
@@ -170,6 +173,16 @@ function admit!(recruiter::TokenRecruiter, id::Pseudonym, ticketid::TicketID, au
 
         ticket.admission = approve(admission_draft, recruiter.signer)
 
+        # Closing admission. Salt is set empty as indication 
+        # When updating metadata the full list of tickets needs to be updated.
+        # Note that unused admissions can be erassed if a new generator is being set thourhg braiding
+        # To invalidate this cancellation message metadata could also contain a hash of 
+        # the current state generator or index at which unused amdissions had been erased
+
+        ticket.salt = UInt8[]
+        ticket.auth_code = auth(recruiter.metadata[], ticketid, salt, hmac(recruiter))
+
+        #ticket.token = token(ticketid, ticket.salt, hmac(recruiter))
     end
 
     return ticket.admission

@@ -91,6 +91,10 @@ function enlist_ticket(server::Route, ticketid::TicketID, hmac::HMAC; dest = des
 
     @assert isbinding(metadata, ticketid, salt, reply_auth_code, hmac)
 
+    if salt == UInt8[]
+        error("TicketID with $(bytes2hex(ticketid))is already admitted.")
+    end
+
     invite = Invite(Digest(metadata), ticketid, Model.token(ticketid, salt, hmac), hasher(hmac), dest)
 
     return invite
