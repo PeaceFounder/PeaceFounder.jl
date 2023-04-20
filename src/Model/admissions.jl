@@ -140,7 +140,6 @@ function enlist!(recruiter::TokenRecruiter, ticketid::TicketID, timestamp::DateT
 
     for ticket in recruiter.tickets
         if ticket.ticketid == ticketid
-            @show ticket
             return ticket.metadata, ticket.salt, ticket.auth_code
         end
     end
