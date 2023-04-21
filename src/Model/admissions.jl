@@ -132,6 +132,8 @@ isbinding(id::Pseudonym, auth_code::Digest, token::Digest, hasher::Hash) = auth(
 
 set_metadata!(recruiter::TokenRecruiter, metadata::Vector{UInt8}) = recruiter.metadata[] = metadata
 
+
+
 function enlist!(recruiter::TokenRecruiter, ticketid::TicketID, timestamp::DateTime, ticket_auth_code::Digest)
    
     @assert (Dates.now() - timestamp) < Second(60) "Old request"
@@ -140,7 +142,7 @@ function enlist!(recruiter::TokenRecruiter, ticketid::TicketID, timestamp::DateT
 
     for ticket in recruiter.tickets
         if ticket.ticketid == ticketid
-            return ticket.metadata, ticket.salt, ticket.auth_code
+            return recruiter.metadata[], ticket.salt, ticket.auth_code
         end
     end
     
@@ -179,7 +181,7 @@ function admit!(recruiter::TokenRecruiter, id::Pseudonym, ticketid::TicketID, au
         # the current state generator or index at which unused amdissions had been erased
 
         ticket.salt = UInt8[]
-        ticket.auth_code = auth(recruiter.metadata[], ticketid, salt, hmac(recruiter))
+        ticket.auth_code = auth(recruiter.metadata[], ticketid, ticket.salt, hmac(recruiter))
 
         #ticket.token = token(ticketid, ticket.salt, hmac(recruiter))
     end

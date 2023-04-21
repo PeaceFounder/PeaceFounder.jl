@@ -34,6 +34,8 @@ alice_invite = Client.enlist_ticket(SERVER, Model.TicketID("Alice"), RECRUIT_HMA
 bob_invite = Client.enlist_ticket(SERVER, Model.TicketID("Bob"), RECRUIT_HMAC) 
 eve_invite = Client.enlist_ticket(SERVER, Model.TicketID("Eve"), RECRUIT_HMAC) 
 
+# If ticketid is already is registered and is unadmitted the same invite shall be returned (unless token have expired)
+@test alice_invite == Client.enlist_ticket(SERVER, Model.TicketID("Alice"), RECRUIT_HMAC) 
 @test Parser.unmarshal(Parser.marshal(eve_invite), Client.Invite) == eve_invite
 
 alice = Client.DemeClient()
@@ -45,6 +47,8 @@ Client.enroll!(bob, bob_invite; server = SERVER)
 eve = Client.DemeClient()
 Client.enroll!(eve, eve_invite; server = SERVER)
 
+# As the ticket is already expired there is no valid invite available and this should throw an error
+@test_throws ErrorException Client.enlist_ticket(SERVER, Model.TicketID("Alice"), RECRUIT_HMAC)
 
 ### A simple proposal submission
 
