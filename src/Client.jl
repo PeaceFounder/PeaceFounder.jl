@@ -55,6 +55,9 @@ route(url::URI) = url == URI() ? error("Empty url not allowed") : RemoteRoute(ur
 route(router::Router) = LocalRoute(router)
 
 
+Route(x) = route(x) # For simplicity
+
+
 function request(server::Route, method::String, target::String, body::Vector{UInt8})::Response
 
     request = Request(method, target, [], body)
