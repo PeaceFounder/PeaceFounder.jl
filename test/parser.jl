@@ -4,6 +4,7 @@ import .Model: TicketID, Digest, Pseudonym, Admission, Seal, DemeSpec, CryptoSpe
 import .Parser: marshal, unmarshal
 import Dates: DateTime, now
 
+
 isconsistent(event::T) where T = unmarshal(marshal(event), T) == event
 
 roundtrip(event::T) where T = unmarshal(marshal(event), T)
@@ -23,7 +24,10 @@ admission = Admission(TicketID("Alice"), Pseudonym(UInt8[1, 2, 3, 4]), now(), Se
 event = Seal(Pseudonym(UInt8[1, 2, 3, 4]), 2, 4)
 @test isconsistent(event)
 
-crypto = Model.CryptoSpec("SHA-256", "MODP", UInt8[1, 2, 3, 6])
+@test isconsistent(Model.CryptoSpec("sha256", "EC: P-192"))
+@test isconsistent(Model.CryptoSpec("sha256", "MODP: 23, 11, 2"))
+
+crypto = Model.CryptoSpec("sha256", "MODP: 23, 11, 2")
 SIGNER = Model.generate(Model.Signer, crypto)
 event = DemeSpec(;
                     uuid = Base.UUID(121432),
@@ -40,3 +44,13 @@ event = DemeSpec(;
 
 event = Member(admission, Generator(UInt8[1, 2, 3, 4]), Pseudonym(UInt8[1, 2, 3, 4]), Signature(123, 4242))
 @test isconsistent(event)
+
+
+# curve = CryptoGroups.curve("P-192")
+# @test unmarshal(marshal(curve), CryptoGroups.Spec) == curve
+
+# group = CryptoGroups.MODP(; p = 23, q = 11, g = 2)
+# @test unmarshal(marshal(group), CryptoGroups.Spec) == group
+
+
+#crypto = Model.CryptoSpec("SHA-256", "MODP", UInt8[1, 2, 3, 6])

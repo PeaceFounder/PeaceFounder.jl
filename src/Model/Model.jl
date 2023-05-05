@@ -3,7 +3,9 @@ module Model
 
 # A patch to Base. An alternative is to patch JSON3.jl 
 
-using StructHelpers
+using StructEquality
+
+#using StructHelpers
 
 using JSON3, StructTypes # used temporaraly for canonicalize
 
@@ -20,8 +22,15 @@ using Infiltrator
 
 # I could implement that in the library
 using HistoryTrees: InclusionProof, ConsistencyProof
-@batteries InclusionProof
-@batteries ConsistencyProof
+
+Base.hash(proof::InclusionProof, h::UInt) = struct_hash(proof, h)
+Base.hash(proof::ConsistencyProof, h::UInt) = struct_hash(proof, h)
+
+Base.:(==)(a::InclusionProof, b::InclusionProof) = struct_equal(a, b)
+Base.:(==)(a::ConsistencyProof, b::ConsistencyProof) = struct_equal(a, b)
+
+#@batteries InclusionProof
+#@batteries ConsistencyProof
 
 # Note that admission is within a member as it's necessary to 
 

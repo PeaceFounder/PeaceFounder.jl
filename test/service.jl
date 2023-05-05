@@ -4,7 +4,7 @@ import .Model: CryptoSpec, DemeSpec, Signer, id, approve
 #import .Service: ROUTER
 import Dates
 
-crypto = CryptoSpec("SHA-256", "MODP", UInt8[1, 2, 3, 6])
+crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
 
 GUARDIAN = Model.generate(Signer, crypto)
 PROPOSER = Model.generate(Signer, crypto)
@@ -37,11 +37,11 @@ eve_invite = Client.enlist_ticket(SERVER, Model.TicketID("Eve"), RECRUIT_HMAC)
 # ------------- invite gets sent over a QR code --------------
 
 @test !Model.isadmitted(Client.get_ticket_status(SERVER, alice_invite.ticketid))
-alice = Client.enroll!(alice_invite; server = SERVER)
+alice = Client.enroll!(alice_invite; server = SERVER, key = 2)
 @test Model.isadmitted(Client.get_ticket_status(SERVER, alice_invite.ticketid))
 
-bob = Client.enroll!(bob_invite; server = SERVER) 
-eve = Client.enroll!(eve_invite; server = SERVER)
+bob = Client.enroll!(bob_invite; server = SERVER, key = 3) 
+eve = Client.enroll!(eve_invite; server = SERVER, key = 4)
 
 proposal = Model.Proposal(
     uuid = Base.UUID(23445325),

@@ -5,7 +5,7 @@ import PeaceFounder.Model
 import .Model: CryptoSpec, pseudonym, BraidChain, commit!, TokenRecruiter, PollingStation, TicketID, add!, id, admit!, commit, verify, generator, Member, approve, record!, ack_leaf, isbinding, roll, constituents, members, state, Proposal, vote, Ballot, Selection, uuid, record, spine, tally, BeaconClient, Dealer, charge_nonces!, pulse_timestamp, nonce_promise, schedule!, next_job, pass!, draw, seed, set_seed!, ack_cast, hasher, HMAC, enlist!, token, auth, DemeSpec, generate, Signer, key
 
 
-crypto = CryptoSpec("SHA-256", "MODP", UInt8[1, 2, 3, 6])
+crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
 
 #GUARDIAN = gen_signer(crypto)
 GUARDIAN = generate(Signer, crypto)
@@ -95,7 +95,8 @@ token_bob = enlist(ticketid_bob)
 ticketid_eve = TicketID("Eve")
 token_eve = enlist(ticketid_eve)
 
-alice = generate(Signer, crypto)
+#alice = generate(Signer, crypto)
+alice = Signer(crypto, 2)
 access, ack = enroll(alice, ticketid_alice, token_alice)
 
 @test isbinding(access, ack, crypto) # true if acknolwedgemnt is a witness for access; perhaps iswitness could be a better one
@@ -112,10 +113,12 @@ access, ack = enroll(alice, ticketid_alice, token_alice)
 @test id(access) in constituents(BRAID_CHAIN)
 @test pseudonym(access) in members(BRAID_CHAIN)
 
-bob = generate(Signer, crypto)
+#bob = generate(Signer, crypto)
+bob = Signer(crypto, 3)
 access, ack = enroll(bob, ticketid_bob, token_bob)
 
-eve = generate(Signer, crypto)
+#eve = generate(Signer, crypto)
+eve = Signer(crypto, 4)
 access, ack = enroll(eve, ticketid_eve, token_eve)
 
 ### Now I have a three members

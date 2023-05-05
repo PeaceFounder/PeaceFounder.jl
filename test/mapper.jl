@@ -6,7 +6,7 @@ using PeaceFounder.Model: CryptoSpec, pseudonym, TicketID, Member, Proposal, Bal
 
 import Dates: Dates, Date
 
-crypto = CryptoSpec("SHA-256", "MODP", UInt8[1, 2, 3, 6])
+crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
 
 GUARDIAN = generate(Signer, crypto)
 PROPOSER = generate(Signer, crypto)
@@ -85,16 +85,13 @@ ticketid_eve = TicketID("Eve")
 token_eve = enlist_ticket(ticketid_eve)
 
 
-#alice = gen_signer(crypto)
-alice = generate(Signer, crypto)
+alice = Signer(crypto, 2)
 access_alice, ack = enroll(alice, ticketid_alice, token_alice)
 
-#bob = gen_signer(crypto)
-bob = generate(Signer, crypto)
+bob = Signer(crypto, 3)
 access_bob, ack = enroll(bob, ticketid_bob, token_bob)
 
-#eve = gen_signer(crypto)
-eve = generate(Signer, crypto)
+eve = Signer(crypto, 4)
 access_eve, ack = enroll(eve, ticketid_eve, token_eve)
 
 
@@ -109,7 +106,7 @@ proposal = Proposal(
     description = "",
     ballot = Ballot(["yes", "no"]),
     open = Dates.now(),
-    closed = Dates.now() + Dates.Second(1),
+    closed = Dates.now() + Dates.Second(2),
     collector = roles.collector,
 
     state = state(commit)
@@ -152,7 +149,7 @@ spine = Mapper.get_ballotbox_spine(proposal.uuid)
 
 ballotbox = Mapper.ballotbox(proposal.uuid)
 @test istallied(ballotbox) == false
-sleep(1)
+sleep(2)
 @test istallied(ballotbox) == true
 
 # auditing phase

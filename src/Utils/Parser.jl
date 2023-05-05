@@ -1,10 +1,7 @@
 module Parser
 
-using Infiltrator
-
-using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Member, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, NonceCommitment, Lot, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Hash, TicketStatus, Commit, AckInclusion, Generator, CryptoSpec, DemeSpec, Hash
+using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Member, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, NonceCommitment, Lot, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Hash, TicketStatus, Commit, AckInclusion, Generator, CryptoSpec, DemeSpec, Hash, parse_groupspec, lower_groupspec
 using HistoryTrees: InclusionProof, ConsistencyProof
-
 
 using Dates: DateTime
 
@@ -159,12 +156,12 @@ end
 
 
 StructTypes.StructType(::Type{CryptoSpec}) = StructTypes.CustomStruct()
-StructTypes.lower(crypto::CryptoSpec) = Dict(:hash => crypto.hasher, :group => crypto.group, :generator => bytes2hex(bytes(crypto.generator)))
+StructTypes.lower(crypto::CryptoSpec) = Dict(:hash => crypto.hasher, :group => lower_groupspec(crypto.group), :generator => bytes2hex(bytes(crypto.generator)))
 
 function StructTypes.construct(::Type{CryptoSpec}, x)
     
     hasher = Hash(x["hash"])
-    group = x["group"]
+    group = parse_groupspec(x["group"])
     generator = Generator(hex2bytes(x["generator"]))
 
     return CryptoSpec(hasher, group, generator)
@@ -224,6 +221,5 @@ end
 
 
 export marshal, unmarshal
-
 
 end

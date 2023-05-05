@@ -59,7 +59,7 @@ isbinding(spec::DemeSpec, hash::Digest, hasher::Hash) = digest(spec, hasher) == 
 isbinding(spec::DemeSpec, hash::Vector{UInt8}, hasher::Hash) = isbinding(spec, Digest(hash), hasher)
 
 
-struct ChainState
+@struct_hash_equal struct ChainState
     index::Int
     root::Digest
     generator::Generator
@@ -69,7 +69,7 @@ end
 
 ChainState(index::Int, root::Nothing, generator::Generator) = ChainState(index, Digest(), generator)
 
-@batteries ChainState
+#@batteries ChainState
 
 generator(state::ChainState) = state.generator
 generator(commit::Commit{ChainState}) = generator(commit.state)

@@ -1,7 +1,7 @@
 module Client
 # Methods to interact with HTTP server
 
-using Infiltrator
+#using Infiltrator
 
 using ..Model
 using ..Model: Member, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, Hash, AckConsistency, AckInclusion, CastAck, DemeSpec, Signer, TicketStatus, Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen
@@ -16,7 +16,7 @@ using Dates
 using Setfield
 
 import StructTypes
-using StructHelpers
+#using StructHelpers 
 
 using ..Parser: marshal, unmarshal
 
@@ -444,9 +444,17 @@ mutable struct DemeAccount # mutable because it also needs to deal with storage
     route # 
 end
 
+DemeAccount(deme::DemeSpec, signer::Signer, route = nothing) = DemeAccount(deme, signer, EnrollGuard(), ProposalInstance[], nothing, route)
+
+
 function DemeAccount(deme::DemeSpec, route = nothing) 
     signer = Model.generate(Signer, crypto(deme))
-    return DemeAccount(deme, signer, EnrollGuard(), ProposalInstance[], nothing, route)
+    return DemeAccount(deme, signer, route)
+end
+
+function DemeAccount(deme::DemeSpec, key::Integer, route = nothing)
+    signer = Signer(crypto(deme), key)
+    return DemeAccount(deme, signer, route)
 end
 
 
@@ -754,11 +762,13 @@ struct Invite
     ticketid::TicketID
     token::Digest
     hasher::Hash # HashSpec
-    #route # I will need to type this in. IPv4 or IPv6 format?
     route::URI
 end
 
-@batteries Invite
+Base.:(==)(x::Invite, y::Invite) = x.demehash == y.demehash && x.ticketid == y.ticketid && x.token == y.token && x.hasher == y.hasher && x.route == y.route
+
+# This gives a nasty error for some reason when CryptoGroups are imported.
+#@batteries Invite
 
 Model.isbinding(spec::DemeSpec, invite::Invite) = Model.digest(spec, invite.hasher) == invite.demehash
 
@@ -782,13 +792,17 @@ end
 # Parser.marshal, Parser.unmarshal ; Client.enroll method seems like a good fit where to do parsing 
 
 
-function enroll!(invite::Invite; server::Route = route(invite.route))
+function enroll!(invite::Invite; server::Route = route(invite.route), key::Union{Integer, Nothing} = nothing)
     
     spec = get_deme(server)
 
     @assert isbinding(spec, invite)
 
-    account = DemeAccount(spec, server)
+    if isnothing(key)
+        account = DemeAccount(spec, server)
+    else
+        account = DemeAccount(spec, key, server)
+    end
 
     enroll!(account, server, invite.ticketid, invite.token)
     
@@ -804,9 +818,9 @@ end
 DemeClient() = DemeClient(DemeAccount[])
 
 
-function enroll!(client::DemeClient, invite::Invite; server::Route = route(invite.route)) #; server::Route = route(invite.route))
+function enroll!(client::DemeClient, invite::Invite; server::Route = route(invite.route), key = nothing) #; server::Route = route(invite.route))
 
-    account = enroll!(invite; server)
+    account = enroll!(invite; server, key)
     push!(client.accounts, account)
 
     return account

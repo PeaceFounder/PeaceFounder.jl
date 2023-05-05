@@ -159,7 +159,7 @@ body(vote::Vote) = @set vote.approval = nothing
 # Should not use this approach
 function seal(vote::Vote, generator::Generator, signer::Signer)
 
-    @assert vote.seq == seq(signer, vote.proposal) + 1
+    #@assert vote.seq == seq(signer, vote.proposal) + 1
 
     bytes = canonicalize(body(vote))
     
@@ -178,7 +178,7 @@ end
 
 function verify(admission::Admission, crypto::CryptoSpec)
 
-    bytes = canonicalize(admission)
+    bytes = canonicalize(body(admission))
     
     return verify(bytes, admission.approval, crypto)
 end
@@ -207,10 +207,6 @@ end
 
 
 
-#hash(bytes::Vector{UInt8}) = Nettle.digest("SHA3_256", bytes)
-function digest(data::Vector{UInt8}, hasher::Hash)
-    return Digest(Nettle.digest("SHA3_256", data))
-end
 
 function digest(data::Transaction, hasher::Hash)
     bytes = canonicalize(data)

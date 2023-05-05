@@ -2,17 +2,17 @@ using Base: UUID
 using Dates: DateTime
 
 
-struct Ballot
+@struct_hash_equal struct Ballot
     options::Vector{String}
 end
 
-@batteries Ballot
+#@batteries Ballot
 
-struct Selection
+@struct_hash_equal struct Selection
     option::Int
 end
 
-@batteries Selection
+#@batteries Selection
 
 isconsistent(selection::Selection, ballot::Ballot) = 1 <= selection.option <= length(ballot.options)
 
@@ -48,7 +48,7 @@ tally(ballot::Ballot, selections::Base.Generator) = tally(ballot, collect(select
 
 
 
-struct Proposal <: Transaction 
+@struct_hash_equal struct Proposal <: Transaction 
     uuid::UUID
     summary::String
     description::String
@@ -66,14 +66,13 @@ struct Proposal <: Transaction
     Proposal(; uuid, summary, description, ballot, open, closed, collector = nothing, state = nothing, approval = nothing) = Proposal(uuid, summary, description, ballot, open, closed, collector, state, approval)
 end
 
-@batteries Proposal
+#@batteries Proposal
 
 state(proposal::Proposal) = proposal.anchor
 generator(proposal::Proposal) = isnothing(proposal.anchor) ? nothing : generator(state(proposal))
 
 uuid(proposal::Proposal) = proposal.uuid
 
-# isconsistent 
 isbinding(chain::BraidChain, state::ChainState) = root(chain, index(state)) == root(state) && generator(chain, index(state)) == generator(state)
 
 isdone(proposal::Proposal; time) = proposal.closed < time
@@ -173,15 +172,15 @@ end
 
 # I could have Vote{<:Option}, Proposal{<:AbstractBallot} and AbstractTally to accomodate different voting scenarious.
 # The selection is associated here with Ballot parametric type
-function vote(proposal::Proposal, seed::Digest, selection::Selection, signer::Signer)
+function vote(proposal::Proposal, seed::Digest, selection::Selection, signer::Signer; seq = 1)
 
     @assert isconsistent(selection, proposal.ballot)
     
     proposal_digest = digest(proposal, hasher(signer.spec))
 
-    _seq = seq(signer, proposal_digest) + 1
+    #_seq = seq(signer, proposal_digest) + 1
 
-    vote = Vote(proposal_digest, seed, selection, _seq)
+    vote = Vote(proposal_digest, seed, selection, seq)
 
     approval = seal(vote, generator(proposal), signer::Signer)
     
@@ -196,7 +195,7 @@ isbinding(record, spine::Vector{Digest}, crypto::CryptoSpec) = isbinding(record,
 pseudonym(vote::Vote) = isnothing(vote.approval) ? nothing : pseudonym(vote.approval)
 
 
-struct BallotBoxState
+@struct_hash_equal struct BallotBoxState
     proposal::Digest
     seed::Digest
     index::Int
@@ -205,7 +204,7 @@ struct BallotBoxState
     view::Union{Nothing, BitVector} # 
 end 
 
-@batteries BallotBoxState
+#@batteries BallotBoxState
 
 BallotBoxState(proposal::Digest, seed::Digest, index::Int, root::Nothing, tally::Nothing, view::Nothing) = BallotBoxState(proposal, seed, index, Digest(), tally, view)
 

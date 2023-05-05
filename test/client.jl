@@ -4,7 +4,7 @@ import .Model: CryptoSpec, DemeSpec, Signer, id, approve, Selection
 #using .Service: ROUTER
 import Dates
 
-crypto = CryptoSpec("SHA-256", "MODP", UInt8[1, 2, 3, 6])
+crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
 
 GUARDIAN = Model.generate(Signer, crypto)
 PROPOSER = Model.generate(Signer, crypto)
@@ -39,13 +39,13 @@ eve_invite = Client.enlist_ticket(SERVER, Model.TicketID("Eve"), RECRUIT_HMAC)
 @test Parser.unmarshal(Parser.marshal(eve_invite), Client.Invite) == eve_invite
 
 alice = Client.DemeClient()
-Client.enroll!(alice, alice_invite; server = SERVER)
+Client.enroll!(alice, alice_invite; server = SERVER, key = 2)
 
 bob = Client.DemeClient()
-Client.enroll!(bob, bob_invite; server = SERVER)
+Client.enroll!(bob, bob_invite; server = SERVER, key = 3)
 
 eve = Client.DemeClient()
-Client.enroll!(eve, eve_invite; server = SERVER)
+Client.enroll!(eve, eve_invite; server = SERVER, key = 4)
 
 # As the ticket is already expired there is no valid invite available and this should throw an error
 @test_throws ErrorException Client.enlist_ticket(SERVER, Model.TicketID("Alice"), RECRUIT_HMAC)

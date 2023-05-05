@@ -158,6 +158,7 @@ function enlist!(recruiter::TokenRecruiter, ticketid::TicketID, timestamp::DateT
     return metadata, salt, reply_auth_code
 end
 
+using Infiltrator
 
 function admit!(recruiter::TokenRecruiter, id::Pseudonym, ticketid::TicketID, auth_code::Digest)
     

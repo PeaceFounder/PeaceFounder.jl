@@ -24,8 +24,7 @@ import .Model: CryptoSpec, DemeSpec, Signer, id, approve, Selection
 import HTTP
 import QML # Needed for @qmlfunction
 
-
-crypto = CryptoSpec("SHA-256", "MODP", UInt8[1, 2, 3, 6])
+crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
 
 GUARDIAN = Model.generate(Signer, crypto)
 PROPOSER = Model.generate(Signer, crypto)
@@ -59,13 +58,13 @@ try
     eve_invite = Client.enlist_ticket(SERVER, Model.TicketID("Eve"), RECRUIT_HMAC) 
 
     Client.reset!(GUI.CLIENT)
-    Client.enroll!(GUI.CLIENT, alice_invite) # internally instantiates a RemoteRouter for the client
+    Client.enroll!(GUI.CLIENT, alice_invite; key = 2) # internally instantiates a RemoteRouter for the client
 
     bob = Client.DemeClient()
-    Client.enroll!(bob, bob_invite)
+    Client.enroll!(bob, bob_invite; key = 3)
 
     eve = Client.DemeClient()
-    Client.enroll!(eve, eve_invite)
+    Client.enroll!(eve, eve_invite; key = 4)
 
     ### A simple proposal submission
 
