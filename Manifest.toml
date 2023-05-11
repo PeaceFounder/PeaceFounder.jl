@@ -27,9 +27,9 @@ version = "1.0.8+0"
 
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "c6d890a52d2c4d55d326439580c3b8d0875a77d9"
+git-tree-sha1 = "e30f2f4e20f7f186dc36529910beaedc60cfa644"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "1.15.7"
+version = "1.16.0"
 
 [[deps.ChangesOfVariables]]
 deps = ["LinearAlgebra", "Test"]
@@ -80,9 +80,9 @@ version = "1.0.1+0"
 
 [[deps.ConcurrentUtilities]]
 deps = ["Serialization", "Sockets"]
-git-tree-sha1 = "b306df2650947e9eb100ec125ff8c65ca2053d30"
+git-tree-sha1 = "96d823b94ba8d187a6d8f0826e731195a74b90e9"
 uuid = "f0e56b4a-5159-44fe-b623-3e5288b988bb"
-version = "2.1.1"
+version = "2.2.0"
 
 [[deps.ConstructionBase]]
 deps = ["LinearAlgebra"]
@@ -102,9 +102,9 @@ version = "4.1.1"
 
 [[deps.CryptoGroups]]
 deps = ["CryptoUtils", "Nettle", "Primes", "Random"]
-git-tree-sha1 = "e3ddc52494cefc1d286d96d60ee3687022df2848"
+git-tree-sha1 = "52512227234827eb56541ca9dfa8cebe0a6d804e"
 uuid = "bc997328-bedd-407e-bcd3-5758e064a52d"
-version = "0.3.1"
+version = "0.3.2"
 
 [[deps.CryptoSignatures]]
 deps = ["CryptoGroups", "Nettle", "Random"]
@@ -200,9 +200,9 @@ version = "2.74.0+2"
 
 [[deps.HTTP]]
 deps = ["Base64", "CodecZlib", "ConcurrentUtilities", "Dates", "Logging", "LoggingExtras", "MbedTLS", "NetworkOptions", "OpenSSL", "Random", "SimpleBufferStream", "Sockets", "URIs", "UUIDs"]
-git-tree-sha1 = "69182f9a2d6add3736b7a06ab6416aafdeec2196"
+git-tree-sha1 = "877b7bc42729aa2c90bbbf5cb0d4294bd6d42e5a"
 uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
-version = "1.8.0"
+version = "1.9.1"
 
 [[deps.HistoryTrees]]
 git-tree-sha1 = "5e0e766befebd2108cef8e3a14cf715c8496cb2e"
@@ -409,9 +409,9 @@ version = "0.8.1+0"
 
 [[deps.OpenSSL]]
 deps = ["BitFlags", "Dates", "MozillaCACerts_jll", "OpenSSL_jll", "Sockets"]
-git-tree-sha1 = "7fb975217aea8f1bb360cf1dde70bad2530622d2"
+git-tree-sha1 = "51901a49222b09e3743c65b8847687ae5fc78eb2"
 uuid = "4d8831e6-92b7-49fb-bdf8-b643e874388c"
-version = "1.4.0"
+version = "1.4.1"
 
 [[deps.OpenSSL_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -448,9 +448,9 @@ version = "1.8.0"
 
 [[deps.PrecompileTools]]
 deps = ["Preferences"]
-git-tree-sha1 = "d0984cc886c48e5a165705ce65236dc2ec467b91"
+git-tree-sha1 = "259e206946c293698122f63e2b513a7c99a244e8"
 uuid = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
-version = "1.1.0"
+version = "1.1.1"
 
 [[deps.Preferences]]
 deps = ["TOML"]
@@ -591,9 +591,9 @@ version = "1.6.0"
 
 [[deps.StatsBase]]
 deps = ["DataAPI", "DataStructures", "LinearAlgebra", "LogExpFunctions", "Missings", "Printf", "Random", "SortingAlgorithms", "SparseArrays", "Statistics", "StatsAPI"]
-git-tree-sha1 = "d1bf48bfcc554a3761a133fe3a9bb01488e06916"
+git-tree-sha1 = "75ebe04c5bed70b91614d684259b661c9e6274a4"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
-version = "0.33.21"
+version = "0.34.0"
 
 [[deps.StructEquality]]
 deps = ["Compat"]
@@ -653,9 +653,9 @@ uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 
 [[deps.UnicodePlots]]
 deps = ["ColorSchemes", "ColorTypes", "Contour", "Crayons", "Dates", "LinearAlgebra", "MarchingCubes", "NaNMath", "PrecompileTools", "Printf", "Requires", "SparseArrays", "StaticArrays", "StatsBase"]
-git-tree-sha1 = "9fbe3fb6c4bbe4cafb5ce4d15bbec82f0077e1d5"
+git-tree-sha1 = "5e3a9796dfae26edbe5a2cc436b230c86a8ab0c4"
 uuid = "b8865327-cd53-5732-bb35-84acbb429228"
-version = "3.5.2"
+version = "3.5.3"
 
 [[deps.Wayland_jll]]
 deps = ["Artifacts", "Expat_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Pkg", "XML2_jll"]
@@ -795,9 +795,9 @@ version = "5.1.1+0"
 
 [[deps.libcxxwrap_julia_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "a9b1ef69fc10c52a8ce9f5a598c6e96ea54d45dc"
+git-tree-sha1 = "db6cccc5c48abdb41795a3b6556e32a548143c66"
 uuid = "3eaa8342-bff7-56a5-9981-c04077f7cee7"
-version = "0.9.7+0"
+version = "0.9.7+1"
 
 [[deps.nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
