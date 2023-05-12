@@ -196,6 +196,9 @@ reset_tree() = Model.reset_tree!(BRAID_CHAIN[])
 get_members(N::Int) = Model.members(BRAID_CHAIN[], N)
 get_members() = Model.members(BRAID_CHAIN[])
 
+get_generator(N::Int) = Model.generator(BRAID_CHAIN[], N)
+get_generator() = Model.generator(BRAID_CHAIN[])
+
 get_chain_proposal_list() = collect(Model.list(Proposal, BRAID_CHAIN[]))
 
 

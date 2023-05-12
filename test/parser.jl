@@ -24,7 +24,7 @@ admission = Admission(TicketID("Alice"), Pseudonym(UInt8[1, 2, 3, 4]), now(), Se
 event = Seal(Pseudonym(UInt8[1, 2, 3, 4]), 2, 4)
 @test isconsistent(event)
 
-@test isconsistent(Model.CryptoSpec("sha256", "EC: P-192"))
+@test isconsistent(Model.CryptoSpec("sha256", "EC: P_192"))
 @test isconsistent(Model.CryptoSpec("sha256", "MODP: 23, 11, 2"))
 
 crypto = Model.CryptoSpec("sha256", "MODP: 23, 11, 2")
@@ -45,12 +45,3 @@ event = DemeSpec(;
 event = Member(admission, Generator(UInt8[1, 2, 3, 4]), Pseudonym(UInt8[1, 2, 3, 4]), Signature(123, 4242))
 @test isconsistent(event)
 
-
-# curve = CryptoGroups.curve("P-192")
-# @test unmarshal(marshal(curve), CryptoGroups.Spec) == curve
-
-# group = CryptoGroups.MODP(; p = 23, q = 11, g = 2)
-# @test unmarshal(marshal(group), CryptoGroups.Spec) == group
-
-
-#crypto = Model.CryptoSpec("SHA-256", "MODP", UInt8[1, 2, 3, 6])

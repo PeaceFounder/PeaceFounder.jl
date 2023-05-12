@@ -158,7 +158,6 @@ function enlist!(recruiter::TokenRecruiter, ticketid::TicketID, timestamp::DateT
     return metadata, salt, reply_auth_code
 end
 
-using Infiltrator
 
 function admit!(recruiter::TokenRecruiter, id::Pseudonym, ticketid::TicketID, auth_code::Digest)
     
@@ -172,9 +171,8 @@ function admit!(recruiter::TokenRecruiter, id::Pseudonym, ticketid::TicketID, au
     if isnothing(ticket.admission)
 
         admission_draft = Admission(ticket.ticketid, id, ticket.timestamp)
-
         ticket.admission = approve(admission_draft, recruiter.signer)
-
+        
         # Closing admission. Salt is set empty as indication 
         # When updating metadata the full list of tickets needs to be updated.
         # Note that unused admissions can be erassed if a new generator is being set thourhg braiding

@@ -169,9 +169,19 @@ base16decode(s::String, ::Type{Pseudonym}) = Pseudonym(base16decode(s))
 
 attest(statement, witness) = isbinding(statement, witness) && verify(witness)
 
+pseudonym(ctx::CryptoSignatures.DSAContext, generator::Generator, private_key::Integer) = Pseudonym(CryptoSignatures.public_key(ctx, generator.data, BigInt(private_key)))
+pseudonym(ctx::CryptoSignatures.ECDSAContext, generator::Generator, private_key::Integer) = Pseudonym(CryptoSignatures.public_key(ctx, generator.data, BigInt(private_key); mode = :compressed))
 
-pseudonym(spec::CryptoSpec, generator::Generator, key::Integer) = Pseudonym(CryptoSignatures.public_key(_dsa_context(spec), generator.data, BigInt(key)))
+pseudonym(p::CryptoGroups.PGroup) = Pseudonym(CryptoGroups.octet(p))
+pseudonym(p::CryptoGroups.ECGroup) = Pseudonym(CryptoGroups.octet(p; mode = :compressed))
+
+generator(g::CryptoGroups.Group) = Generator(CryptoGroups.octet(g))
+
+#pseudonym(spec::CryptoSpec, generator::Generator, key::Integer) = Pseudonym(CryptoSignatures.public_key(_dsa_context(spec), generator.data, BigInt(key)))
+pseudonym(spec::CryptoSpec, generator::Generator, key::Integer) = pseudonym(_dsa_context(spec), generator, key)
 pseudonym(spec::CryptoSpec, key::Integer) = pseudonym(spec, generator(spec), key)
+
+
 
 struct Signer
     spec::CryptoSpec
@@ -196,13 +206,15 @@ _dsa_context(spec::Union{ECP, EC2N, Koblitz}, hasher::Union{String, Nothing}) = 
 _dsa_context(spec::Spec, hasher::Hash) = _dsa_context(spec, hasher.spec)
 _dsa_context(spec::CryptoSpec; hasher = spec.hasher) = _dsa_context(spec.group, hasher)
 
+
 function generate(::Type{Signer}, spec::CryptoSpec)
 
     ctx = _dsa_context(spec)
     private_key = CryptoSignatures.generate_key(ctx)
-    public_key = CryptoSignatures.public_key(ctx, generator(spec).data, private_key)
-
-    return Signer(spec, Pseudonym(public_key), private_key)
+    #public_key = CryptoSignatures.public_key(ctx, generator(spec).data, private_key)
+    _pseudonym = pseudonym(ctx, generator(spec), private_key)
+    
+    return Signer(spec, _pseudonym, private_key)
 end
 
 

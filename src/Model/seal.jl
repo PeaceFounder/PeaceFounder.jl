@@ -205,7 +205,23 @@ function verify(proposal::Proposal, crypto::CryptoSpec)
 end
 
 
+body(braidwork::BraidWork) = @set braidwork.approval = nothing
 
+function seal(braidwork::BraidWork, signer::Signer)
+
+    bytes = canonicalize(body(braidwork))
+
+    return seal(bytes, signer)
+end
+
+# function verify(braidwork::BraidWork, crypto::CryptoSpec)
+    
+#     bytes = canonicalize(body(braidwork))
+    
+#     return verify(bytes, braidwork.approval, crypto)
+# end
+
+# verify(braidwork::BraidWork) = verify(braidwork, braidwork.producer.crypto)
 
 
 function digest(data::Transaction, hasher::Hash)

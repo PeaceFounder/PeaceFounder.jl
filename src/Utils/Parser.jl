@@ -1,6 +1,6 @@
 module Parser
 
-using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Member, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, NonceCommitment, Lot, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Hash, TicketStatus, Commit, AckInclusion, Generator, CryptoSpec, DemeSpec, Hash, parse_groupspec, lower_groupspec
+using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Member, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, NonceCommitment, Lot, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Hash, TicketStatus, Commit, AckInclusion, Generator, CryptoSpec, DemeSpec, Hash, parse_groupspec, lower_groupspec, BraidWork
 using HistoryTrees: InclusionProof, ConsistencyProof
 
 using Dates: DateTime
@@ -77,12 +77,15 @@ unmarshal(bytes, T::DataType) = JSON3.read(bytes, T)
 
 
 StructTypes.StructType(::Type{Seal}) = StructTypes.CustomStruct()
-StructTypes.lower(seal::Seal) = Dict(:id => seal.pbkey, :r => seal.sig.r, :s => seal.sig.s)
+#StructTypes.lower(seal::Seal) = Dict(:id => seal.pbkey, :r => seal.sig.r, :s => seal.sig.s)
+
+StructTypes.lower(seal::Seal) = (;id = seal.pbkey, r = seal.sig.r, s = seal.sig.s)
+StructTypes.lowertype(::Type{Seal}) = NamedTuple{(:id, :r, :s), Tuple{String, BigInt, BigInt}}
 
 function StructTypes.construct(::Type{Seal}, x)
     
-    id = constructfrom(Pseudonym, x["id"])
-    sig = Signature(x["r"], x["s"])
+    id = constructfrom(Pseudonym, x.id)
+    sig = Signature(x.r, x.s)
 
     return Seal(id, sig)
 end
@@ -221,5 +224,11 @@ end
 
 
 export marshal, unmarshal
+
+
+StructTypes.StructType(::Type{BraidWork}) = StructTypes.Struct()
+StructTypes.omitempties(::Type{BraidWork}) = (:approval,)
+
+
 
 end

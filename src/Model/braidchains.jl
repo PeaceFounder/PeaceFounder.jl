@@ -237,27 +237,39 @@ end
 
 function generator(chain::BraidChain, n::Int)
     
-    g = generator(chain.spec)
-    for i in view(chain.ledger, 1:n)
-        # only braid can make a change here. 
+    for i in view(chain.ledger, n:-1:1)
+
+        if i isa BraidWork
+            return output_generator(i)
+        end
+
     end
 
-    return g
+    return generator(chain.spec)
 end
 
 
 function members(chain::BraidChain, n::Int)
     
-    set = Set{Pseudonym}()
-    for i in view(chain.ledger, 1:n)
+    mset = Set{Pseudonym}()
+    for i in view(chain.ledger, n:-1:1)
+
         if i isa Member
-            push!(set, pseudonym(i))
+            push!(mset, pseudonym(i))
         end
         
-        # braids also need to be treated here
+        if i isa BraidWork
+
+            for j in output_members(i)
+                push!(mset, j)
+            end
+
+            return mset
+        end
+
     end
 
-    return set
+    return mset
 end
 
 

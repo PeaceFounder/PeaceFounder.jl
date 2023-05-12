@@ -2,10 +2,12 @@ using Dates
 using Test
 import PeaceFounder.Model
 
-import .Model: CryptoSpec, pseudonym, BraidChain, commit!, TokenRecruiter, PollingStation, TicketID, add!, id, admit!, commit, verify, generator, Member, approve, record!, ack_leaf, isbinding, roll, constituents, members, state, Proposal, vote, Ballot, Selection, uuid, record, spine, tally, BeaconClient, Dealer, charge_nonces!, pulse_timestamp, nonce_promise, schedule!, next_job, pass!, draw, seed, set_seed!, ack_cast, hasher, HMAC, enlist!, token, auth, DemeSpec, generate, Signer, key
+import .Model: CryptoSpec, pseudonym, BraidChain, commit!, TokenRecruiter, PollingStation, TicketID, add!, id, admit!, commit, verify, generator, Member, approve, record!, ack_leaf, isbinding, roll, constituents, members, state, Proposal, vote, Ballot, Selection, uuid, record, spine, tally, BeaconClient, Dealer, charge_nonces!, pulse_timestamp, nonce_promise, schedule!, next_job, pass!, draw, seed, set_seed!, ack_cast, hasher, HMAC, enlist!, token, auth, DemeSpec, generate, Signer, key, braid, Model
 
 
-crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
+crypto = CryptoSpec("sha256", "EC: P_192")
+#crypto = CryptoSpec("sha256", "EC: P-192")
+#crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
 
 #GUARDIAN = gen_signer(crypto)
 GUARDIAN = generate(Signer, crypto)
@@ -126,6 +128,29 @@ access, ack = enroll(eve, ticketid_eve, token_eve)
 @test access in roll(BRAID_CHAIN) # coresponds to enroll!
 @test id(access) in constituents(BRAID_CHAIN)
 @test pseudonym(access) in members(BRAID_CHAIN)
+
+
+# Here now can a braiding happen
+
+input_generator = generator(BRAID_CHAIN)
+input_members = members(BRAID_CHAIN)
+
+braidwork = braid(input_generator, input_members, demespec, demespec, BRAIDER) 
+
+@test Model.input_generator(braidwork) == generator(BRAID_CHAIN) 
+@test Model.input_members(braidwork) == members(BRAID_CHAIN)
+
+@test verify(braidwork, crypto)
+
+record!(BRAID_CHAIN, braidwork)
+commit!(BRAID_CHAIN, BRAID_CHAIN_RECORDER)
+
+@test Model.output_generator(braidwork) == generator(BRAID_CHAIN)
+@test Model.output_members(braidwork) == members(BRAID_CHAIN)
+
+@test generator(BRAID_CHAIN, length(BRAID_CHAIN) - 1) == Model.input_generator(braidwork)
+@test generator(BRAID_CHAIN, length(BRAID_CHAIN)) == Model.output_generator(braidwork)
+
 
 # A proposal can be constructed as
 

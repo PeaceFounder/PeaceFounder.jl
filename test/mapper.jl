@@ -6,7 +6,8 @@ using PeaceFounder.Model: CryptoSpec, pseudonym, TicketID, Member, Proposal, Bal
 
 import Dates: Dates, Date
 
-crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
+crypto = CryptoSpec("sha256", "EC: P_192")
+#crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
 
 GUARDIAN = generate(Signer, crypto)
 PROPOSER = generate(Signer, crypto)
@@ -15,7 +16,6 @@ PROPOSER = generate(Signer, crypto)
 Mapper.initialize!(crypto)
 
 roles = Mapper.system_roles()
-
 
 demespec = DemeSpec(;
                     uuid = Base.UUID(121432),
@@ -30,15 +30,10 @@ demespec = DemeSpec(;
 ) |> approve(GUARDIAN) 
 
 
-#GUARDIAN = gen_signer(crypto)
-#DEME = DemeSpec("Community", id(GUARDIAN), crypto)
-
 Mapper.capture!(demespec)
 
-
-RECRUIT_AUTHORIZATION_KEY = Mapper.get_recruit_key() # Similarly I could have a method for a recruit authorization key. 
+RECRUIT_AUTHORIZATION_KEY = Mapper.get_recruit_key() 
 RECRUIT_HMAC = HMAC(RECRUIT_AUTHORIZATION_KEY, hasher(crypto))
-
 
 function enroll(signer, ticketid, token)
 
@@ -94,9 +89,19 @@ access_bob, ack = enroll(bob, ticketid_bob, token_bob)
 eve = Signer(crypto, 4)
 access_eve, ack = enroll(eve, ticketid_eve, token_eve)
 
+@test Mapper.get_ticket_status(ticketid_alice) isa Model.TicketStatus
+@test Mapper.get_ticket_admission(ticketid_alice) isa Model.Admission
 
-status = Mapper.get_ticket_status(ticketid_alice) # :registered, 
-admission = Mapper.get_ticket_admission(ticketid_alice)
+### Braiding
+
+input_generator = Mapper.get_generator()
+input_members = Mapper.get_members()
+
+braidwork = Model.braid(input_generator, input_members, demespec, demespec, Mapper.BRAIDER[]) 
+
+Mapper.submit_chain_record!(braidwork)
+
+### 
 
 commit = Mapper.get_chain_commit()
 

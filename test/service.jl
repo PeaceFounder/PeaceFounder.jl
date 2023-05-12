@@ -4,7 +4,8 @@ import .Model: CryptoSpec, DemeSpec, Signer, id, approve
 #import .Service: ROUTER
 import Dates
 
-crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
+crypto = CryptoSpec("sha256", "EC: P_192")
+#crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
 
 GUARDIAN = Model.generate(Signer, crypto)
 PROPOSER = Model.generate(Signer, crypto)
@@ -41,7 +42,32 @@ alice = Client.enroll!(alice_invite; server = SERVER, key = 2)
 @test Model.isadmitted(Client.get_ticket_status(SERVER, alice_invite.ticketid))
 
 bob = Client.enroll!(bob_invite; server = SERVER, key = 3) 
-eve = Client.enroll!(eve_invite; server = SERVER, key = 4)
+
+
+# Braiding in between registration. Within this time admission can be attained, wheras 
+# no new Member certificates can be added to the BraidChain. 
+
+input_generator = Mapper.get_generator()
+input_members = Mapper.get_members()
+
+braidwork = Model.braid(input_generator, input_members, demespec, demespec, Mapper.BRAIDER[]) 
+
+Mapper.submit_chain_record!(braidwork)
+
+### 
+
+eve = Client.enroll!(eve_invite; server = SERVER, key = 4) # Works as expected!
+
+# Braiding
+
+input_generator = Mapper.get_generator()
+input_members = Mapper.get_members()
+
+braidwork = Model.braid(input_generator, input_members, demespec, demespec, Mapper.BRAIDER[]) 
+
+Mapper.submit_chain_record!(braidwork)
+
+###
 
 proposal = Model.Proposal(
     uuid = Base.UUID(23445325),
@@ -74,7 +100,7 @@ Client.check_vote!(alice, proposal.uuid)
 Client.get_ballotbox_commit!(alice, proposal.uuid)
 @test !Client.istallied(alice, proposal.uuid)
 
-Schedulers.waituntil(proposal.closed + Dates.Millisecond(300))
+Schedulers.waituntil(proposal.closed + Dates.Millisecond(1000))
 
 Client.get_ballotbox_commit!(alice, proposal.uuid)
 @test Client.istallied(alice, proposal.uuid)
