@@ -231,7 +231,8 @@ function item(instance::ProposalInstance)
     index = instance.index
     title = instance.proposal.summary
     voterCount = instance.proposal.anchor.member_count
-    castCount = isnothing(instance.commit) ? 0 : instance.commit.state.index
+    #castCount = isnothing(instance.commit) ? 0 : instance.commit.state.index
+    castCount = isnothing(Model.commit(instance)) ? 0 : Model.commit(instance).state.index
     
     #isVotable = Client.isvotable(instance)
     isVotable = Client.isopen(instance)
@@ -422,6 +423,7 @@ end
 function refreshHome()
 
     PROPOSAL_METADATA["index"] = 0
+    setHome()    
 
     return
 end
@@ -469,10 +471,7 @@ function resetBallot()
 end
 
 
-
-function addDeme(invite_str::QString)
-
-    invite = Parser.unmarshal(invite_str |> String, Client.Invite)
+function addDeme(invite::Client.Invite)
 
     account = Client.enroll!(CLIENT, invite)
 
@@ -481,6 +480,14 @@ function addDeme(invite_str::QString)
     setHome()
     
     return
+end
+
+
+function addDeme(invite_str::QString)
+
+    invite = Parser.unmarshal(invite_str |> String, Client.Invite)
+    
+    return addDeme(invite)
 end
 
 

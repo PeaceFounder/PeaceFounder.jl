@@ -541,6 +541,7 @@ function record!(ballotbox::BallotBox, record::CastRecord)
     return N
 end
 
+using Infiltrator
 
 function commit!(ballotbox::BallotBox, timestamp::DateTime, signer::Signer; with_tally::Union{Nothing, Bool} = nothing)
 
@@ -556,7 +557,7 @@ function commit!(ballotbox::BallotBox, timestamp::DateTime, signer::Signer; with
 
     resize!(ballotbox.queue, 0)
 
-    _state = state(ballotbox; with_tally)
+    @show _state = state(ballotbox; with_tally)
     ballotbox.commit = Commit(_state, seal(_state, signer))
 
     return

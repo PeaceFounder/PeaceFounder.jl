@@ -24,7 +24,8 @@ import .Model: CryptoSpec, DemeSpec, Signer, id, approve, Selection
 import HTTP
 import QML # Needed for @qmlfunction
 
-crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
+crypto = CryptoSpec("sha256", "EC: P_192")
+#crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
 
 GUARDIAN = Model.generate(Signer, crypto)
 PROPOSER = Model.generate(Signer, crypto)

@@ -1,3 +1,4 @@
+import Random
 # One could add expiration policy and etc. Currently that is not needed.
 
 struct TicketID
@@ -67,8 +68,8 @@ TokenRecruiter(signer::Signer, key::Vector{UInt8}) = TokenRecruiter(Ref{Vector{U
 
 
 function generate(::Type{TokenRecruiter}, spec::CryptoSpec)
-    
-    key = UInt8[1, 2, 3, 6, 7, 8]
+
+    key = rand(Random.RandomDevice(), UInt8, 32) # Alternativelly I could derive it from a global SEED
     recruiter = generate(Signer, spec)
 
     return TokenRecruiter(recruiter, key)

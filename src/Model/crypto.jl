@@ -218,6 +218,8 @@ function generate(::Type{Signer}, spec::CryptoSpec)
 end
 
 
+
+
 sign(message::Vector{UInt8}, generator::Generator, signer::Signer) = CryptoSignatures.sign(_dsa_context(signer.spec), message, generator.data, signer.key)
 sign(message::Vector{UInt8}, signer::Signer) = sign(message, signer.spec.generator, signer)
 
@@ -350,6 +352,8 @@ struct HMAC
     key::Vector{UInt8}
     hasher::Hash
 end
+
+HMAC(key::Vector{UInt8}, hasher::String) = HMAC(key, Hash(hasher))
 
 hasher(hmac::HMAC) = hmac.hasher
 

@@ -75,7 +75,7 @@ proposal = Model.Proposal(
     description = "",
     ballot = Model.Ballot(["yes", "no"]),
     open = Dates.now() + Dates.Millisecond(100),
-    closed = Dates.now() + Dates.Second(3)
+    closed = Dates.now() + Dates.Second(5)
 ) |> Client.configure(SERVER) |> approve(PROPOSER)
 
 
