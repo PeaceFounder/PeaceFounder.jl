@@ -15,7 +15,7 @@ using Setfield
 
 using HistoryTrees
 
-using Infiltrator
+#using Infiltrator
 
 # Proposals and Braids can be treated the same way as they are in a blockchain as proofs of work.
 

@@ -3,7 +3,6 @@ module Service
 # This is the outermost layer for the sercvice concerned with providing services for outsied world. 
 # Defines how HTTP requests are processed
 
-using Infiltrator
 
 using ..Mapper
 using ..Parser: marshal, unmarshal

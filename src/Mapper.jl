@@ -1,7 +1,6 @@
 module Mapper
 # Initialization of global variables and coresponding methods to it
 # Service layer puts more abstrction. Probably unnecessary.
-using Infiltrator
 
 import Sockets
 import Dates: Dates, DateTime
@@ -34,8 +33,6 @@ const DEALER_PROCESS = Ref{Task}()
 const BRAID_BROKER = Ref{BraidBroker}
 const BRAID_BROKER_SCHEDULER = Scheduler(retry_interval = 5)
 const BRAID_BROKER_PROCESS = Ref{Task}()
-
-using Infiltrator
 
 
 function dealer_process_loop(; force = false)

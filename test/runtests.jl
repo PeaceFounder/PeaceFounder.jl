@@ -1,4 +1,3 @@
-
 module ModelTest
 include("model.jl")
 end
@@ -27,7 +26,5 @@ module RemoteTest
 include("remote.jl")
 end
 
-module GUITest
-include("gui.jl")
-end
+
 

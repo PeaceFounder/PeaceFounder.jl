@@ -112,7 +112,6 @@ function unmarshal(bytes, ::Type{Tuple{TicketID, DateTime, Digest}})
 end
 
 
-
 function marshal(event::Tuple{Vector{UInt8}, Vector{UInt8}, Digest})
     
     metadata, salt, auth_code = event
@@ -120,8 +119,6 @@ function marshal(event::Tuple{Vector{UInt8}, Vector{UInt8}, Digest})
 
     return marshal(payload)
 end
-
-using Infiltrator
 
 function unmarshal(bytes, ::Type{Tuple{Vector{UInt8}, Vector{UInt8}, Digest}})
     
@@ -149,8 +146,6 @@ function unmarshal(bytes, ::Type{Tuple{TicketID, Digest}})
 
     payload = unmarshal(bytes)
     
-    @infiltrate
-
     id = constructfrom(Pseudonym, payload.id)
     auth_code = constructfrom(Digest, payload.auth_code)
 

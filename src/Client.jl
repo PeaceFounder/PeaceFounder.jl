@@ -1,8 +1,6 @@
 module Client
 # Methods to interact with HTTP server
 
-#using Infiltrator
-
 using ..Model
 using ..Model: Member, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, Hash, AckConsistency, AckInclusion, CastAck, DemeSpec, Signer, TicketStatus, Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen
 using Base: UUID
@@ -211,8 +209,6 @@ end
 function get_chain_record(server::Route, N::Int)
 
     response = get(server, "/braidchain/$N/record")
-    
-    @show response # Need a way to get a type information
     
     error("Not implemented")
 end
@@ -652,7 +648,6 @@ end
 
 list_proposal_instances(voter::DemeAccount) = voter.proposals
 
-using Infiltrator
 
 function cast_vote!(instance::ProposalInstance, deme::DemeSpec, selection, signer::Signer; server::Route)
 

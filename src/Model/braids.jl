@@ -1,4 +1,3 @@
-using Infiltrator
 
 import ShuffleProofs
 import ShuffleProofs: Braid, Simulator, BraidProof, ProtocolSpec
