@@ -1,7 +1,7 @@
 # PeaceFounder.jl
 
-| ![Recruitment](docs/assets/recruit_form.png) | ![Recruitment](docs/assets/proposal.png) | ![Recruitment](docs/assets/guard.png) |
-| -------------------------------------------- | ---------------------------------------- | ------------------------------------- |
+| ![Recruitment](docs/assets/recruit_form.png) | ![Proposal](docs/assets/proposal.png) | ![Guard](docs/assets/guard.png) |
+| -------------------------------------------- | ------------------------------------- | ------------------------------- |
 
 
 
