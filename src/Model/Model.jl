@@ -75,4 +75,6 @@ include("braids.jl")
 include("seal.jl") # Defines how values should be canonicalized. Could contain means for a signer with a state.
 
 
+export isbinding, braid, approve, verify, canonicalize
+
 end

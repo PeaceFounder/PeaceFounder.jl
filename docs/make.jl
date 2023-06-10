@@ -1,16 +1,25 @@
 using Documenter
 using PeaceFounder
 
+
+cp((@__DIR__) * "/../README.md", (@__DIR__) * "/src/index.md", force = true)
+
 makedocs(
     sitename = "PeaceFounder",
     format = Documenter.HTML(),
-    modules = [PeaceFounder],
+    modules = [PeaceFounder.Model, PeaceFounder.Client],
     pages = [
-        "index.md",
+        #"index.md",
+        
         "Overview" => "overview.md",
         "Setup" => "setup.md",
-        "Audit" => "audit.md"
-    ]
+        "Audit" => "audit.md",
+        "API" => [
+            "REST" => "schema.md",
+            "PeaceFounder.Model" => "model_api.md"
+        ]
+    ],
+    repo = "github.com/PeaceFounder/PeaceFounder.jl.git"
 )
 
 # Documenter can also automatically deploy documentation to gh-pages.

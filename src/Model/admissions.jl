@@ -124,6 +124,9 @@ auth(id::Pseudonym, hmac::HMAC) = digest(bytes(id), hmac)
 auth(id::Pseudonym, token::Digest, hasher::Hash) = auth(id, HMAC(bytes(token), hasher))
 
 
+"""
+checks whether request for a new ticketid is properly authetificated.
+"""
 isbinding(ticketid::TicketID, time::DateTime, auth_code::Digest, hmac::HMAC) = auth(ticketid, time, hmac) == auth_code
 
 isbinding(metadata::Vector{UInt8}, ticketid::TicketID, salt::Vector{UInt8}, auth_code::Digest, hmac::HMAC) = auth(metadata, ticketid, salt, hmac) == auth_code
