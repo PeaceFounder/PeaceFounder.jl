@@ -3,7 +3,7 @@
 [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://PeaceFounder.github.io/PeaceFounder.jl/stable)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://PeaceFounder.github.io/PeaceFounder.jl/dev)
 
-![](https://peacefounder.org/assets/vision.png)
+![](https://github.com/PeaceFounder/PeaceFounder.github.io/blob/master/_assets/vision.png?raw=true)
 
 With the advancement of technology, remote electronic voting systems are becoming more prevalent in many contexts. Often the e-voting systems are designed as a two-step process where in the first step, voters cast encrypted votes, and, in the second step, the encrypted ballots are shuffled between different independent parties for anonymity and then decrypted. However, in these systems' privacy, transparency, and security remain in tension. Making all evidence public would violate the right of voters to keep their decision to participate secret, whereas including more parties who collectively decrypt the votes to ensure the anonymity of the voters could open adversaries an opportunity to prevent the election result from being decrypted or to assemble the entire decryption key providing means to know how exactly each voter had voted. 
 
