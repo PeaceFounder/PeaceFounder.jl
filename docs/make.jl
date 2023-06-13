@@ -9,8 +9,7 @@ makedocs(
     format = Documenter.HTML(),
     modules = [PeaceFounder.Model, PeaceFounder.Client],
     pages = [
-        #"index.md",
-        
+        "index.md",
         "Overview" => "overview.md",
         "Setup" => "setup.md",
         "Audit" => "audit.md",
@@ -19,8 +18,6 @@ makedocs(
             "PeaceFounder.Model" => "model_api.md"
         ]
     ],
-    #repo = "PeaceFounder/PeaceFounder.jl"
-    #repo = "github.com/PeaceFounder/PeaceFounder.jl.git"
 )
 
 # Documenter can also automatically deploy documentation to gh-pages.
