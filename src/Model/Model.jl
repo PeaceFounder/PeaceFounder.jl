@@ -19,6 +19,71 @@ using HistoryTrees
 
 # Proposals and Braids can be treated the same way as they are in a blockchain as proofs of work.
 
+"""
+    isbinding(x, y, [hasher|crypto|deme])::Bool
+
+Checks whether two objects `x` and `y` legally binding. Some general examples:
+
+- Checking that a document is bound to it's signature without verifying it. 
+- Checking that a record is bound to a state for a ledger.
+"""
+function isbinding end
+
+
+"""
+    verify(message, seal::Seal, [generator::Generator], crypto::CryptoSpec)::Bool
+    verify(message, pk::Pseudonym, sig::Signature, [generator::Generator], crypto::CryptoSpec)::Bool
+
+checks whether signature of on the given message is cryptographically valid. 
+
+--- 
+
+    verify(document, [generator::Generator], crypto::CryptoSpec)
+
+checks that signature of the document is cryptographically valid. 
+
+--- 
+        
+    verify(braidwork::BraidWork, crypto::CryptoSpec)
+
+verifies the signatures of the braidwork and as well zero knowledge proofs for the braid.
+
+"""
+function verify end
+
+
+"""
+    id(document)
+
+returns identity pseudonym of document issuer.
+
+---
+
+    id(signer)
+
+returns identity pseudonym of a signer.
+"""
+function id end
+
+"""
+    pseudonym(signer::Signer, [generator])
+
+returns a pseudonym for a given genrator. If generator is not passed returns identity pseudonym. (See also `id`)
+
+---
+
+    pseudonym(seal::Seal)
+
+returns a pseudonym of a seal. Note that it is not equal to identity when signature is being issued on a relative generator.
+
+--- 
+
+    pseudonym(vote::Vote)
+
+returns a pseudonym used to seal the vote.
+
+"""
+function pseudonym end
 
 # I could implement that in the library
 using HistoryTrees: InclusionProof, ConsistencyProof

@@ -2,7 +2,7 @@
 
 julia_version = "1.9.0"
 manifest_format = "2.0"
-project_hash = "7fe4d9ea9e8cdefa8b7570cb34cef53234ead56a"
+project_hash = "34a8e7b59b47921c03dab4e20a1836e3c25ffb59"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -286,7 +286,7 @@ version = "2.5.10"
 
 [[deps.PeaceFounder]]
 deps = ["Base64", "CryptoGroups", "CryptoSignatures", "Dates", "HTTP", "HistoryTrees", "JSON3", "Nettle", "Random", "Setfield", "ShuffleProofs", "Sockets", "StructEquality", "StructHelpers", "StructTypes", "Test", "URIs"]
-git-tree-sha1 = "7a8383a4f9f96de6064fe2ac3753df244b62f06a"
+path = ".."
 uuid = "916f7771-afe2-4319-943d-0e770c333432"
 version = "0.4.0"
 
