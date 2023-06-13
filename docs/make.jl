@@ -5,7 +5,7 @@ using PeaceFounder
 cp((@__DIR__) * "/../README.md", (@__DIR__) * "/src/index.md", force = true)
 
 makedocs(
-    sitename = "PeaceFounder",
+    sitename = "PeaceFounder.jl",
     format = Documenter.HTML(),
     modules = [PeaceFounder.Model, PeaceFounder.Client],
     pages = [
@@ -19,7 +19,8 @@ makedocs(
             "PeaceFounder.Model" => "model_api.md"
         ]
     ],
-    repo = "github.com/PeaceFounder/PeaceFounder.jl.git"
+    #repo = "PeaceFounder/PeaceFounder.jl"
+    #repo = "github.com/PeaceFounder/PeaceFounder.jl.git"
 )
 
 # Documenter can also automatically deploy documentation to gh-pages.
