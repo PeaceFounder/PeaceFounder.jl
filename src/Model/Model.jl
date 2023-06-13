@@ -38,13 +38,13 @@ checks whether signature of on the given message is cryptographically valid.
 
 --- 
 
-    verify(document, [generator::Generator], crypto::CryptoSpec)
+    verify(document, [generator::Generator], crypto::CryptoSpec)::Bool
 
 checks that signature of the document is cryptographically valid. 
 
 --- 
         
-    verify(braidwork::BraidWork, crypto::CryptoSpec)
+    verify(braidwork::BraidWork, crypto::CryptoSpec)::Bool
 
 verifies the signatures of the braidwork and as well zero knowledge proofs for the braid.
 
@@ -53,32 +53,32 @@ function verify end
 
 
 """
-    id(document)
+    id(document)::Pseudonym
 
 returns identity pseudonym of document issuer.
 
 ---
 
-    id(signer)
+    id(signer)::Pseudonym
 
 returns identity pseudonym of a signer.
 """
 function id end
 
 """
-    pseudonym(signer::Signer, [generator])
+    pseudonym(signer::Signer, [generator])::Pseudonym
 
 returns a pseudonym for a given genrator. If generator is not passed returns identity pseudonym. (See also `id`)
 
 ---
 
-    pseudonym(seal::Seal)
+    pseudonym(seal::Seal)::Pseudonym
 
 returns a pseudonym of a seal. Note that it is not equal to identity when signature is being issued on a relative generator.
 
 --- 
 
-    pseudonym(vote::Vote)
+    pseudonym(vote::Vote)::Pseudonym
 
 returns a pseudonym used to seal the vote.
 

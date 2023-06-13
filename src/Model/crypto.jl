@@ -10,6 +10,13 @@ index(proof::ConsistencyProof) = proof.index
 index(proof::InclusionProof) = proof.index
 
 
+"""
+    struct Generator
+        data::Vector{UInt8}
+    end
+
+datatype which stores cryptogrpahic group point in standart octet form intended to be used as a base. See also `Pseudonym`.
+"""
 @struct_hash_equal struct Generator
     data::Vector{UInt8}
 end
@@ -20,6 +27,14 @@ Generator(g::Generator) = g
 
 bytes(generator::Generator) = generator.data
 
+
+"""
+    struct Digest
+        data::Vector{UInt8}
+    end
+
+a message digest obtained applying a hash function on a message or document.
+"""
 struct Digest
     data::Vector{UInt8}
 end
@@ -44,6 +59,12 @@ end
 (hasher::Hash)(x, y) = digest(x, y, hasher)
 
 
+"""
+    generator(spec::Spec)::Generator
+
+returns a standart generator of a given specification.
+
+"""
 function generator(spec::Union{ECP, EC2N, Koblitz})
 
     x, y = CryptoGroups.generator(spec)
@@ -107,6 +128,15 @@ end
 _groupspec(spec::Spec) = spec
 _groupspec(spec::String) = parse_groupspec(spec)
 
+"""
+    struct CryptoSpec
+        hasher::Hash
+        group::Spec
+        generator::Geenrator
+    end
+
+Specification of cryptographic parameters which are used for public key cryptography, message hashing and authetification codes. 
+"""
 struct CryptoSpec
     hasher::Hash
     group::Spec
@@ -130,10 +160,20 @@ end
 
 Base.:(==)(x::CryptoSpec, y::CryptoSpec) = x.hasher == y.hasher && x.group == y.group && x.generator == y.generator
 
+"""
+    generator(crypto::CryptoSpec)::Generator
+
+returns a relative generator used in the specification. 
+"""
 generator(crypto::CryptoSpec) = crypto.generator
 
 hasher(crypto::CryptoSpec) = crypto.hasher
 
+"""
+    digest(message, hasher::Hash|crypto::CryptoSpec)::Digest
+    
+returns a resulting digest applying hasher on the given message. If message is not octet string a `canonicalize` method is applied first.
+"""
 digest(x, crypto::CryptoSpec) = digest(x, hasher(crypto))
 digest(x::Digest, y::Digest, crypto::CryptoSpec) = digest(x, y, hasher(crypto))
 
@@ -149,8 +189,13 @@ function Base.show(io::IO, spec::CryptoSpec)
 
 end
 
+"""
+    struct Pseudonym
+        pk::Vector{UInt8}
+    end
 
-
+datatype which stores public key in canonical standart octet form.
+"""
 @struct_hash_equal struct Pseudonym
     pk::Vector{UInt8}
 end
