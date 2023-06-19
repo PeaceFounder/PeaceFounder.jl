@@ -15,7 +15,7 @@ index(proof::InclusionProof) = proof.index
         data::Vector{UInt8}
     end
 
-datatype which stores cryptogrpahic group point in standart octet form intended to be used as a base. See also `Pseudonym`.
+Datatype which stores cryptogrpahic group point in standart octet form intended to be used as a base. See also `Pseudonym`.
 """
 @struct_hash_equal struct Generator
     data::Vector{UInt8}
@@ -33,7 +33,7 @@ bytes(generator::Generator) = generator.data
         data::Vector{UInt8}
     end
 
-a message digest obtained applying a hash function on a message or document.
+A message digest obtained applying a hash function on a message or a document. See method [`digest`](@ref).
 """
 struct Digest
     data::Vector{UInt8}
@@ -45,9 +45,19 @@ Base.:(==)(x::Digest, y::Digest) = x.data == y.data
 
 bytes(digest::Digest) = digest.data
 
+
+
+"""
+    struct Hash
+        spec::String
+    end
+
+A specification for a hasher. See method [`digest`](@ref).
+"""
 struct Hash # HashSpec?
     spec::String
 end
+
 
 Hash(hasher::Hash) = hasher
 
@@ -62,7 +72,7 @@ end
 """
     generator(spec::Spec)::Generator
 
-returns a standart generator of a given specification.
+Return a generator of `spec`.
 
 """
 function generator(spec::Union{ECP, EC2N, Koblitz})
@@ -163,16 +173,17 @@ Base.:(==)(x::CryptoSpec, y::CryptoSpec) = x.hasher == y.hasher && x.group == y.
 """
     generator(crypto::CryptoSpec)::Generator
 
-returns a relative generator used in the specification. 
+Return a generator of the specification. 
 """
 generator(crypto::CryptoSpec) = crypto.generator
 
 hasher(crypto::CryptoSpec) = crypto.hasher
 
 """
-    digest(message, hasher::Hash|crypto::CryptoSpec)::Digest
+    digest(message::Vector{UInt8}, hasher::Hash)::Digest
+    digest(document, spec) = digest(canonicalize(message)::Vector{UInt8}, hasher(spec)::Hash)
     
-returns a resulting digest applying hasher on the given message. If message is not octet string a `canonicalize` method is applied first.
+Return a resulting digest applying hasher on the given message. When message is not octet string a `canonicalize` method is applied first.
 """
 digest(x, crypto::CryptoSpec) = digest(x, hasher(crypto))
 digest(x::Digest, y::Digest, crypto::CryptoSpec) = digest(x, y, hasher(crypto))
@@ -194,7 +205,7 @@ end
         pk::Vector{UInt8}
     end
 
-datatype which stores public key in canonical standart octet form.
+A datatype which stores public key in canonical standart octet form.
 """
 @struct_hash_equal struct Pseudonym
     pk::Vector{UInt8}
@@ -227,7 +238,17 @@ pseudonym(spec::CryptoSpec, generator::Generator, key::Integer) = pseudonym(_dsa
 pseudonym(spec::CryptoSpec, key::Integer) = pseudonym(spec, generator(spec), key)
 
 
+"""
+    struct Signer
+        spec::CryptoSpec
+        pbkey::Pseudonym
+        key::BigInt
+    end
 
+A signer type. See a method `generate(Signer, spec)` for initialization.
+
+*Interface:* pseudonym, id, sign
+"""
 struct Signer
     spec::CryptoSpec
     pbkey::Pseudonym
@@ -252,6 +273,11 @@ _dsa_context(spec::Spec, hasher::Hash) = _dsa_context(spec, hasher.spec)
 _dsa_context(spec::CryptoSpec; hasher = spec.hasher) = _dsa_context(spec.group, hasher)
 
 
+"""
+    generate(Signer, spec::CryptoSpec)::Signer
+    
+Generate a unique private key and return a Signer object. 
+"""
 function generate(::Type{Signer}, spec::CryptoSpec)
 
     ctx = _dsa_context(spec)
@@ -261,8 +287,6 @@ function generate(::Type{Signer}, spec::CryptoSpec)
     
     return Signer(spec, _pseudonym, private_key)
 end
-
-
 
 
 sign(message::Vector{UInt8}, generator::Generator, signer::Signer) = CryptoSignatures.sign(_dsa_context(signer.spec), message, generator.data, signer.key)
