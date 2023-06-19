@@ -48,3 +48,7 @@ PeaceFounder.Model.Digest
 ```@docs
 PeaceFounder.Model.digest
 ```
+
+```@docs
+PeaceFounder.Model.Signer
+```

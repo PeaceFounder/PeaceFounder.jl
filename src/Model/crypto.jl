@@ -247,7 +247,7 @@ pseudonym(spec::CryptoSpec, key::Integer) = pseudonym(spec, generator(spec), key
 
 A signer type. See a method `generate(Signer, spec)` for initialization.
 
-*Interface:* pseudonym, id, sign
+**Interface:** pseudonym, id, sign
 """
 struct Signer
     spec::CryptoSpec
