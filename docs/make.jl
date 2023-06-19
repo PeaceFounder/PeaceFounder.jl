@@ -2,7 +2,18 @@ using Documenter
 using PeaceFounder
 
 
-cp((@__DIR__) * "/../README.md", (@__DIR__) * "/src/index.md", force = true)
+function copy_if_changed(source, destination)
+    
+    if isfile(destination) && !(readlines(source) == readlines(destination))
+        @info "README.md updated"
+        cp(source, destination, force = true)
+    end
+
+    return nothing
+end
+
+#cp((@__DIR__) * "/../README.md", (@__DIR__) * "/src/index.md", force = true)
+copy_if_changed((@__DIR__) * "/../README.md", (@__DIR__) * "/src/index.md")
 
 makedocs(
     sitename = "PeaceFounder.jl",

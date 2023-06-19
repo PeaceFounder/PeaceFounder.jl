@@ -40,7 +40,7 @@ checks whether signature of on the given message is cryptographically valid.
 
     verify(document, [generator::Generator], crypto::CryptoSpec)::Bool
 
-checks that signature of the document is cryptographically valid. 
+For a given document checks that signature is cryptographically valid. 
 
 --- 
         
