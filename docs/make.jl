@@ -4,12 +4,16 @@ using PeaceFounder
 
 function copy_if_changed(source, destination)
     
-    if isfile(destination) && !(readlines(source) == readlines(destination))
-        @info "README.md updated"
-        cp(source, destination, force = true)
+    if !isfile(destination)
+        cp(source, destination)
+        return nothing
     end
 
-    return nothing
+    if !(readlines(source) == readlines(destination))
+        @info "README.md updated"
+        cp(source, destination, force = true)
+        return nothing
+    end
 end
 
 #cp((@__DIR__) * "/../README.md", (@__DIR__) * "/src/index.md", force = true)

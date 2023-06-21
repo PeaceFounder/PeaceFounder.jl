@@ -1,6 +1,6 @@
 # PeaceFounder.Model
 
-## CryptoGraphic primitives
+## Crypto primitives
 
 ```@meta
 CurrentModule = PeaceFounder
