@@ -61,12 +61,32 @@ end
 
 Hash(hasher::Hash) = hasher
 
+"""
+    digest(bytes::Vector{UInt8}, hasher::Hash)::Digest
+    digest(x, spec) = digest(canonicalize(x)::Vector{UInt8}, hasher(spec)::Hash)
+
+Compute a hash digest. When input is not in bytes the [`canonicalize`](@ref) method is applied first.
+"""
 function digest(data::Vector{UInt8}, hasher::Hash)
     return Digest(Nettle.digest(hasher.spec, data))
 end
 
 (hasher::Hash)(x) = digest(x, hasher)
 (hasher::Hash)(x, y) = digest(x, y, hasher)
+
+
+"""
+    isbinding(x, y, spec::Hash)::Bool
+    isbinding(x, y, spec) = isbinding(x, y, hasher(spec)::Hash)
+
+Check binding of two objects `x` and `y`. Some general examples:
+
+- Check that a document is bound to it's signature. 
+- Check that a record is included in the ledger.
+- Check that a given object is consistent with a ledger.
+"""
+isbinding(x, y, hasher::Hash) = isbinding(y, x, hasher)::Bool # May not be clean enough
+isbinding(x, y, spec) = isbinding(x, y, hasher(spec)::Hash)::Bool
 
 
 """
@@ -247,7 +267,7 @@ pseudonym(spec::CryptoSpec, key::Integer) = pseudonym(spec, generator(spec), key
 
 A signer type. See a method `generate(Signer, spec)` for initialization.
 
-**Interface:** pseudonym, id, sign
+**Interface:** `pseudonym`, `id`, `sign`, `seal`, `approve`
 """
 struct Signer
     spec::CryptoSpec
@@ -288,11 +308,23 @@ function generate(::Type{Signer}, spec::CryptoSpec)
     return Signer(spec, _pseudonym, private_key)
 end
 
+"""
+    sign(message::Vector{UInt8}[, generator::Generator], signer::Signer)::Signature
 
+Sign a bytestring `message` with signer's private key and specification. When generator is provided it is used as 
+a base for the signature.
+"""
 sign(message::Vector{UInt8}, generator::Generator, signer::Signer) = CryptoSignatures.sign(_dsa_context(signer.spec), message, generator.data, signer.key)
 sign(message::Vector{UInt8}, signer::Signer) = sign(message, signer.spec.generator, signer)
 
 
+"""
+    sign(digest::Digest[, generator::Generator], signer::Signer)::Signature
+
+Sign a digest as an integer with signer's private key and specification. This method avoids 
+running hashing twice when that is done externally. When generator is provided it is used as 
+a base for the signature.
+"""
 sign(digest::Digest, generator::Generator, signer::Signer) = CryptoSignatures.sign(_dsa_context(signer.spec; hasher = nothing), digest.data, generator, signer.key)
 sign(digest::Digest, signer::Signer) = sign(digest, signer.spec.generator, signer)
 
@@ -313,7 +345,16 @@ verify(message::Vector{UInt8}, pk::Pseudonym, signature::Signature, spec::Crypto
 verify(digest::Digest, pk::Pseudonym, signature::Signature, generator::Generator, spec::CryptoSpec) = CryptoSignatures.verify(_dsa_context(spec, hasher = nothing), digest.data, generator.data, pk.pk, signature)
 verify(digest::Digest, pk::Pseudonym, signature::Signature, spec::CryptoSpec) = verify(digest, pk, signature, spec.generator, spec)
 
+"""
+    struct Seal
+        pbkey::Pseudonym
+        sig::Signature
+    end
 
+A wrapper type for a signature which adds a public key of signature issuer. See [`seal`](@ref) method. 
+
+**Interface:** [`pseudonym`](@ref), [`verify`](@ref)
+"""
 struct Seal 
     pbkey::Pseudonym
     sig::Signature
@@ -325,7 +366,12 @@ Base.:(==)(x::Seal, y::Seal) = x.pbkey == y.pbkey && x.sig == y.sig
 
 pseudonym(seal::Seal) = seal.pbkey
 
+"""
+    seal(message::Vector{UInt8}[, generator::Generator], signer::Signer)::Seal
 
+Sign a bytestring `message` with signer's private key and specification and return a signature as a `Seal`. When generator is provided it is used as 
+a base for the signature. See also [`sign`](@ref).
+"""
 seal(message::Vector{UInt8}, signer::Signer) = Seal(signer.pbkey, sign(message, signer))
 seal(message::Vector{UInt8}, generator::Generator, signer::Signer) = Seal(pseudonym(signer, generator), sign(message, generator, signer))
 
@@ -333,7 +379,17 @@ seal(message::Vector{UInt8}, generator::Generator, signer::Signer) = Seal(pseudo
 verify(message::Vector{UInt8}, seal::Seal, crypto::CryptoSpec) = verify(message, seal.pbkey, seal.sig, crypto)
 verify(message::Vector{UInt8}, seal::Seal, generator::Generator, crypto::CryptoSpec) = verify(message, seal.pbkey, seal.sig, generator, crypto)
 
+"""
+    Commit{T}
+        state::T
+        seal::Seal
+    end 
 
+Represents a commited ledger state to which issuer can be held accountable for integrity. It is assumed that `T`
+implements `index` and `root` necessaary to fix a ledger state. 
+
+**Interface:** [`id`](@ref), [`issuer`](@ref), [`verify`](@ref), [`index`](@ref), [`root`](@ref), [`state`](@ref)
+"""
 @struct_hash_equal struct Commit{T}
     state::T
     seal::Seal
@@ -342,13 +398,35 @@ end
 #@batteries Commit
 
 id(commit::Commit) = pseudonym(commit.seal) # It is an id because of the context
+
+"""
+    issuer(x)
+
+In case an object `x` is cryptographically signed return an issuer of who have issued the signature. See also [`id`](@ref).
+"""
 issuer(commit::Commit) = pseudonym(commit.seal) 
 
 verify(commit::Commit, crypto::CryptoSpec) = verify(commit.state, commit.seal, crypto)
 
+"""
+    index(x)::Int
+
+Return an index of a ledger state.
+"""
 index(commit::Commit) = index(commit.state)
 
+"""
+    root(x)::Digest
+
+Return a ledger root hash.
+"""
 root(commit::Commit) = root(commit.state)
+
+"""
+    state(commit::Commit{T})::T
+
+Return a ledger state. `T` implements `index` and `root`. 
+"""
 state(commit::Commit) = commit.state
 
 
@@ -361,6 +439,17 @@ function Base.show(io::IO, commit::Commit)
 end
 
 
+"""
+    struct AckInclusion{T}
+        proof::InclusionProof
+        commit::Commit{T}
+    end
+
+Represents an acknowldgment from the issuer that a leaf is permanently included in the ledger. 
+In case the ledger is tampered with this acknowledgement acts as sufficient proof to blame the issuer.
+
+**Interface:** [`leaf`](@ref), [`id`](@ref), [`issuer`](@ref), [`commit`](@ref), [`index`](@ref), [`verify`](@ref)
+"""
 @struct_hash_equal struct AckInclusion{T}
     proof::InclusionProof
     commit::Commit{T}
@@ -377,25 +466,61 @@ function Base.show(io::IO, ack::AckInclusion)
 
 end
 
+"""
+    leaf(ack::AckInclusion)
 
+Access a leaf diggest for which the acknowledgment is made.
+"""
 leaf(ack::AckInclusion) = leaf(ack.proof)
 id(ack::AckInclusion) = id(ack.commit)
 issuer(ack::AckInclusion) = issuer(ack.commit)
 
+"""
+    index(ack::AckInclusion)::Int
+
+Return an index at which the leaf is recorded in the ledger. To obtain the current ledger index use `index(commit(ack))`.
+"""
 index(ack::AckInclusion) = index(ack.proof)
 
+"""
+    commit(x)
+
+Access a commit of an object `x`. 
+"""
 commit(ack::AckInclusion) = ack.commit
 state(ack::AckInclusion) = state(ack.commit)
 
-verify(ack::AckInclusion, crypto::CryptoSpec) = HistoryTrees.verify(ack.proof, root(ack.commit), index(ack.commit); hash = hasher(crypto)) && verify(commit(ack), crypto)
+
+isbinding(proof::InclusionProof, commit::Commit, hasher::Hash) = HistoryTrees.verify(proof, root(commit), index(commit); hash = hasher)
+
+#verify(ack::AckInclusion, crypto::CryptoSpec) = HistoryTrees.verify(ack.proof, root(ack.commit), index(ack.commit); hash = hasher(crypto)) && verify(commit(ack), crypto)
+verify(ack::AckInclusion, crypto::CryptoSpec) = isbinding(ack.proof, ack.commit, crypto) && verify(commit(ack), crypto)
 
 isbinding(ack::AckInclusion, id::Pseudonym) = issuer(ack) == id
 
+"""
+    struct AckConsistency{T}
+        proof::ConsistencyProof
+        commit::Commit{T}
+    end
+
+Represents an ackknowledgment from the issuer that a root is permanetly included in the ledger. This acknowledgemnt assures
+that ledger up to `index(ack)` is included in the current ledger which has has index `index(commit(ack))`. This is useful in
+a combination with `AckInclusion` to privatelly update it's validity rather than asking an explicit element. Also
+ensures that other elements in the ledger are not being tampered with.
+
+**Interface:** [`root`](@ref), [`id`](@ref), [`issuer`](@ref), [`commit`](@ref), [`index`](@ref), [`verify`](@ref)
+"""
 struct AckConsistency{T}
     proof::ConsistencyProof
     commit::Commit{T}
 end
 
+"""
+    root(x::AckConsistency)
+
+Access a root diggest for which the acknowledgment is made.
+"""
 root(ack::AckConsistency) = root(ack.proof)
 id(ack::AckConsistency) = id(ack.commit)
 issuer(ack::AckConsistency) = issuer(ack.commit)
@@ -403,8 +528,16 @@ issuer(ack::AckConsistency) = issuer(ack.commit)
 commit(ack::AckConsistency) = ack.commit
 state(ack::AckConsistency) = state(ack.commit)
 
-verify(ack::AckConsistency, crypto::CryptoSpec) = HistoryTrees.verify(ack.proof, root(ack.commit), index(ack.commit); hash = hasher(crypto)) && verify(commit(ack), crypto)
+isbinding(proof::ConsistencyProof, commit::Commit, hasher::Hash) = HistoryTrees.verify(proof, root(commit), index(commit); hash = hasher)
 
+verify(ack::AckConsistency, crypto::CryptoSpec) = isbinding(ack.proof, ack.commit, crypto) && verify(commit(ack), crypto)
+
+"""
+    index(ack::AckConsistency)
+
+Return an index for a root at which the consistency proof is made. To obtain the current ledger index use `index(commit(ack))`.
+
+"""
 index(ack::AckConsistency) = index(ack.proof)
 
 
@@ -416,7 +549,17 @@ function Base.show(io::IO, ack::AckConsistency)
 
 end
 
+"""
 
+    struct HMAC
+        key::Vector{UInt8}
+        hasher::Hash
+    end
+
+Represent a hash message authetification code authorizer.
+
+**Interface:** [`hasher`](@ref), [`digest`](@ref), [`key`](@ref)
+"""
 struct HMAC
     key::Vector{UInt8}
     hasher::Hash
@@ -424,8 +567,18 @@ end
 
 HMAC(key::Vector{UInt8}, hasher::String) = HMAC(key, Hash(hasher))
 
+"""
+    hasher(spec)::Hash
+
+Access a hasher function from a given specification.
+"""
 hasher(hmac::HMAC) = hmac.hasher
 
 digest(bytes::Vector{UInt8}, hmac::HMAC) = digest(UInt8[bytes..., hmac.key...], hasher(hmac))
 
+"""
+    key(x)
+
+Access a secret key of an object `x`.
+"""
 key(hmac::HMAC) = hmac.key

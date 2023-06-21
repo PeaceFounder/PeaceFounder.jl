@@ -1,6 +1,15 @@
 import Random
 # One could add expiration policy and etc. Currently that is not needed.
 
+"""
+    struct TicketID
+        id::Vector{UInt8}
+    end
+
+Represents a unique identifier for which a recruit tooken is issued. In case of necessity `id` can contain
+a full document, for instance, registration form, proof of identity and etc. In case a privacy is an issue
+the `id` can contain a unique identifier which can be matched to an identity in an external database.
+"""
 struct TicketID
     id::Vector{UInt8}
 end

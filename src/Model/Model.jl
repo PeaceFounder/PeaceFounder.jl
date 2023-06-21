@@ -19,17 +19,6 @@ using HistoryTrees
 
 # Proposals and Braids can be treated the same way as they are in a blockchain as proofs of work.
 
-"""
-    isbinding(x, y, spec::Hash)::Bool
-    isbinding(x, y, spec) = isbinding(x, y, hasher(spec)::Hash)
-
-Check binding of two objects `x` and `y`. Some general examples:
-
-- Check that a document is bound to it's signature. 
-- Check that a record is included in the ledger.
-- Check that a given object is consistent with a ledger.
-"""
-function isbinding end
 
 
 """
