@@ -84,6 +84,10 @@ PeaceFounder.Model.seal
 ```
 
 ```@docs
+PeaceFounder.Model.approve
+```
+
+```@docs
 PeaceFounder.Model.Commit
 ```
 
@@ -123,6 +127,10 @@ PeaceFounder.Model.HMAC
 PeaceFounder.Model.key
 ```
 
+```
+PeaceFounder.Model.hmac
+```
+
 
 
 ## Recruitment
@@ -131,7 +139,67 @@ PeaceFounder.Model.key
 PeaceFounder.Model.TicketID
 ```
 
+```@docs
+PeaceFounder.Model.Admission
+```
 
+```@docs
+PeaceFounder.Model.ticket
+```
 
+```@docs
+PeaceFounder.Model.Ticket
+```
 
+```@docs
+PeaceFounder.Model.TokenRecruiter
+```
+
+```@docs
+Base.in
+```
+
+```@docs
+PeaceFounder.Model.set_metadata!
+```
+
+```@docs
+PeaceFounder.Model.select
+```
+
+```@docs
+PeaceFounder.Model.tickets
+```
+
+```@docs
+PeaceFounder.Model.auth
+```
+
+```@docs
+PeaceFounder.Model.token
+```
+
+```@docs
+PeaceFounder.Model.enlist!
+```
+
+```@docs
+PeaceFounder.Model.admit!
+```
+
+```@docs
+PeaceFounder.Model.isadmitted
+```
+
+```@docs
+PeaceFounder.Model.TicketStatus
+```
+
+```@docs
+PeaceFounder.Model.ticket_status
+```
+
+```@docs
+PeaceFounder.Model.hmac
+```
 
