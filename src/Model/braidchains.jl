@@ -1,9 +1,40 @@
 using HistoryTrees: HistoryTree, InclusionProof, ConsistencyProof
 using Base: UUID, @kwdef
 
-
+"""
+Represents an abstract record type which can be stored in the braidchain ledger. 
+"""
 abstract type Transaction end # an alternative name is Transaction
 
+"""
+    struct DemeSpec <: Transaction
+        uuid::UUID
+        title::String
+        crypto::CryptoSpec
+        guardian::Pseudonym
+        recorder::Pseudonym
+        recruiter::Pseudonym
+        braider::Pseudonym
+        proposer::Pseudonym 
+        collector::Pseudonym
+        timestamp::Union{DateTime, Nothing} = nothing
+        signature::Union{Signature, Nothing} = nothing
+    end
+
+Represents a deme configuration parameters issued by the guardian.
+
+- `uuid::UUID` an unique random generated community identifier;
+- `title::String` a community name with which deme is represented;
+- `crypto::CryptoSpec` cryptographic parameters for the deme;
+- `guardian::Pseudonym` an issuer for this demespec file. Has authorithy to set a roster:
+    - `recorder::Pseudonym` an authorithy which has rights to add new transactions and is responsable for braidchain's ledger integrity. Issues `Commit{ChainState}`;
+    - `recruiter::Pseudonym` an authorithy which has rights to authorize new admissions to the deme. See [`Admission`](@ref) and [`Member`](@ref);
+    - `braider::Pseudonym` an authorithy which can do a legitimate braid jobs for other demes. See [`BraidWork`](@ref);   
+    - `proposer::Pseudonym` an authorithy which has rights to issue a proposals for the braidchain. See [`Proposal`](@ref);
+    - `collector::Pseudonym` an authorithy which is repsonsable for collecting votes for proposals. This is also recorded in the proposal itself.
+- `timestamp::Union{DateTime, Nothing}` time when signature is being issued;
+- `signature::Union{Signature, Nothing}` a guardian issued signature. 
+"""
 @kwdef struct DemeSpec <: Transaction
     uuid::UUID
     title::String
@@ -58,7 +89,18 @@ generator(spec::DemeSpec) = generator(crypto(spec))
 isbinding(spec::DemeSpec, hash::Digest, hasher::Hash) = digest(spec, hasher) == hash
 isbinding(spec::DemeSpec, hash::Vector{UInt8}, hasher::Hash) = isbinding(spec, Digest(hash), hasher)
 
+"""
+    struct ChainState
+        index::Int
+        root::Digest
+        generator::Generator
+        member_count::Int
+    end
 
+Represents a current chain state metadata which is sufficient for integrity checks.
+
+**Interface:** [`index`](@ref), [`root`](@ref), [`generator`](@ref)
+"""
 @struct_hash_equal struct ChainState
     index::Int
     root::Digest
@@ -77,6 +119,11 @@ generator(commit::Commit{ChainState}) = generator(commit.state)
 index(state::ChainState) = state.index
 root(state::ChainState) = state.root
 
+"""
+    isbinding(record::Transaction, ack::AckInclusion{ChainState}, crypto::CryptoSpec)
+
+A generic method checking whether transaction is included in the braidchain.
+"""
 isbinding(record::Transaction, ack::AckInclusion{ChainState}, crypto::CryptoSpec) = digest(record, crypto) == leaf(ack)
 
 isbinding(record::Transaction, ack::AckInclusion{ChainState}, hasher::Hash) = digest(record, hasher) == leaf(ack)
@@ -89,6 +136,11 @@ isbinding(ack::AckInclusion{ChainState}, deme::DemeSpec) = issuer(ack) == deme.r
 
 isbinding(record::Transaction, ack::AckInclusion{ChainState}, deme::DemeSpec) = isbinding(ack, deme) && isbinding(record, ack, hasher(deme))
 
+"""
+    isbinding(admission::Admission, spec::DemeSpec)
+
+Check whether issuer of `admission` is a recruiter set in `spec`.
+"""
 isbinding(admission::Admission, deme::DemeSpec) = issuer(admission) == deme.recruiter
 
 isbinding(commit::Commit{ChainState}, deme::DemeSpec) = issuer(commit) == deme.recorder
@@ -104,7 +156,21 @@ function Base.show(io::IO, state::ChainState)
     
 end
 
+"""
+    struct BraidChain
+        members::Set{Pseudonym}
+        ledger::Vector{Transaction}
+        spec::DemeSpec
+        generator::Generator
+        tree::HistoryTree
+        commit::Union{Commit{ChainState}, Nothing}
+    end
 
+Represents a braidchain ledger with it's associated state. Can be instantitated with a demespec file using
+`BraidChain(::DemeSpec)` method.
+
+**Interface:**  [`push!`](@ref), [`record!`](@ref), [`state`](@ref), [`length`](@ref), [`list`](@ref), [`select`](@ref), [`roll`](@ref), [`constituents`](@ref), [`generator`](@ref), [`commit`](@ref), [`commit_index`](@ref), [`ledger`](@ref), [`leaf`](@ref), [`root`](@ref), [`ack_leaf`](@ref), [`ack_root`](@ref), [`members`](@ref), [`commit!`](@ref)
+"""
 mutable struct BraidChain
     members::Set{Pseudonym}
     ledger::Vector{Transaction}

@@ -203,3 +203,23 @@ PeaceFounder.Model.ticket_status
 PeaceFounder.Model.hmac
 ```
 
+## BraidChain
+
+```@docs
+PeaceFounder.Model.Transaction
+```
+
+```@docs
+PeaceFounder.Model.DemeSpec
+```
+
+```@docs
+PeaceFounder.Model.ChainState
+```
+
+```@docs
+PeaceFounder.Model.BraidChain
+```
+
+
+
