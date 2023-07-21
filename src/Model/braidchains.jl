@@ -97,7 +97,7 @@ isbinding(spec::DemeSpec, hash::Vector{UInt8}, hasher::Hash) = isbinding(spec, D
         member_count::Int
     end
 
-Represents a current chain state metadata which is sufficient for integrity checks.
+Represents a chain state metadata which is sufficient for integrity checks.
 
 **Interface:** [`index`](@ref), [`root`](@ref), [`generator`](@ref)
 """
@@ -219,7 +219,11 @@ function BraidChain(spec::DemeSpec)
 end
     
 
+"""
+    reset_tree!(ledger::BraidChain)
 
+Recompute a chain tree hash. 
+"""
 function reset_tree!(chain::BraidChain)
 
     d = Digest[digest(i, hasher(chain.crypto)) for i in chain.ledger]
@@ -230,6 +234,13 @@ function reset_tree!(chain::BraidChain)
     return
 end
 
+"""
+    push!(ledger::BraidChain, t::Transaction)
+
+Add an element to the BraidChain bypassing transaction verification with the chain.
+This should only be used when the ledger is loaded from a trusted source like
+a local disk or when final root hash is validated with a trusted source.
+"""
 function Base.push!(chain::BraidChain, t::Transaction)
     push!(chain.ledger, t)
     #push!(chain.tree, digest(t, crypto(chain)))
@@ -239,11 +250,19 @@ end
 
 Base.length(chain::BraidChain) = length(chain.ledger)
 
+"""
+    list(T, ledger::BraidChain)::Vector{Tuple{Int, T}}
 
+List braidchain elements with a given type together with their index.
+"""
 list(::Type{T}, chain::BraidChain) where T <: Transaction = ((n,p) for (n,p) in enumerate(chain.ledger) if p isa T)
 
 # list also accpets filter arguments. 
+"""
+    select(T, predicate::Function, ledger::BraidChain)::Union{T, Nothing}
 
+Return a first element from a ledger with a type `T` which satisfies a predicate. 
+"""
 function select(::Type{T}, f::Function, chain::BraidChain) where T <: Transaction
 
     for i in chain.ledger
@@ -256,13 +275,32 @@ function select(::Type{T}, f::Function, chain::BraidChain) where T <: Transactio
 end
 
 
-#roll(chain::BraidChain) = (m for m in chain.ledger if m isa Member)
+"""
+    roll(ledger::BraidChain)::Vector{Member}
+
+Return all member certificates from a braidchain ledger.
+"""
 roll(chain::BraidChain) = (m for m in chain.ledger if m isa Member)
 
+"""
+    constituents(ledger::BraidChain)::Set{Pseudonym}
+
+Return all member identity pseudonyms. 
+"""
 constituents(chain::BraidChain) = Set(id(i) for i in roll(chain))
 
+"""
+    generator(ledger::BraidChain)
+
+Return a current relative generator for a braidchain ledger.
+"""
 generator(chain::BraidChain) = chain.generator
 
+"""
+    commit(ledger::BraidChain)
+
+Return a current commit for a braichain. 
+"""
 commit(chain::BraidChain) = chain.commit
 
 commit_index(chain::BraidChain) = index(commit(chain))
@@ -270,16 +308,29 @@ commit_index(chain::BraidChain) = index(commit(chain))
 
 ledger(chain::BraidChain) = chain.ledger
 
+"""
+    leaf(ledger::BraidChain, N::Int)::Digest
 
+Return a ledger's element digest at given index.
+"""
 leaf(chain::BraidChain, N::Int) = leaf(chain.tree, N)
 
+"""
+    root(ledger::BraidChain[, N::Int])::Digest
+
+Return a ledger root digest. In case when index is not given a current index is used.
+"""
 root(chain::BraidChain) = root(chain.tree)
 root(chain::BraidChain, N::Int) = root(chain.tree, N)
 
 
 Base.getindex(chain::BraidChain, n::Int) = chain.ledger[n]
 
+"""
+    ack_leaf(ledger::BraidChain, index::Int)::AckInclusion
 
+Return a proof for record inclusion with respect to a current braidchain ledger history tree root. 
+"""
 function ack_leaf(chain::BraidChain, index::Int) 
 
     @assert commit_index(chain) >= index
@@ -289,7 +340,11 @@ function ack_leaf(chain::BraidChain, index::Int)
     return AckInclusion(proof, commit(chain))
 end
 
+"""
+    ack_root(ledger::BraidChain, index::Int)
 
+Return a proof for the ledger root at given index with respect to the current braidchain ledger history tree root.
+"""
 function ack_root(chain::BraidChain, index::Int) 
     
     @assert commit_index(chain) >= index
@@ -300,7 +355,11 @@ function ack_root(chain::BraidChain, index::Int)
 end
 
 
+"""
+    generator(ledger[, index])
 
+Return a generator at braidchain ledger row index. If `index` is omitted return the current state value.
+"""
 function generator(chain::BraidChain, n::Int)
     
     for i in view(chain.ledger, n:-1:1)
@@ -315,6 +374,12 @@ function generator(chain::BraidChain, n::Int)
 end
 
 
+"""
+    members(ledger::BraidChain[, index::Int])::Set{Pseudonym}
+
+Return a set of member pseudonyms at relative generator at braidchain ledger row index.
+If `index` is omitted return a current state value.
+"""
 function members(chain::BraidChain, n::Int)
     
     mset = Set{Pseudonym}()
@@ -341,10 +406,19 @@ end
 
 members(chain::BraidChain) = chain.members
 
+"""
+    state(ledger::BraidChain)
 
+Return a current braidchain ledger state metadata.
+"""
 state(chain::BraidChain) = ChainState(length(chain), root(chain), generator(chain), length(members(chain)))
 
 
+"""
+    commit!(ledger::BraidChain, signer::Signer)
+
+Commit a current braidchain ledger state with a signer's issued cryptographic signature. 
+"""
 function commit!(chain::BraidChain, signer::Signer) 
 
     @assert chain.spec.recorder == id(signer)
@@ -357,6 +431,18 @@ end
 
 members(chain::BraidChain, state::ChainState) = members(chain, state.index)
 
+"""
+    struct Member <: Transaction
+        admission::Admission
+        generator::Generator
+        pseudonym::Pseudonym
+        approval::Union{Signature, Nothing} 
+    end
+
+A new member certificate which rolls in (anouances) it's `pseudonym` at current generator signed with identity pseudonym
+certified with admission certificate issued by registrar. This two step process is necessary as a checkpoint in situations when 
+braidchain ledger get's locked during a new member resgistration procedure.
+"""
 struct Member <: Transaction
     admission::Admission
     generator::Generator
@@ -369,16 +455,48 @@ Member(admission::Admission, generator::Generator, pseudonym::Pseudonym) = Membe
 
 Base.:(==)(x::Member, y::Member) = x.admission == y.admission && x.generator == y.generator && x.pseudonym == y.pseudonym && x.approval == y.approval
 
+"""
+    approve(member::Member, signer::Signer)::Member
+
+Sign a member certificate and return it with `approval` field filled.
+"""
 approve(member::Member, signer::Signer) = @set member.approval = sign(member, signer)
 
+"""
+    issuer(member::Member)::Pseudonym
+
+The identiy of registrar who signed admission.
+"""
 issuer(member::Member) = issuer(member.admission)
 
+"""
+    id(member::Member)::Pseudonym
+
+Identity pseudonym for a member. 
+"""
 id(member::Member) = id(member.admission)
 
+
+"""
+    pseudonym(member::Member)::Pseudonym
+
+Pseudonym for a member at the `generator(member)`. 
+"""
 pseudonym(member::Member) = member.pseudonym
 
+
+"""
+    generator(member::Member)::Generator
+
+Generator at which member tries to roll in the braidchain.
+"""
 generator(member::Member) = member.generator
 
+"""
+    ticket(member::Member)
+
+Ticket for a member admission certificate.
+"""
 ticket(member::Member) = ticket(member.admission)
 
 function Base.show(io::IO, member::Member)

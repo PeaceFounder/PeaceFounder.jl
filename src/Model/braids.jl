@@ -15,7 +15,21 @@ group(spec::ECP) = CryptoGroups.specialize(ECGroup, spec)
 #group(spec::ECP) = CryptoGroups.specialize(ECGroup, spec; name = :P_192)
 group(spec::MODP) = CryptoGroups.specialize(PGroup, spec) 
 
+"""
+    struct BraidWork <: Transaction
+        braid::Simulator
+        consumer::DemeSpec
+        producer::DemeSpec
+        approval::Union{Seal, Nothing}
+    end
 
+Represents a braider's computation which is supported with zero knowledge proof of shuffle and decryption assuring it's corectness
+stored in a `braid` field; `consumer` denotes a deme for which the braid is intended and `producer` denotes a deme where 
+the braid is made. To assert latter the the braider signs the braidwork and stores that in the `aproval` field.
+See a [`braid`](@ref) method.
+
+**Interface:** [`approve`](@ref), [`verify`](@ref), [`input_geneerator`](@ref), [`input_members`](@ref), [`output_generator`](@ref), [`output_members`](@ref)
+"""
 struct BraidWork <: Transaction 
     braid::Simulator
     consumer::DemeSpec
@@ -37,7 +51,18 @@ struct BraidWork <: Transaction
     BraidWork(braid::Simulator, consumer::DemeSpec, producer::DemeSpec, approval) = new(braid, consumer, producer, approval)
 end 
 
+raw"""
+    braid(generator::Generator, members::Union{Vector{Pseudonym}, Set{Pseudonym}}, consumer::DemeSpec, producer::DemeSpec; verifier = (g) -> ProtocolSpec(; g))
 
+Selects a private exponent `x` at random and computes a new generator $g' = g^x$ and $member_i'=member_i^x$ 
+returns the latter in a sorted order and provides a zero knowledge proof that all operations have been performed honestly. 
+In partucular, not including/droping new member pseudonyms in the process. `consumer` attributes are necessary to 
+interepret generator and pseudonym group elements with which the computation is performed. 
+
+By default a Verificatum compatable verifier is used for performing reencryption proof of shuffle
+
+A verifier can be configured with a keyword argument. By default a Verificatum compatable verifier for a proof of shuffle is used.
+"""
 function braid(generator::Generator, members::Union{Vector{Pseudonym}, Set{Pseudonym}}, consumer::DemeSpec, producer::DemeSpec; verifier = (g) -> ProtocolSpec(; g))
 
     G = group(consumer.crypto.group)
@@ -51,7 +76,11 @@ function braid(generator::Generator, members::Union{Vector{Pseudonym}, Set{Pseud
     return BraidWork(braid, consumer, producer)
 end
 
+"""
+    approve(braid::BraidWork, braider::Signer)
 
+Sign a braidwork with a braider. Throws an error if braider is not in the `producer` demespec.
+"""
 function approve(braidwork::BraidWork, braider::Signer)
 
     @assert pseudonym(braider) == braidwork.producer.braider
@@ -69,7 +98,12 @@ function braid(generator::Generator, members::Union{Vector{Pseudonym}, Set{Pseud
     return _braid
 end
 
+"""
+    verify(braid::BraidWork, crypto::CryptoSpec)
 
+Verifies a braid approval and then it's zero knowledge proofs. A `crypto` argument is 
+provided to avoid downgrading attacks. 
+"""
 function verify(braidwork::BraidWork, crypto::CryptoSpec)
 
     @assert !isnothing(braidwork.approval) "Only signed braids can be verified"
@@ -84,9 +118,32 @@ function verify(braidwork::BraidWork, crypto::CryptoSpec)
     return true
 end
 
+"""
+    input_generator(braid::BraidWork)
+
+Return input generator of the braid.
+"""
 input_generator(braidwork::BraidWork) = generator(ShuffleProofs.input_generator(braidwork.braid.proposition)) # |> Generator
+
+"""
+    input_members(braid::BraidWork)
+
+Return input member pseudonyms of the braid at provided input generator. See [`input_generator`](@ref)
+"""
 input_members(braidwork::BraidWork) = Set(Pseudonym[pseudonym(i) for i in ShuffleProofs.input_members(braidwork.braid.proposition)])
+
+"""
+    output_generator(braid::BraidWork)
+
+Return output genertor of the braid.
+"""
 output_generator(braidwork::BraidWork) = generator(ShuffleProofs.output_generator(braidwork.braid.proposition))
+
+"""
+    output_members(braid::BraidWork)
+
+Return output member pseudonyms of the braid at a resulting output generator. See [`output_generator`](@ref)
+"""
 output_members(braidwork::BraidWork) = Set(Pseudonym[pseudonym(i) for i in ShuffleProofs.output_members(braidwork.braid.proposition)])
 
 

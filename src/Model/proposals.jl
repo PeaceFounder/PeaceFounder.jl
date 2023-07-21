@@ -1,21 +1,45 @@
 using Base: UUID
 using Dates: DateTime
 
+"""
+    struct Ballot
+        options::Vector{String}
+    end
 
+Represents a simple ballot form for multiple choice question. 
+"""
 @struct_hash_equal struct Ballot
     options::Vector{String}
 end
 
 #@batteries Ballot
+"""
+    struct Selection
+        option::Int
+    end
 
+Represents voter's selection for a `Ballot` form.
+"""
 @struct_hash_equal struct Selection
     option::Int
 end
 
 #@batteries Selection
+"""
+    isconsistent(selection::Selection, ballot::Ballot)
 
+Verifies that voter's selection is consistent with ballot form. For instance, whether selection 
+is withing the range of ballot options.
+"""
 isconsistent(selection::Selection, ballot::Ballot) = 1 <= selection.option <= length(ballot.options)
 
+"""
+    struct Tally
+        data::Vector{Int}
+    end
+
+Represent a tally for `Ballot` form obtained aftert counting multiple voter's `Selection` forms.
+"""
 struct Tally
     data::Vector{Int}
 end
@@ -24,7 +48,11 @@ end
 selection_type(::Type{Ballot}) = Selection
 tally_type(::Type{Ballot}) = Tally
 
+"""
+    tally(ballot::Ballot, ballots::AbstractVector{Selection})::Tally
 
+Count ballots, check that they are filled consistently and return a final tally.
+"""
 function tally(ballot::Ballot, selections::AbstractVector{Selection})
     
     _tally = zeros(Int, length(ballot.options))
@@ -47,7 +75,24 @@ end
 tally(ballot::Ballot, selections::Base.Generator) = tally(ballot, collect(selections))
 
 
+"""
+    struct Proposal <: Transaction 
+        uuid::UUID
+        summary::String
+        description::String
+        ballot::Ballot
+        open::DateTime
+        closed::DateTime
+        collector::Union{Pseudonym, Nothing} # 
+        anchor::Union{ChainState, Nothing}
+        approval::Union{Seal, Nothing} 
+    end
 
+Represents a proposal for a ballot specyfing voting window, unique identifier, summary, description. Set's the collector identity
+which collects votes and issues vote inclusion receipts and is responsable for maintaining the ledger's integrity. The proposal
+also includes an `anchor` which sets a relative generator with which members vote anonymously. To be considered valid is signed by
+`proposer` authorizing vote to take place.
+"""
 @struct_hash_equal struct Proposal <: Transaction 
     uuid::UUID
     summary::String
@@ -67,18 +112,44 @@ tally(ballot::Ballot, selections::Base.Generator) = tally(ballot, collect(select
 end
 
 #@batteries Proposal
+"""
+    state(proposal::Proposal)::ChainState
 
+A braidchain ledger state which is used to anchor a relative generator for members.
+"""
 state(proposal::Proposal) = proposal.anchor
+
+"""
+    generator(proposal::Proposal)
+
+A relative generator for at which memebers sign votes for this proposal.
+"""
 generator(proposal::Proposal) = isnothing(proposal.anchor) ? nothing : generator(state(proposal))
 
+"""
+    uuid(proposal::Proposal)::UUID
+
+UUID for a proposal. Issued by proposer and it's purpose is to croslink to an external system durring the proposal dreafting stage.
+"""
 uuid(proposal::Proposal) = proposal.uuid
 
+"""
+    isbinding(chain::BraidChain, state::ChainState)::Bool
+
+Check that chain state is consistent with braidchain ledger.
+"""
 isbinding(chain::BraidChain, state::ChainState) = root(chain, index(state)) == root(state) && generator(chain, index(state)) == generator(state)
+
 
 isdone(proposal::Proposal; time) = proposal.closed < time
 isopen(proposal::Proposal; time) = proposal.open < time && proposal.closed > time
 isstarted(proposal::Proposal; time) = proposal.open < time
 
+"""
+    issuer(proposal::Proposal)
+
+Issuer of approval for the proposal.
+"""
 issuer(proposal::Proposal) = isnothing(proposal.approval) ? nothing : pseudonym(proposal.approval)
 
 
@@ -145,7 +216,22 @@ members(chain::BraidChain, proposal::Proposal) = members(chain, proposal.anchor)
 
 select(::Type{Proposal}, uuid::UUID, chain::BraidChain) = select(Proposal, x -> x.uuid == uuid, chain)
 
+"""
+    struct Vote
+        proposal::Digest
+        seed::Digest
+        selection::Selection
+        seq::Int
+        approval::Union{Seal, Nothing} 
+    end
 
+Represents a vote for a proposal issued by a member. The `proposal` is stored as hash digest ensuring that member have voted on an untampered proposal. `seed` contains a randon string issued by collector at the moment when a vote starts to eliminate early voting / shortening a time at which coercers could act uppon. `selection` contians voter's preference; 
+
+`seq` is a serquence number counting a number of votes at which vote have been approved for a given proposal. It starts at 1 and is increased by one for every single signature made on the proposal. This is an important measure which allows to detect possible leakage of a member's private key. Also provides means for revoting ensuring that latest vote get's counted.
+
+The vote is considered valid when it is sealed by a member's private key at a relative generator stored in the proposal. 
+
+"""
 struct Vote
     proposal::Digest
     seed::Digest
@@ -172,6 +258,12 @@ end
 
 # I could have Vote{<:Option}, Proposal{<:AbstractBallot} and AbstractTally to accomodate different voting scenarious.
 # The selection is associated here with Ballot parametric type
+
+"""
+    vote(proposal::Proposal, seed::Digest, selection::Selection, member::Signer; seq = 1)
+
+Issue a vote on a proposal and provided collector `seed` for a member's `selection`. 
+"""
 function vote(proposal::Proposal, seed::Digest, selection::Selection, signer::Signer; seq = 1)
 
     @assert isconsistent(selection, proposal.ballot)
@@ -187,14 +279,34 @@ function vote(proposal::Proposal, seed::Digest, selection::Selection, signer::Si
     return @set vote.approval = approval
 end
 
-isbinding(vote::Vote, proposal::Proposal, crypto::CryptoSpec) = vote.proposal == digest(proposal, hasher(crypto))
+"""
+    isbinding(vote::Vote, proposal::Proposal, crypto::CryptoSpec)
 
+Check that the vote is bound to a proposal.. 
+"""
+isbinding(vote::Vote, proposal::Proposal, crypto::CryptoSpec) = vote.proposal == digest(proposal, hasher(crypto))
 
 isbinding(record, spine::Vector{Digest}, crypto::CryptoSpec) = isbinding(record, spine, hasher(crypto))
 
+"""
+    pseudonym(vote::Vote)::Union{Pseudonym, Nothing}
+
+Return a pseudonym with which vote is sealed.
+"""
 pseudonym(vote::Vote) = isnothing(vote.approval) ? nothing : pseudonym(vote.approval)
 
-
+"""
+    struct BallotBoxState
+        proposal::Digest
+        seed::Digest
+        index::Int
+        root::Digest
+        tally::Union{Nothing, Tally} 
+        view::Union{Nothing, BitVector} # 
+    end 
+        
+Represents a public ballot box state. Contains an immutable proposal and seed digest; a current ledger `index`, history tree `root`. When ellections end a `tally` is included in the state and a `view` is added listing all counted votes. Note that the `view` attribute is important for a client to know whether it's key have leaked and somone lese havbe superseeded it's vote by revoting.
+"""
 @struct_hash_equal struct BallotBoxState
     proposal::Digest
     seed::Digest
@@ -208,7 +320,18 @@ end
 
 BallotBoxState(proposal::Digest, seed::Digest, index::Int, root::Nothing, tally::Nothing, view::Nothing) = BallotBoxState(proposal, seed, index, Digest(), tally, view)
 
+"""
+    index(state::BallotBoxState)
+
+Return an index for a current ballotbox ledger state.
+"""
 index(state::BallotBoxState) = state.index
+
+"""
+    root(state::BallotBoxState)
+
+Return a history tree root for a current ballotbox ledger state.
+"""
 root(state::BallotBoxState) = state.root
 
 seed(state::BallotBoxState) = state.seed
@@ -262,7 +385,16 @@ function Base.show(io::IO, state::BallotBoxState)
     print(io, "  view : $(view_str)")
 end
 
+"""
+    struct CastRecord
+        vote::Vote
+        timestamp::DateTime
+    end
 
+Represents a ballotbox ledger record. Adds a timestamp when the vote have been recorded. In future,
+the record will also contain a blind signature with which members could prove to everyone 
+that they had cast their vote without revealing the link to the vote.
+"""
 struct CastRecord
     vote::Vote
     timestamp::DateTime
@@ -276,6 +408,25 @@ function Base.show(io::IO, receipt::CastRecord)
 
 end
 
+"""
+    struct CastReceipt
+        vote::Digest
+        timestamp::DateTime
+    end
+
+Represents a ballotbox ledger receipt which is hashed for a history tree. It's sole purpose is
+ to assure voters that their vote is included in the ledger while also adding additional metadata 
+as timestamp and. In contrast to `CastRecord` it does not reveal 
+how voter have voted thus can be published during ellections without violating fairness property. 
+For some situations it may be useful to extend the time until the votes are published as that can 
+disincentivice coercers and bribers as they would not know whether their coerced vote have been superseeded
+in revoting. See [`receipt`](@ref) method for it's construction from a `CastRecord`.
+
+Note that a blind signature could be commited as `H(signature|H(vote))` to avoid tagging the use of
+pseudonym during ellections while collector could issue only a one blind signature for a voter. Note
+that members whoose private key could have been stolen could not obtain a valid signature for participation
+and that could be a good thing!
+"""
 struct CastReceipt
     vote::Digest
     timestamp::DateTime
@@ -289,16 +440,44 @@ function Base.show(io::IO, receipt::CastReceipt)
 
 end
 
+"""
+    receipt(record::CastRecord, hasher::Hash)::CastReceipt
+
+Construct a CastReceipt from a CastRecord with a provided hasher function.
+"""
 receipt(record::CastRecord, hasher::Hash) = CastReceipt(digest(record.vote, hasher), record.timestamp)
 
+"""
+    isbinding(receipt::CastReceipt, ack::AckInclusion, hasher::Hash)::Bool
+
+Check that cast receipt is binding to received inclusion acknowledgment.
+"""
 isbinding(receipt::CastReceipt, ack::AckInclusion, hasher::Hash) = digest(receipt, hasher) == leaf(ack)
 
 isbinding(receipt::CastReceipt, spine::Vector{Digest}, hasher::Hash) = digest(receipt, hasher) in spine
 isbinding(record::CastRecord, spine::Vector{Digest}, hasher::Hash) = isbinding(receipt(record, hasher), spine, hasher)
 
+
+"""
+    isbinding(receipt::CastReceipt, vote::Vote, hasher::Hash)::Bool
+
+Check that the receipt is bidning to a vote. 
+"""
 isbinding(receipt::CastReceipt, vote::Vote, hasher::Hash) = receipt.vote == digest(vote, hasher)
 
-# A good place to also reply with a blind signature here for a proof of pariticpation
+
+"""
+    struct CastAck
+        receipt::CastReceipt
+        ack::AckInclusion{BallotBoxState}
+    end
+
+Represents a reply to a voter when a vote have been included in the ballotbox ledger. Contains a receipt
+and inlcusion acknowledgment. In future would also include a blind signature in the reply for a proof of
+participation. To receive this reply (with a blind signature in the future) a voter needs to send a vote
+ which is concealed during ellections and thus tagging votes with blind signatures from reply to monitor 
+revoting would be as hard as monitoring the submitted votes.
+"""
 struct CastAck
     receipt::CastReceipt
     ack::AckInclusion{BallotBoxState}
@@ -307,11 +486,21 @@ end
 id(ack::CastAck) = id(ack.ack)
 index(ack::CastAck) = index(ack.ack)
 
+"""
+    verify(ack::CastAck, crypto::CryptoSpec)::Bool
+
+Verify the cast acknowledgment cryptographic signature. 
+"""
 function verify(ack::CastAck, crypto::CryptoSpec)
     isbinding(ack.receipt, ack.ack, hasher(crypto)) || return false
     return verify(ack.ack, crypto)
 end
 
+"""
+    isbinding(ack::CastAck, proposal::Proposal, hasher::Hash)::Bool
+
+Check that acknowledgment is legitimate meaning that it is issued by a collector listed in the proposal.
+"""
 isbinding(ack::CastAck, proposal::Proposal, hasher::Hash) = isbinding(ack.ack, proposal, hasher)
 
 isbinding(ack::AckInclusion{BallotBoxState}, proposal::Proposal, hasher::Hash) = issuer(ack) == proposal.collector && state(ack).proposal == digest(proposal, hasher)
@@ -322,8 +511,11 @@ isbinding(ack::CastAck, vote::Vote, hasher::Hash) = isbinding(ack.receipt, vote,
 
 isbinding(ack::CastAck, commit::Commit{BallotBoxState}) = isbinding(ack.ack, commit)
 
+"""
+    commit(ack::CastAck)
 
-
+Return a commit from a `CastAck`.
+"""
 commit(ack::CastAck) = commit(ack.ack)
 
 function Base.show(io::IO, ack::CastAck)
@@ -334,7 +526,23 @@ function Base.show(io::IO, ack::CastAck)
 
 end
 
+"""
+    mutable struct BallotBox
+        proposal::Proposal
+        voters::Set{Pseudonym} # better than members
+        collector::Pseudonym
+        seed::Union{Digest, Nothing}
+        crypto::CryptoSpec # on the other hand the inclusion of a vote should be binding enough as it includes proposal hash.
+        queue::Vector{Vote}
+        ledger::Vector{CastRecord}
+        tree::HistoryTree
+        commit::Union{Commit{BallotBoxState}, Nothing}
+    end
+    
+Represents a ballot box for a proposal. Contains `proposal`, a set of eligiable `voters` a `collector` who collects the votes and a `seed` which is selected at random when the voting starts. `queue` contains a list of valid votes which yet to be comitted to a `ledger`. A history `tree` is built on leafs of ledger's receipts (see a [`receipt`](@ref) method). A `commit` contains a collector seal on the current ballotbox state. 
 
+**Interface:** [`reset_tree!`](@ref), [`generator`](@ref), [`uuid`](@ref), [`members`](@ref), [`ledger`](@ref), [`spine`](@ref), [`index`](@ref), [`seed`](@ref), [`leaf`](@ref), [`root`](@ref), [`record`](@ref), [`receipt`](@ref), [`commit`](@ref), [`tally`](@ref), [`set_seed!`](@ref), [`ack_leaf`](@ref), [`ack_root`](@ref), [`ack_cast`](@ref), [`commit_index`](@ref), [`commit_state`](@ref), [`push!`](@ref), [`state`](@ref), [`validate`](@ref), [`record!`](@ref), [`commit!`](@ref)
+"""
 mutable struct BallotBox
     proposal::Proposal
     voters::Set{Pseudonym} # better than members
@@ -367,6 +575,12 @@ function Base.show(io::IO, ballotbox::BallotBox)
 
 end
 
+"""
+    reset_tree!(ledger::BallotBox)
+
+Recompute history tree root and cache from the elements in the ledger. This is a useful
+for loading the ledger all at once.  
+"""
 function reset_tree!(ballotbox::BallotBox)
 
     d = Digest[digest(i, hasher(ballotbox.crypto)) for i in ballotbox.ledger]
@@ -377,43 +591,127 @@ function reset_tree!(ballotbox::BallotBox)
     return
 end
 
+"""
+    generator(ledger::BallotBox)
+
+Return a relative generator which members use to sign votes anchored by the proposal.
+"""
 generator(ballotbox::BallotBox) = generator(ballotbox.proposal)
+
+"""
+    uuid(ledger::BallotBox)
+
+Return a UUID of the proposal.
+"""
 uuid(ballotbox::BallotBox) = uuid(ballotbox.proposal)
+
+"""
+    members(ledger::BallotBox)
+
+Return a list of member pseudonyms with which members authetificate their votes.
+"""
 members(ballotbox) = ballotbox.voters
 
+"""
+    ledger(ballotbox::BallotBox)::Vector{CastRecord}
 
+Return all records from a ballotbox ledger.
+"""
 ledger(ballotbox::BallotBox) = ballotbox.ledger
+
+"""
+    spine(ledger::BallotBox)::Vector{Digest}
+
+Return a history tree leaf vector.
+"""
 spine(ballotbox::BallotBox) = ballotbox.tree.d # 
 
+"""
+    length(ledger::BallotBox)
+
+Return a total length of the ledger including uncommited records in the queue.
+"""
 Base.length(ballotbox::BallotBox) = length(ledger(ballotbox)) + length(ballotbox.queue)
 
+"""
+    index(ledger::BallotBox)
+
+Return the current index of the ledger. See also [`length`](@ref).
+"""
 index(ballotbox::BallotBox) = length(ledger(ballotbox))
 
+"""
+    seed(ledger::BallotBox)::Union{Digest, Nothing}
+
+Return a random selected seed used in the voting.
+"""
 seed(ballotbox::BallotBox) = ballotbox.seed
 
+"""
+    leaf(ledger::BallotBox, N::Int)::Digest
+
+Return a record digest used to form a history tree.
+"""
 leaf(ballotbox::BallotBox, N::Int) = leaf(ballotbox.tree, N)
+
+"""
+    root(ledger::BallotBox[, N::Int])::Digest
+
+Calculate a root for history tree at given index `N`. If index is not specified
+returns the current value.
+"""
 root(ballotbox::BallotBox, N::Int) = root(ballotbox.tree, N)
 root(ballotbox::BallotBox) = root(ballotbox.tree)
 
+"""
+    record(ledger::BallotBox, index::Int)::CastRecord
+
+Return a ledger record at provided `index`.
+"""
 record(ballotbox::BallotBox, N::Int) = ledger(ballotbox)[N]
+
+"""
+    receipt(ledger::BallotBox, index::Int)::CastReceipt
+
+Return a receipt for a ledger element.
+"""
 receipt(ballotbox::BallotBox, N::Int) = receipt(record(ballotbox, N), hasher(ballotbox.crypto))
 
+"""
+    commit(ledger::BallotBox)
+
+Return a commit for the ballotbox ledger.
+"""
 commit(ballotbox::BallotBox) = !isnothing(ballotbox.commit) ? ballotbox.commit : error("ballotbox had not been commited yet")
 
 
 selections(votes::Vector{CastRecord}) = (i.vote.selection for i in votes) # Note that dublicates are removed at this stage
 tallyview(votes::Vector{CastRecord}) = BitVector(true for i in votes) 
 
+"""
+    tally(ledger::BallotBox)
 
+Compute a tally for a ballotbox ledger. 
+"""
 tally(ballotbox::BallotBox) = tally(ballotbox.proposal.ballot, selections(ledger(ballotbox)))
 tallyview(ballotbox::BallotBox) = tallyview(ballotbox.ledger)
 
 
 istallied(ballotbox::BallotBox) = istallied(ballotbox.commit)
 
+"""
+    set_seed!(ledger::BallotBox, seed::Digest)
+
+Set's a seed of the ballotbox.
+"""
 set_seed!(ballotbox::BallotBox, seed::Digest) = ballotbox.seed = seed;
 
 
+"""
+    ack_leaf(ledger::BallotBox, index::Int)::AckInclusion
+
+Compute an inclusion proof `::AckInclusion` for record element at given `index`.
+"""
 function ack_leaf(ballotbox::BallotBox, index::Int) 
 
     @assert commit_index(ballotbox) >= index
@@ -425,8 +723,18 @@ end
 
 #isbinding(vote::Vote, ack::AckInclusion{BallotBoxState}, crypto::Crypto) = digest(vote, crypto) == leaf(ack)
 
+"""
+    isbinding(vote::Vote, ack::CastAck, hasher)
+
+Check whether acknowledgment is bound to the provided vote.
+"""
 isbinding(vote::Vote, ack::CastAck, crypto::CryptoSpec) = digest(vote, crypto) == ack.receipt.vote
 
+"""
+    ack_root(ledger::BallotBox, index::Int)::AckConsistency
+
+Compute a history tree consistency proof at `index`. 
+"""
 function ack_root(ballotbox::BallotBox, index::Int) 
 
     @assert commit_index(ballotbox) >= index
@@ -436,7 +744,11 @@ function ack_root(ballotbox::BallotBox, index::Int)
     return AckConsistency(proof, commit(ballotbox))
 end
 
+"""
+    ack_cast(ledger::BallotBox, index::Int)::CastAck
 
+Compute an acknowledgment for record inclusion at `index`.
+"""
 function ack_cast(ballotbox::BallotBox, N::Int)
     
     ack = ack_leaf(ballotbox, N)
@@ -445,11 +757,26 @@ function ack_cast(ballotbox::BallotBox, N::Int)
     return CastAck(_receipt, ack)    
 end
 
+"""
+    commit_index(ledger::BallotBox)::Union{Index, Nothing}
 
-
+Index at which commit is issued. See also [`length`](@ref) and [`index`](@ref)
+"""
 commit_index(ballotbox::BallotBox) = index(commit(ballotbox))
+
+"""
+    commit_state(ledger::BallotBox)
+
+Return a committed state for a ballotbox ledger.
+"""
 commit_state(ballotbox::BallotBox) = state(commit(ballotbox))
 
+"""
+    push!(ledger::BallotBox, record::CastRecord)
+
+Push a `record` to the `ledger` bypassing integrity checks. Used when loading the ledger
+from a trusted source such as local disk or an archive with a signed root cheksum.
+"""
 function Base.push!(ballotbox::BallotBox, record::CastRecord) 
     
     push!(ballotbox.tree, digest(record, ballotbox.crypto))
@@ -459,6 +786,11 @@ function Base.push!(ballotbox::BallotBox, record::CastRecord)
 end
 
 
+"""
+    state(ledger::BallotBox; with_tally::Union{Nothing, Bool} = nothing)::BallotBoxState
+
+Return a state metadata for ballotbox ledger. 
+"""
 function state(ballotbox::BallotBox; with_tally::Union{Nothing, Bool} = nothing)
 
     # nothing follows the current state
@@ -495,7 +827,12 @@ function get_dublicate_index(ballotbox::BallotBox, vote::Vote)
     return
 end
 
+"""
+    validate(ledger::BallotBox, vote::Vote)
 
+Check that vote can be included in the ballotbox. Is well formed, signed by a member pseudonym
+and cryptographic signature is valid. Raises error if either of checks fail.
+"""
 function validate(ballotbox::BallotBox, vote::Vote)
 
     @assert isconsistent(vote.selection, ballotbox.proposal.ballot)
@@ -507,7 +844,12 @@ function validate(ballotbox::BallotBox, vote::Vote)
     return
 end
 
+"""
+    record!(ledger::BallotBox, vote::Vote)
 
+Check the vote for validity and pushes it to the queue. Returns an index `N`
+at which the vote will be recorded in the ledger. See also [`push`](@ref)
+"""
 function record!(ballotbox::BallotBox, vote::Vote)
 
     N = get_dublicate_index(ballotbox, vote)
@@ -522,7 +864,13 @@ function record!(ballotbox::BallotBox, vote::Vote)
     return N
 end
 
+"""
+    record!(ledger::BallotBox, record::CastRecord)
 
+Check the vote in the record for validity and include that in the ledger directly bypassing queue. 
+This method is useful for replaying and debugging ballotbox ledger state changes. 
+See also [`record!`](@ref)
+"""
 function record!(ballotbox::BallotBox, record::CastRecord)
 
     @assert length(ballotbox.queue) == 0 "BallotBox have uncommited votes."
@@ -541,7 +889,11 @@ function record!(ballotbox::BallotBox, record::CastRecord)
     return N
 end
 
+"""
+    commit!(ledger::BallotBox[, timestamp::DataTime], signer::Signer; with_tally=nothing)
 
+Flushes ballotbox ledger's queue and creates a commit for a current ballotbox ledger state with provided `timestamp` and `signer`. A keyword argument `with_tally` has three values `true|false` to include or exclude a tally from a commited state and `nothing` which uses a previous commit preference.
+"""
 function commit!(ballotbox::BallotBox, timestamp::DateTime, signer::Signer; with_tally::Union{Nothing, Bool} = nothing)
 
     # while commit! no changes to ballotbox allowed. It's up to user to put locks in place.
@@ -565,7 +917,16 @@ end
 commit!(ballotbox::BallotBox, signer::Signer; with_tally::Union{Nothing, Bool} = nothing) = commit!(ballotbox, Dates.now(), signer; with_tally)
 
 
+"""
+    struct PollingStation
+        halls::Vector{BallotBox}
+        crypto::CryptoSpec
+    end
 
+Represents a pooling station which hosts ballotbox ledgers for every proposal collector manages. 
+
+**Interface:** [`add!`](@ref), [`ballotbox`](@ref), [`record!`](@ref), [`commit!`](@ref), [`commit`](@ref), [`ack_leaf`](@ref), [`ack_root`](@ref), [`ack_cast`](@ref), [`record`](@ref), [`receipt`](@ref), [`spine`](@ref), [`ledger`](@ref), [`tally`](@ref), [`set_seed!`](@ref)
+"""
 struct PollingStation
     halls::Vector{BallotBox}
     crypto::CryptoSpec
@@ -585,7 +946,12 @@ function Base.show(io::IO, station::PollingStation)
 
 end
 
+"""
+    add!(station::PollingStation, proposal::Proposal, voters::Set{Pseudonym}[, collector::Pseudonym])
 
+Creates a new ballotbox for given proposal with provided member pseudonyms at a relative generator anchored in the proposal. 
+A collector is optional and provided only when it differs from one specified in the proposal. 
+"""
 function add!(station::PollingStation, proposal::Proposal, voters::Set{Pseudonym}, collector::Pseudonym)
     bbox = BallotBox(proposal, voters, collector, station.crypto)
     push!(station.halls, bbox)
@@ -594,7 +960,11 @@ end
 
 add!(station::PollingStation, proposal::Proposal, voters::Set{Pseudonym}) = add!(station, proposal, voters, proposal.collector)
 
+"""
+    ballotbox(station::PollingStation, uuid::UUID)::BallotBox
 
+Return a ballotbox ledger with a provided UUID. If none is found throws an error.
+"""
 function ballotbox(station::PollingStation, _uuid::UUID) 
 
     for hall in station.halls
@@ -607,7 +977,12 @@ function ballotbox(station::PollingStation, _uuid::UUID)
     return
 end
 
+"""
+    record!(station::PollingStation, uuid::UUID, vote::Vote)::Int
 
+Records a `vote` in a ballotbox with provided proposal UUID. Throws an error
+if a ballotbox can't be found.
+"""
 function record!(station::PollingStation, uuid::UUID, vote::Vote)
     
     bbox = ballotbox(station, uuid)
@@ -615,7 +990,11 @@ function record!(station::PollingStation, uuid::UUID, vote::Vote)
     return record!(bbox, vote)
 end
 
+"""
+    ballotbox(station::PollingStation, proposal::Digest)::BallotBox
 
+Return a ballotbox which has proposal with provided digest.
+"""
 function ballotbox(station::PollingStation, proposal::Digest)
 
     for hall in station.halls
@@ -629,7 +1008,12 @@ function ballotbox(station::PollingStation, proposal::Digest)
     error("BallotBox with proposal diggest $(proposal) not found")
 end
 
+"""
+    record!(station::PollingStation, uuid::UUID, vote::Vote)::Int
 
+Record a `vote` in a ballotbox found by proposal diggest stored in the vote. 
+Throws an error if a ballotbox can't be found.
+"""
 function record!(station::PollingStation, vote::Vote)
     
     bbox = ballotbox(station, vote.proposal)
@@ -638,21 +1022,79 @@ function record!(station::PollingStation, vote::Vote)
 end
 
 
+"""
+    commit!(station::PollingStation, uuid::UUID, collector::Signer; with_tally = nothing)
+
+Select a ballotbox with provided uuid and commit it's state with collector. 
+"""
 commit!(station::PollingStation, uuid::UUID, signer::Signer; with_tally::Union{Bool, Nothing} = nothing) = commit!(ballotbox(station, uuid), signer; with_tally)
 
+"""
+    commit(station::PollingStation, uuid::UUID)::Commit
+
+Return a ballotbox commit.
+"""
 commit(station::PollingStation, uuid::UUID) = commit(ballotbox(station, uuid))
 
+"""
+    ack_leaf(station::PollingStation, uuid::UUID, N::Int)::AckInclusion
+
+Return history tree inclusion proof for a tree leaf at index `N` in ballotbox with `uuid`.
+"""
 ack_leaf(station::PollingStation, uuid::UUID, N::Int) = ack_leaf(ballotbox(station, uuid), N)
+
+"""
+    ack_root(station::PollingStation, uuid::UUID, N::Int)::AckConsistency
+
+Return history tree consitency proof tree root at index `N` in ballotbox with `uuid`.
+"""
 ack_root(station::PollingStation, uuid::UUID, N::Int) = ack_root(ballotbox(station, uuid), N)
+
+"""
+    ack_cast(station::PollingStation, uuid::UUID, N::Int)::CastAck
+
+Return inclusion proof with receipt and current tree commit for a leaf at index `N` and ballotbox with `uuid`. 
+"""
 ack_cast(station::PollingStation, uuid::UUID, N::Int) = ack_cast(ballotbox(station, uuid), N)
 
+"""
+    record(station::PollingStation, uuid::UUID, N::Int)::CastRecord
+
+Return a record with an index `N` at ballotbox with `uuid`.
+"""
 record(station::PollingStation, uuid::UUID, N::Int) = record(ballotbox(station, uuid), N)
+
+"""
+    spine(station::PollingStation, uuid::UUID)::Vector{Digest}
+
+Return a leaf vector for a ballotbox with proposal `uuid`.
+"""
 spine(station::PollingStation, uuid::UUID) = spine(ballotbox(station, uuid))
 
+"""
+    receipt(station::PollingStation, uuid::UUID, N::Int)::CastReceipt
+
+Return a receipt for a record with index `N` at ballotbox with `uuid`.
+"""
 receipt(station::PollingStation, uuid::UUID, N::Int) = receipt(ballotbox(station, uuid), N)
 
+"""
+    ledger(station::PollingStation, uuid::UUID)::Vector{CastRecord}
+
+Return a vector of records from a ballotbox with `uuid`.
+"""
 ledger(station::PollingStation, uuid::UUID) = ledger(ballotbox(station, uuid))
 
+"""
+    tally(station::PollingStation, uuid::UUID)
+
+Compute a tally from ledger records a ballotbox with `uuid`.
+"""
 tally(station::PollingStation, uuid::UUID) = tally(ballotbox(station, uuid))
 
+"""
+    set_seed!(station::PollingStation, uuid::UUID, seed::Digest)
+
+Sets a seed for a ballotbox with provided `uuid`.
+"""
 set_seed!(station::PollingStation, uuid::UUID, seed::Digest) = set_seed!(ballotbox(station, uuid), seed)
