@@ -6,10 +6,10 @@ Every voter after ellections receives a final tally together with a consistency 
 which proves that their vote is included in the ledger which have produced the tally. 
 From the voter client voter reads four important parameters for the ballotbox:
 
-    - `deme_uuid`: an UUID of the deme where the proposal is registered;
-    - `proposal_index`: a index at which the proposal is recorded in the braidchain ledger;
-    - `ledger_length`: a number of collected votes in the ledger;
-    - `ledger_root`: a ballotbox ledger root checksum.
+- `deme_uuid`: an UUID of the deme where the proposal is registered;
+- `proposal_index`: a index at which the proposal is recorded in the braidchain ledger;
+- `ledger_length`: a number of collected votes in the ledger;
+- `ledger_root`: a ballotbox ledger root checksum.
 
 The auditor also knows a `hasher` deme uses to make checksums which is immutable at the
 moment deme is created.
@@ -49,21 +49,19 @@ For convinience an `audit` method is provided which audits both archives at the 
 Note that this audit does not check honesty of the `registrar` that it have not admitted fake
 users to gain more influence in the ellection result. Properties being verified by the audit:
 
-    - Legitimacy: only and all eligiable voters cast their votes;
-    - Fairness: every eligiable voter can vote at most once;
-    - Immutability: no vote can be deleted or modified when recorded in the ledger; 
-    - Tallied as Cast: all cast votes are counted honestly to predetermined procedure; 
-    - Software independence: the previously audited properties for the evidence does not 
-    depend on a trust in honest execution of peacefounder service nor honesty of the braiders
-    who provides new pseudonyms for the deme members. In other words the previously listed 
-    properties would not be altered if adversary would have a full control over the peacefounder 
-    service and the braiders. 
+- Legitimacy: only and all eligiable voters cast their votes;
+- Fairness: every eligiable voter can vote at most once;
+- Immutability: no vote can be deleted or modified when recorded in the ledger; 
+- Tallied as Cast: all cast votes are counted honestly to predetermined procedure; 
+- Software independence: the previously audited properties for the evidence does not 
+depend on a trust in honest execution of peacefounder service nor honesty of the braiders
+who provides new pseudonyms for the deme members. In other words the previously listed 
+properties would not be altered if adversary would have a full control over the peacefounder 
+service and the braiders. 
 
 The immutability is ensured from voter's clients updating their consistency proof chain which includes their vote. If the vote gets removed from a chain every single voter who had cast their vote would get a proof for inconsistent ledger state called blame. The blame can be made public by the voter without revealing it's vote and thus ensures immutability and also persitance after votes are published. The auditable part here are the votes themselves signed with pseudonym which contract voter's clients to follow up at latter periods with consistency proofs. On top of that, other monitors can synchronize the ballotbox ledger and add assurances that way.
 
 """
-# Black hole? 
-# How to say that vote is not modified after it is being cast
 module AuditTools
 
 using ..Model: Transaction, Pseudonym, Proposal, Digest, Vote, CastRecord

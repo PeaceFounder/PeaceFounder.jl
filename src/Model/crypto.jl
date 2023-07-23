@@ -162,7 +162,7 @@ _groupspec(spec::String) = parse_groupspec(spec)
     struct CryptoSpec
         hasher::Hash
         group::Spec
-        generator::Geenrator
+        generator::Generator
     end
 
 Specification of cryptographic parameters which are used for public key cryptography, message hashing and authetification codes. 

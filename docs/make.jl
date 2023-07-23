@@ -30,7 +30,9 @@ makedocs(
         "Audit" => "audit.md",
         "API" => [
             "REST" => "schema.md",
-            "PeaceFounder.Model" => "model_api.md"
+            "PeaceFounder.Model" => "model_api.md",
+            "PeaceFounder.AuditTools" => "audittools.md",
+            "PeaceFounder.Schedulers" => "schedulers.md"
         ]
     ],
 )

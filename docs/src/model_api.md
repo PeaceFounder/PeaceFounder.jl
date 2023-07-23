@@ -1,29 +1,13 @@
 # PeaceFounder.Model
 
-## Crypto primitives
+## Primitives
 
-```@meta
-CurrentModule = PeaceFounder
-```
 
-```@docs
-PeaceFounder.Model.canonicalize
-```
 
-```@docs
-PeaceFounder.Model.isbinding
-```
-
-```@docs
-PeaceFounder.Model.CryptoSpec
-```
-
-```@docs
-PeaceFounder.Model.verify
-```
-
-```@docs
-PeaceFounder.Model.Pseudonym
+```@autodocs
+Modules = [PeaceFounder.Model]
+Order = [:type, :function]
+Pages = ["Model/crypto.jl", "Model/seal.jl"]
 ```
 
 ```@docs
@@ -35,190 +19,33 @@ PeaceFounder.Model.id
 ```
 
 ```@docs
-PeaceFounder.Model.issuer
-```
-
-
-```@docs
-PeaceFounder.Model.Generator
-```
-
-```@docs
-PeaceFounder.Model.generator
-```
-
-```@docs
-PeaceFounder.Model.Hash
-```
-
-```@docs
-PeaceFounder.Model.hasher
-```
-
-```@docs
-PeaceFounder.Model.Digest
-```
-
-```@docs
-PeaceFounder.Model.digest
-```
-
-```@docs
-PeaceFounder.Model.Signer
-```
-
-```@docs
-PeaceFounder.Model.sign
-```
-
-```@docs
-PeaceFounder.Model.generate
-```
-
-```@docs
-PeaceFounder.Model.Seal
-```
-
-```@docs
-PeaceFounder.Model.seal
-```
-
-```@docs
-PeaceFounder.Model.approve
-```
-
-```@docs
-PeaceFounder.Model.Commit
-```
-
-```@docs
-PeaceFounder.Model.index
-```
-
-```@docs
-PeaceFounder.Model.root
-```
-
-```@docs
-PeaceFounder.Model.state
-```
-
-```@docs
-PeaceFounder.Model.AckInclusion
-```
-
-```@docs
-PeaceFounder.Model.leaf
-```
-
-```@docs
-PeaceFounder.Model.AckConsistency
-```
-
-```@docs
-PeaceFounder.Model.commit
-```
-
-```@docs
-PeaceFounder.Model.HMAC
-```
-
-```@docs
-PeaceFounder.Model.key
-```
-
-```
-PeaceFounder.Model.hmac
+PeaceFounder.Model.verify
 ```
 
 
 
-## Recruitment
+## Admission
 
-```@docs
-PeaceFounder.Model.TicketID
-```
-
-```@docs
-PeaceFounder.Model.Admission
-```
-
-```@docs
-PeaceFounder.Model.ticket
-```
-
-```@docs
-PeaceFounder.Model.Ticket
-```
-
-```@docs
-PeaceFounder.Model.TokenRecruiter
-```
-
-```@docs
-Base.in
-```
-
-```@docs
-PeaceFounder.Model.set_metadata!
-```
-
-```@docs
-PeaceFounder.Model.select
-```
-
-```@docs
-PeaceFounder.Model.tickets
-```
-
-```@docs
-PeaceFounder.Model.auth
-```
-
-```@docs
-PeaceFounder.Model.token
-```
-
-```@docs
-PeaceFounder.Model.enlist!
-```
-
-```@docs
-PeaceFounder.Model.admit!
-```
-
-```@docs
-PeaceFounder.Model.isadmitted
-```
-
-```@docs
-PeaceFounder.Model.TicketStatus
-```
-
-```@docs
-PeaceFounder.Model.ticket_status
-```
-
-```@docs
-PeaceFounder.Model.hmac
+```@autodocs
+Modules = [PeaceFounder.Model]
+Order = [:type, :function]
+Pages = ["Model/admissions.jl"]
 ```
 
 ## BraidChain
 
-```@docs
-PeaceFounder.Model.Transaction
+```@autodocs
+Modules = [PeaceFounder.Model]
+Order = [:type, :function]
+Pages = ["Model/braidchains.jl", "Model/braids.jl"]
 ```
 
-```@docs
-PeaceFounder.Model.DemeSpec
-```
+## Ballot Box
 
-```@docs
-PeaceFounder.Model.ChainState
-```
-
-```@docs
-PeaceFounder.Model.BraidChain
+```@autodocs
+Modules = [PeaceFounder.Model]
+Order = [:type, :function]
+Pages = ["Model/proposals.jl"]
 ```
 
 

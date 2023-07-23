@@ -28,7 +28,7 @@ stored in a `braid` field; `consumer` denotes a deme for which the braid is inte
 the braid is made. To assert latter the the braider signs the braidwork and stores that in the `aproval` field.
 See a [`braid`](@ref) method.
 
-**Interface:** [`approve`](@ref), [`verify`](@ref), [`input_geneerator`](@ref), [`input_members`](@ref), [`output_generator`](@ref), [`output_members`](@ref)
+**Interface:** [`approve`](@ref), [`verify`](@ref), [`input_generator`](@ref), [`input_members`](@ref), [`output_generator`](@ref), [`output_members`](@ref)
 """
 struct BraidWork <: Transaction 
     braid::Simulator
@@ -51,7 +51,7 @@ struct BraidWork <: Transaction
     BraidWork(braid::Simulator, consumer::DemeSpec, producer::DemeSpec, approval) = new(braid, consumer, producer, approval)
 end 
 
-raw"""
+@doc raw"""
     braid(generator::Generator, members::Union{Vector{Pseudonym}, Set{Pseudonym}}, consumer::DemeSpec, producer::DemeSpec; verifier = (g) -> ProtocolSpec(; g))
 
 Selects a private exponent `x` at random and computes a new generator $g' = g^x$ and $member_i'=member_i^x$ 

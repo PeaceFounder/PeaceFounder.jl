@@ -848,7 +848,7 @@ end
     record!(ledger::BallotBox, vote::Vote)
 
 Check the vote for validity and pushes it to the queue. Returns an index `N`
-at which the vote will be recorded in the ledger. See also [`push`](@ref)
+at which the vote will be recorded in the ledger. See also [`push!`](@ref)
 """
 function record!(ballotbox::BallotBox, vote::Vote)
 

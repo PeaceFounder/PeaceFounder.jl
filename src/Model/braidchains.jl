@@ -2,6 +2,8 @@ using HistoryTrees: HistoryTree, InclusionProof, ConsistencyProof
 using Base: UUID, @kwdef
 
 """
+    Transaction
+
 Represents an abstract record type which can be stored in the braidchain ledger. 
 """
 abstract type Transaction end # an alternative name is Transaction
