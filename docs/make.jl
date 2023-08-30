@@ -27,6 +27,7 @@ makedocs(
         "index.md",
         "Overview" => "overview.md",
         "Setup" => "setup.md",
+        "Client" => "client.md",
         "Audit" => "audit.md",
         "API" => [
             "REST" => "schema.md",
