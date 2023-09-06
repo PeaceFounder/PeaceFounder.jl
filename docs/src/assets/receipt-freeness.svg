@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="154.24316mm"
+   height="63.548191mm"
+   viewBox="0 0 154.24316 63.548191"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.2.1 (9c6d41e, 2022-07-14)"
+   sodipodi:docname="receipt-freeness.svg"
+   inkscape:export-filename="receipt-freeness.png"
+   inkscape:export-xdpi="164.67503"
+   inkscape:export-ydpi="164.67503"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="0.85768239"
+     inkscape:cx="251.25851"
+     inkscape:cy="64.709268"
+     inkscape:window-width="1512"
+     inkscape:window-height="857"
+     inkscape:window-x="0"
+     inkscape:window-y="38"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2">
+    <marker
+       style="overflow:visible"
+       id="Arrow3"
+       refX="0"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="Arrow3"
+       markerWidth="4.2071066"
+       markerHeight="7"
+       viewBox="0 0 4.2071068 7"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         style="fill:none;stroke:context-stroke;stroke-width:1;stroke-linecap:round"
+         d="M 3,-3 0,0 3,3"
+         id="arrow3"
+         transform="rotate(180,0.125,0)"
+         sodipodi:nodetypes="ccc" />
+    </marker>
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-33.625015,-141.59526)">
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:none;stroke-width:0.499999;stroke-dasharray:none;stroke-dashoffset:0.755906;stroke-opacity:1"
+       id="rect4959"
+       width="154.24316"
+       height="63.548191"
+       x="33.625015"
+       y="141.59526"
+       ry="0.037559424" />
+    <rect
+       style="fill:#81b4fe;stroke:#000000;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.5;stroke-opacity:1"
+       id="rect788"
+       width="45.575024"
+       height="9.499999"
+       x="38.223133"
+       y="44.406506"
+       ry="0.034459859" />
+    <rect
+       style="fill:#ffdf7e;fill-opacity:1;stroke:#000000;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.2;stroke-opacity:1"
+       id="rect788-8"
+       width="120.3289"
+       height="9.499959"
+       x="83.859795"
+       y="44.406548"
+       ry="0.034459714" />
+    <rect
+       style="fill:#febc85;stroke:#000000;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.5;stroke-opacity:1"
+       id="rect788-3"
+       width="108.63911"
+       height="9.499999"
+       x="38.223133"
+       y="57.354603"
+       ry="0.034459859" />
+    <rect
+       style="fill:#8fd19e;stroke:#000000;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.5;stroke-opacity:1"
+       id="rect788-3-7"
+       width="57.326454"
+       height="9.499999"
+       x="146.86224"
+       y="57.354603"
+       ry="0.034459859" />
+    <text
+       xml:space="preserve"
+       style="font-size:5.64444px;font-family:'Helvetica Neue';-inkscape-font-specification:'Helvetica Neue, Normal';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.755906;stroke-opacity:1"
+       x="70.506844"
+       y="63.56369"
+       id="text1070"><tspan
+         sodipodi:role="line"
+         id="tspan1068"
+         style="font-size:5.64444px;fill:#000000;stroke:none;stroke-width:0.2"
+         x="70.506844"
+         y="63.56369">Receipt Freeness</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:5.64444px;font-family:'Helvetica Neue';-inkscape-font-specification:'Helvetica Neue, Normal';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.755906;stroke-opacity:1"
+       x="50.215679"
+       y="51.140526"
+       id="text1070-3"><tspan
+         sodipodi:role="line"
+         id="tspan1068-6"
+         style="font-size:5.64444px;fill:#000000;stroke:none;stroke-width:0.2"
+         x="50.215679"
+         y="51.140526">Fairness</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:5.64444px;font-family:'Helvetica Neue';-inkscape-font-specification:'Helvetica Neue, Normal';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.755906;stroke-opacity:1"
+       x="95.454414"
+       y="51.140526"
+       id="text1070-3-7"><tspan
+         sodipodi:role="line"
+         id="tspan1068-6-1"
+         style="font-size:5.64444px;fill:#000000;stroke:none;stroke-width:0.2"
+         x="95.454414"
+         y="51.140526">Tally Anounced</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:5.64444px;font-family:'Helvetica Neue';-inkscape-font-specification:'Helvetica Neue, Normal';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.755906;stroke-opacity:1"
+       x="157.36453"
+       y="64.12249"
+       id="text1070-39"><tspan
+         sodipodi:role="line"
+         id="tspan1068-0"
+         style="font-size:5.64444px;fill:#000000;stroke:none;stroke-width:0.2"
+         x="157.36453"
+         y="64.12249">Tallied as Cast</tspan></text>
+    <g
+       id="g4891"
+       transform="translate(4.0103229,31.157124)">
+      <path
+         style="fill:#ffdf7e;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-dasharray:none;stroke-dashoffset:0.755906;stroke-opacity:1;marker-end:url(#Arrow3)"
+         d="M 32.204072,140.09762 H 180.68404"
+         id="path2258" />
+      <circle
+         style="fill:#d35f5f;fill-opacity:1;stroke:#000000;stroke-width:0.499999;stroke-dasharray:none;stroke-dashoffset:0.755906;stroke-opacity:1"
+         id="path3152"
+         cx="32.204071"
+         cy="139.84761"
+         r="2.0148776" />
+      <circle
+         style="fill:#ffdd55;fill-opacity:1;stroke:#000000;stroke-width:0.499999;stroke-dasharray:none;stroke-dashoffset:0.755906;stroke-opacity:1"
+         id="path3152-8"
+         cx="77.78083"
+         cy="140.09761"
+         r="2.0148776" />
+      <circle
+         style="fill:#6f916f;fill-opacity:1;stroke:#000000;stroke-width:0.499999;stroke-dasharray:none;stroke-dashoffset:0.755906;stroke-opacity:1"
+         id="path3152-8-9"
+         cx="123.35759"
+         cy="140.09761"
+         r="2.0148776" />
+      <text
+         xml:space="preserve"
+         style="font-size:4.93889px;font-family:'Helvetica Neue';-inkscape-font-specification:'Helvetica Neue, Normal';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.755906;stroke-opacity:1"
+         x="-63.406349"
+         y="126.87299"
+         id="text1070-3-4"
+         transform="rotate(-40.619115)"><tspan
+           sodipodi:role="line"
+           id="tspan1068-6-8"
+           style="font-size:4.93889px;fill:#000000;stroke:none;stroke-width:0.2"
+           x="-63.406349"
+           y="126.87299">Ellection Starts</tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-size:4.93889px;font-family:'Helvetica Neue';-inkscape-font-specification:'Helvetica Neue, Normal';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.755906;stroke-opacity:1"
+         x="-28.973877"
+         y="156.73447"
+         id="text1070-3-4-0"
+         transform="rotate(-40.619115)"><tspan
+           sodipodi:role="line"
+           id="tspan1068-6-8-4"
+           style="font-size:4.93889px;fill:#000000;stroke:none;stroke-width:0.2"
+           x="-28.973877"
+           y="156.73447">Tally Announced</tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-size:4.93889px;font-family:'Helvetica Neue';-inkscape-font-specification:'Helvetica Neue, Normal';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.755906;stroke-opacity:1"
+         x="5.6213512"
+         y="186.40619"
+         id="text1070-3-4-05"
+         transform="rotate(-40.619115)"><tspan
+           sodipodi:role="line"
+           id="tspan1068-6-8-7"
+           style="font-size:4.93889px;fill:#000000;stroke:none;stroke-width:0.2"
+           x="5.6213512"
+           y="186.40619">Votes Published</tspan></text>
+      <rect
+         style="fill:#e3dbdb;stroke:#000000;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.5;stroke-opacity:1"
+         id="rect788-0"
+         width="45.376759"
+         height="9.499999"
+         x="32.30407"
+         y="147.21301"
+         ry="0.034459859" />
+      <text
+         xml:space="preserve"
+         style="font-size:5.63215px;font-family:'Helvetica Neue';-inkscape-font-specification:'Helvetica Neue, Normal';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.755906;stroke-opacity:1"
+         x="44.340996"
+         y="153.61182"
+         id="text1070-3-9"
+         transform="scale(0.99782247,1.0021823)"><tspan
+           sodipodi:role="line"
+           id="tspan1068-6-3"
+           style="font-size:5.63215px;fill:#000000;stroke:none;stroke-width:0.2"
+           x="44.340996"
+           y="153.61182">Fairness</tspan></text>
+      <rect
+         style="fill:#e3dbdb;stroke:#000000;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.5;stroke-opacity:1"
+         id="rect788-3-0"
+         width="90.953522"
+         height="9.499999"
+         x="32.30407"
+         y="161.05307"
+         ry="0.034459859" />
+      <text
+         xml:space="preserve"
+         style="font-size:5.64444px;font-family:'Helvetica Neue';-inkscape-font-specification:'Helvetica Neue, Normal';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.755906;stroke-opacity:1"
+         x="55.744991"
+         y="167.85855"
+         id="text1070-0"><tspan
+           sodipodi:role="line"
+           id="tspan1068-3"
+           style="font-size:5.64444px;fill:#000000;stroke:none;stroke-width:0.2"
+           x="55.744991"
+           y="167.85855">Receipt Freeness</tspan></text>
+      <rect
+         style="fill:#dbe3de;stroke:#000000;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.5;stroke-opacity:1"
+         id="rect788-3-7-9"
+         width="57.326454"
+         height="9.499999"
+         x="123.25758"
+         y="161.05307"
+         ry="0.034459859" />
+      <text
+         xml:space="preserve"
+         style="font-size:5.64444px;font-family:'Helvetica Neue';-inkscape-font-specification:'Helvetica Neue, Normal';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.755906;stroke-opacity:1"
+         x="133.75987"
+         y="167.82095"
+         id="text1070-39-0"><tspan
+           sodipodi:role="line"
+           id="tspan1068-0-1"
+           style="font-size:5.64444px;fill:#000000;stroke:none;stroke-width:0.2"
+           x="133.75987"
+           y="167.82095">Tallied as Cast</tspan></text>
+    </g>
+  </g>
+</svg>

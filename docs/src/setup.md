@@ -36,7 +36,14 @@ HTTP.serve(Service.ROUTER, "0.0.0.0", 80)
 
 The second part is to set up the entry for registration within the deme. This is up to the guardian to decide how new members are added to the deme and how their identity is being tracked and made transparent so that members would be assured that someone has created fake identities to vote multiple times.
 
-That would best be done within the organisation's website, where members can log in and get an invite as a string or QR code scanned in the PeaceFounder client application. To facilitate that, the PeaceFounder service offers a recruiter endpoint from which invites can be obtained which can be accessed, knowing `ROUTE = "0.0.0.0:80"` and recruiter symmetric key `KEY = Mapper.get_recruit_key()`. That makes it relatively easy to integrate into the webpage as it only needs the ability to read some JSON and sha256 hash functions used to authenticate and compute registration tokens at the endpoints. That also makes it redundant to add a TLS certificate for the PeaceFoudner service. 
+```@raw html
+<figure>
+    <img src="../assets/registration_sequence.svg" alt='' />
+    <figcaption>Sequence diagram illustrating client registration with a deme. The process begins when the client requests an invitation from the registrar and concludes when a certified pseudonym is submitted to the Braidchain ledger. The protocol serves multiple goals: 1) It simplifies integration by requiring only a hash function for authorization of new member requests. 2) It prevents inconsistencies between the client's device and the braidchain by allowing repetition of the final step. 3) It ensures that registration can continue even when the chain is temporarily locked for new members, by allowing catch-up with the current relative generator. Future updates aim to combine the last two steps to reduce the number of communication rounds required.</figcaption>
+</figure>
+```
+
+That would best be done within the organisation's website, where members can log in and get an invite as a string or QR code scanned in the PeaceFounder client application. To facilitate that, the PeaceFounder service offers a recruiter endpoint from which invites can be obtained and accessed, knowing `ROUTE = "0.0.0.0:80"` and recruiter symmetric key `KEY = Mapper.get_recruit_key()`. That makes it relatively easy to integrate into the webpage as it only needs the ability to read some JSON and sha256 hash functions used to authenticate and compute registration tokens at the endpoints. That also makes it redundant to add a TLS certificate for the PeaceFoudner service. 
 
 ## Registrar setup
 

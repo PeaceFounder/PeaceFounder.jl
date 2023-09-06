@@ -1,17 +1,17 @@
 # Audit
 
-**Note: The demonstrated audit API is in progress. Currently the best auditing strategy is to recreate braidchain and ballotbox ledger from one record at a time.**
+**Note: The demonstrated audit API is in progress. Currently, the best auditing strategy is to recreate the braidchain and ballotbox ledger from one record at a time.**
 
-After ellections have ended the collector publishes a tally. Every voter after ellections receives a final tally together with a consistency proof which proves that their vote is included in the ledger which have produced the tally. From the voter client voter reads four important parameters for the ballotbox:
+After elections have ended, the collector publishes a tally. Every voter, after elections, receives a final tally together with consistency proof, which proves that their vote is included in the ledger that has produced the tally. From the voter client, the voter reads four important parameters for the ballotbox:
 
-- `deme_uuid`: an UUID of the deme where the proposal is registered;
-- `proposal_index`: a index at which the proposal is recorded in the braidchain ledger;
+- `deme_uuid`: a UUID of the deme where the proposal is registered;
+- `proposal_index`: an index at which the proposal is recorded in the braidchain ledger;
 - `ledger_length`: a number of collected votes in the ledger;
 - `ledger_root`: a ballotbox ledger root checksum.
 
-The auditor also knows a `hasher` deme uses to make checksums which is immutable at the moment deme is created.
+The auditor also knows a `hasher` deme used to make checksums, which is immutable when the deme is created.
 
-To assert integrity of the vote an audit takes place. Let's consider abstract functions to retrieve ballotbox and braidchain ledger archives from the internet with `get_ballotbox_archive` and `get_braidchain_archive` then the auditing can be done with a following script:
+To assert the integrity of the vote, an audit takes place. Let's consider abstract functions to retrieve ballotbox and braidchain ledger archives from the internet with `get_ballotbox_archive` and `get_braidchain_archive; then the auditing can be done with the following script:
 
 ```julia
 braidchain_archive = get_ballotbox_archive(uuid)
@@ -28,9 +28,9 @@ spec = crypto(braidchain_archive)
 @show tally(ballotbox_archive)
 ```
 
-Note that `spec` is read from the `DemeSpec` record in the braidchain which can be trusted as the tree braidchain ledger checksum is listed within a proposal's anchor. The proposal is the first record in history tree for the ballotbox thus it is bound to `ledger_root` checksum and so demespec record is also tied to `ledger_root`.
+Note that `spec` is read from the `DemeSpec` record in the braidchain, which can be trusted as the tree braidchain ledger checksum is listed within a proposal's anchor. The proposal is the first record in the history tree for the ballotbox; thus, it is bound to the `ledger_root` checksum, so the demespec record is also tied to `ledger_root`.
 
-For convinience an `audit` method is provided which audits both archives at the same time:
+For convenience, an `audit` method is provided that audits both archives at the same time:
 
 ```julia
 braidchain_archive = get_ballotbox_archive(uuid)
@@ -42,13 +42,13 @@ ballotbox_archive = get_ballotbox_archive(uuid, proposal_index)[1:ledger_length]
 @show tally(ballotbox_archive)
 ```
 
-Note that this audit does not check honesty of the `registrar` that it have not admitted fake users to gain more influence in the ellection result. Properties being verified by the audit:
+Note that this audit does not check the honesty of the `registrar` and that it has not admitted fake users to gain more influence in the election result. Properties being verified by the audit:
 
-- Legitimacy: only eligiable voters cast their votes;
-- Equality: every eligiable voter can vote at most once;
-- Immutability: no vote can be deleted or modified after recorded in the ledger; 
-- Tallied as Cast: all cast votes are counted honestly to predetermined procedure; 
+- Legitimacy: only eligible voters cast their votes;
+- Equality: every eligible voter can vote at most once;
+- Immutability: no vote can be deleted or modified after being recorded in the ledger; 
+- Tallied as Cast: all cast votes are counted honestly according to predetermined procedure; 
 
-All theese properties together ensure software independence so that the resulting tally does not depend on a trust in honest execution of either peacefounder service or braiders. In other words the previously listed properties would not be altered if adversary would have a full control over the peacefounder service and the braiders. 
+All these properties together ensure software independence so that the resulting tally does not depend on trust in the honest execution of either peacefounder service or braiders. In other words, the previously listed properties would not be altered if the adversary had full control over the peacefounder service and the braiders. 
 
-The immutability is ensured from voter's clients updating their consistency proof chain which includes their vote. If the vote gets removed from a chain every single voter who had cast their vote would get a proof for inconsistent ledger state called blame. The blame can be made public by the voter without revealing it's vote and thus ensures immutability and also persitance after votes are published. The auditable part here are the votes themselves signed with pseudonym which contract voter's clients to follow up at latter periods with consistency proofs. On top of that, other monitors can synchronize the ballotbox ledger and add assurances that way.
+The immutability is ensured by voter's clients updating their consistency proof chain, which includes their vote. If the vote gets removed from a chain, every voter who cast their vote will get proof for an inconsistent ledger state called blame. The voter can make the blame public without revealing their vote, thus ensuring immutability and persistence after votes are published. The auditable part here is the votes signed with a pseudonym, which contract voters' clients to follow up at later periods with consistency proofs. On top of that, other monitors can synchronise the ballotbox ledger and add assurances that way.
