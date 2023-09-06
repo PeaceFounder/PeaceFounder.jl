@@ -4,7 +4,7 @@
 
 A major hurdle in mainstream E2E (end-to-end) e-voting system designs is a multiparty protocol ceremony coordination required for initiating a threshold decryption key and performing decryption at the end of the vote. The voter's anonymity demands independence of the involved parties, which introduces a risk of sabotage where election results could be left undecrypted and unannounced. Moreover, due to the need to encode ballot selection in a group element, only a limited number of ballot types can be supported and face challenges, for instance, for cardinal and budget planning ballots. This is even more restrictive when a homomorphic counting procedure is employed.
 
-An alternative approach is to anonymise voter's credentials instead of the votes. The idea has been explored with blind signature schemes, but auditing the authority's issuance of signatures and detecting key leaks remains unresolved. A subsequent method, proposed by Haenni \& Spycher, leverages ElGamal re-encryption to verifiably exponentiate voters' public keys in tandem with a generator using zero-knowledge proofs. Together with a history tree bulletin board implementation, it forms the foundation for the design of the PeaceFounder voting system.
+An alternative approach is to anonymise voter's credentials instead of the votes. The idea has been explored with blind signature schemes, but auditing the authority's issuance of signatures and detecting key leaks remains unresolved. A subsequent method, proposed by Haenni & Spycher, leverages ElGamal re-encryption to verifiably exponentiate voters' public keys in tandem with a generator using zero-knowledge proofs. Together with a history tree bulletin board implementation, it forms the foundation for the design of the PeaceFounder voting system.
 
 The PeaceFounder voting system builds upon the foundational work of Haenni & Spycher, serving as a practical implementation of their proposal. Nevertheless, PeaceFounder introduces several key features:
 
@@ -24,6 +24,6 @@ For a demo, go to the `PeaceFounderDemo` repository. A 10-minute YouTube demonst
 
 ## References
 
-- Rolf Haenni and Oliver Spycher. *Secure internet voting on limited devices with anonymized dsa public keys.* 2011
+- Rolf Haenni and Oliver Spycher. *Secure internet voting on limited devices with anonymized DSA public keys.* 2011
 - Scott A. Crosby and Dan S. Wallach. *Efficient data structures for tamper-evident logging.* 2009
 - Björn Terelius and Douglas Wikström. *Proofs of restricted shuffles.* 2010.
