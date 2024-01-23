@@ -2,9 +2,9 @@
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://PeaceFounder.github.io/PeaceFounder.jl/dev)
 ![](https://github.com/PeaceFounder/PeaceFounder.github.io/blob/master/_assets/vision.png?raw=true)
 
-A major hurdle in mainstream E2E (end-to-end) e-voting system designs is a multiparty protocol ceremony coordination required for initiating a threshold decryption key and performing decryption at the end of the vote. The voter's anonymity demands independence of the involved parties, which introduces a risk of sabotage where election results could be left undecrypted and unannounced. Moreover, due to the need to encode ballot selection in a group element, only a limited number of ballot types can be supported and face challenges, for instance, for cardinal and budget planning ballots. This is even more restrictive when a homomorphic counting procedure is employed.
+A major hurdle in mainstream E2E (end-to-end) e-voting system designs is the multiparty protocol ceremony coordination required to initiate a threshold decryption key and perform decryption at the end of the vote. The voter's anonymity demands independence of the involved parties, which introduces a risk of sabotage where election results could be left undecrypted and unannounced. Moreover, due to the need to encode ballot selection in a group element, only a limited number of ballot types can be supported and face challenges, for instance, for cardinal and budget planning ballots. This is even more restrictive when a homomorphic counting procedure is employed.
 
-An alternative approach is to anonymise voter's credentials instead of the votes. The idea has been explored with blind signature schemes, but auditing the authority's issuance of signatures and detecting key leaks remains unresolved. A subsequent method, proposed by Haenni & Spycher, leverages ElGamal re-encryption to verifiably exponentiate voters' public keys in tandem with a generator using zero-knowledge proofs. Together with a history tree bulletin board implementation, it forms the foundation for the design of the PeaceFounder voting system.
+An alternative approach is to anonymise voter's credentials instead of the votes. The idea has been widely explored with blind signature schemes, but auditing the authority's issuance of signatures and detecting key leaks remains unresolved. A subsequent method, proposed by Haenni & Spycher, leverages ElGamal re-encryption to verifiably exponentiate voters' public keys in tandem with a generator using zero-knowledge proofs. Together with a history tree bulletin board implementation, it forms the foundation for the design of the PeaceFounder voting system.
 
 The PeaceFounder voting system builds upon the foundational work of Haenni & Spycher, serving as a practical implementation of their proposal. Nevertheless, PeaceFounder introduces several key features:
 
@@ -14,13 +14,13 @@ The PeaceFounder voting system builds upon the foundational work of Haenni & Spy
 - A system allowing a member's device to detect private key leaks coming from spyware or bad cryptography via sequence numbers and bitmasks;
 - A malware detection mechanism post-voting, where the device displayed receipt, is compared to a bulletin board while not being deceived into verifying another voter's vote.
 
-Furthermore, PeaceFounder demonstrates that a single maintainer can feasibly deploy the system. That is possible due to the lack of a multi-party ceremony and member device accountability of the bulletin board. It also offers seamless integration opportunities with existing infrastructure and political environment for supporting different ways proposals are put to the ballot box, and member authenticity is verified and later audited. Additionally, the PeaceFounder showcases user experience for the voter, minimising their exposure to complex byte strings while maintaining cryptographic soundness along with other usability improvements. 
+PeaceFounder illustrates that a single maintainer can effectively deploy the system, thanks to the elimination of multi-party ceremonies and the accountability of member devices in managing the bulletin board. The system is also designed for seamless integration with current infrastructures and political contexts, supporting diverse approaches to ballot proposal submissions, member authentication, and subsequent audits. Furthermore, PeaceFounder enhances the voting user experience by minimising voter interaction with complex byte strings while still maintaining cryptographic integrity and introducing various usability improvements.
 
 ## Demo
 
-For a demo, go to the `PeaceFounderDemo` repository. A 10-minute YouTube demonstration is available here:
+An 8-minute YouTube demonstration is available here:
 
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/L7M0FG50ulU/maxresdefault.jpg)](https://www.youtube.com/watch?v=L7M0FG50ulU)
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/3asNuNMlHhY/maxresdefault.jpg)](https://www.youtube.com/watch?v=3asNuNMlHhY)
 
 ## References
 

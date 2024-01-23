@@ -2,17 +2,17 @@
 
 # Client
 
+The PeaceFounder client can be installed on all major desktop platforms by simply downloading a bundle for your particular platform from the [PeaceFounderClient release page](https://github.com/PeaceFounder/PeaceFounderClient/releases/tag/v0.0.2). Currently, for demonstration purposes, the application does not save a state. Also, errors should be appropriately handled. For instance, receiving an incorrect receipt or proof from the bulletin board will crash the application. This will be solved in future versions of the client.
+
+In the future, the focus will be on mobile applications for iOS and Android. Unfortunately, in the current state, deploying mobile applications with Julia is not possible due to JIT compilation. This is why the client backend is planned to be rewritten in Rust while keeping the QML facade already written. This will be a significant time investment; thus, I would be eager to test the PeaceFounder voting system in practice with the desktop GUI client only to gauge people's needs.
+
+### For Developers
+
 The PeaceFounder client is implemented in a QML and is available on all major desktop platforms. To run the client, install a recent Julia version on your computer, clone a `https://github.com/PeaceFounder/PeaceFounderGUI` repository, and run the GUI application with the following:
 
 ```bash
 julia --load main.jl
 ```
-
-In the future, a bundle will be available for every major system so that all voters can install the client without technical knowledge. 
-
-Currently, for demonstration purposes, the application does not save a state. Also, errors should be appropriately handled. For instance, receiving an incorrect receipt or proof from the bulletin board will crash the application. This will be solved in the future versions of the client, which can be accelerated by letting me know if that interests you. 
-
-In future, the focus will be on the mobile application for iOS and Android. Unfortunately, in the current state, deploying mobile applications with Julia is not possible due to JIT compilation. This is why the client backend is planned to be rewritten in Rust while keeping the QML facade already written. This will be a significant time investment; thus, I would be eager to test the PeaceFounder voting system in practice with the desktop GUI client only to gauge people's needs.
 
 ## Registration to a Deme
 
@@ -45,7 +45,7 @@ When a voter enters the proposal within the specified time window, it can go to 
 A guard report is shown to the voter when the vote is cast. The guard contains three categories:
 
 - Ballot Box: the deme UUID and a proposal’s record index on the braidchain, after which the elections can be found online.
-- A receipt: contains the pseudonym hash with which the vote is being cast, the timestamp on when it was recorded in the ballot box, and the cast record gives an index at which the vote is recorded in the ledger.
+- A receipt contains the pseudonym hash with which the vote is being cast, the timestamp on when it was recorded in the ballot box, and the cast record gives an index at which the vote is recorded in the ledger.
 - A commit contains a current Merkle tree root and index of the collector signed chain. This is also an index at which consistency proof is being checked so that votes can only be removed from the ballot box after they are added with evidence.
 
 ```@raw html
@@ -57,7 +57,7 @@ A guard report is shown to the voter when the vote is cast. The guard contains t
 
 The Merkle tree inclusion and consistency proof as a receipt to make a tamper-resistant bulletin board monitored by voters. So that undesirable votes can not be discarded when they have been recorded.
 
-After the elections, each voter's client device checks whether the last cast vote is included in the final tally, together with a sequence number on the vote that prevents an adversary that has obtained the voter's private key from casting votes on voters' behalf without being noticed. This is done automatically as long as the client's device acts honestly, aka not being infected with malware.
+After the elections, each voter's client device checks whether the last cast vote is included in the final tally, together with a sequence number on the vote that prevents an adversary that has obtained the voter's private key from casting votes on voters' behalf without being noticed. This is done automatically as long as the client's device acts honestly, i.e., is not infected with malware.
 
-In the case of malware, the fairness property maintained by the election authority and a timestamp on the casting receipt prevents malware on the voter's client from pointing to a substitute vote. Whereas the vote is cast as intended and counted as cast (important for revoting), a voter can check on the bulletin board with another computer using the receipt. If the malware is detected, the voter takes appropriate action for his device.
+In the case of malware, the fairness property maintained by the election authority and a timestamp on the casting receipt prevent malware on the voter's client from pointing to a substitute vote. Whereas the vote is cast as intended and counted as cast (important for revoting), a voter can check on the bulletin board with another computer using the receipt. If the malware is detected, the voter takes appropriate action for his device.
 

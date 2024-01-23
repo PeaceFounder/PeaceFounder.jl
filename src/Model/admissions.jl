@@ -39,7 +39,10 @@ struct Admission
     id::Pseudonym
     timestamp::DateTime # Timestamp could be used as a deadline
     approval::Union{Seal, Nothing}
+    # demespec::Digest # To prevent malicios guardian to downgrade cryptographic parameters, set a selective route compromising anonimity. Uppon receiving admission member would test that demespec is the one as sent in the invite.  
 end
+
+
 
 Admission(ticketid::TicketID, id::Pseudonym, timestamp::DateTime) = Admission(ticketid, id, timestamp, nothing)
 
@@ -294,6 +297,28 @@ function enlist!(recruiter::TokenRecruiter, ticketid::TicketID, timestamp::DateT
 
     return metadata, salt, reply_auth_code
 end
+
+
+function enlist_locally!(recruiter::TokenRecruiter, ticketid::TicketID, timestamp::DateTime)
+
+    @assert (Dates.now() - timestamp) < Second(60) "Request too old"
+
+    for ticket in recruiter.tickets
+        if ticket.ticketid == ticketid
+            return ticket.token
+        end
+    end
+
+    # Just to follow
+    salt = rand(UInt8, 16) # Needs a real random number generator
+    _token = token(ticketid, salt, hmac(recruiter))    
+
+    push!(recruiter.tickets, Ticket(ticketid, timestamp, Digest[], Digest[], _token, nothing))
+
+    return _token
+end
+
+
 
 """
     admit!(recruiter::TokenRecruiter, id::Pseudonym, ticketid::TicketID, auth_code::Digest)::Admission

@@ -1,8 +1,10 @@
 # Audit
 
-**Note: The demonstrated audit API is in progress. Currently, the best auditing strategy is to recreate the braidchain and ballotbox ledger from one record at a time.**
+**Note: The demonstrated audit API is in progress. Currently, the best auditing strategy is to recreate the braid chain and ballot box ledger from one record at a time.**
 
-After elections have ended, the collector publishes a tally. Every voter, after elections, receives a final tally together with consistency proof, which proves that their vote is included in the ledger that has produced the tally. From the voter client, the voter reads four important parameters for the ballotbox:
+**Update: follow the feature proposal https://github.com/PeaceFounder/PeaceFounder.jl/issues/19**
+
+After elections have ended, the collector publishes a tally. After elections, every voter receives a final tally together with consistency proof, which proves that their vote is included in the ledger that has produced the tally. From the voter client, the voter reads four important parameters for the ballotbox:
 
 - `deme_uuid`: a UUID of the deme where the proposal is registered;
 - `proposal_index`: an index at which the proposal is recorded in the braidchain ledger;

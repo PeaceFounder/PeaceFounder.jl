@@ -1,5 +1,7 @@
 # Overview
 
+**Note: a more recent and condensed overview is provided in [a poster presented at EVoteID 2023](https://janiserdmanis.org/artefacts/EVOTEID-2023-poster.pdf)**
+
 ```@raw html
 <figure>
     <img src="../assets/knot-formula.png" alt='' />
@@ -55,7 +57,7 @@ Another pillar that is necessary for ensuring democratic elections is to prevent
 
 This method undermines the confidence of vote buyers and coercers, as it prevents them from ensuring that the votes they've acquired will be counted in the final tally. As a consequence, they can only return bribes after votes are published on the bulletin board. (During the vote, only receipt hashes are published on the bulletin board. This serves to both commit the votes while maintaining fairness and receipt-freeness.) This arrangement erodes the credibility of bribers and coercers, making it less likely for voters to engage with them in such transactions due to the lack of a guaranteed positive/negative outcome.
 
-A secondary concern is the potential for a coercer to ask an individual to show how they had voted on their device. To address this, only a receipt is shown. However, this receipt can be linked to the specific vote on the bulletin board. If coercion becomes a significant threat, the receipt can be visible only briefly, such as 30 minutes after casting a vote. During this window, members can manually record their details in a logbook. While this approach may reduce user-friendliness, it still serves as a robust deterrent against ma
+A secondary concern is the potential for a coercer to ask an individual to show how they had voted on their device. To address this, only a receipt is shown. However, this receipt can be linked to the specific vote on the bulletin board. If coercion becomes a significant threat, the receipt can be visible only briefly, such as 30 minutes after casting a vote. During this window, members can manually record their details in a logbook. While this approach may reduce user-friendliness, it still serves as a robust deterrent against malware.
 
 ## Malware and spyware detection
 
@@ -87,11 +89,53 @@ Members can view the bulletin board records through the HTTP Facade, which displ
 
 It's imperative to recognise the absence of TLS in all communications. This choice stems from the fact that data from the bulletin board is supported with a signature on Merkle tree root, rendering requests tamper-proof. Moreover, using TLS session resumption for anonymous interactions between members and the bulletin board would unintentionally make the system vulnerable to DDOS attacks during the key establishment phase. Furthermore, eliminating the need for certificate issuance and management streamlines system maintenance and deployment, enhancing usability.
 
+
+
+## Planed Core Features
+
+The PeaceFounder system is actively focusing on integrating key features in its upcoming iterations to enhance transparency. While not exhaustive, the current list includes well-defined proposals ready for implementation.
+
+### PeaceFounderBB
+
+**https://github.com/PeaceFounder/PeaceFounder.jl/issues/22**
+
+A small democratic community often faces the challenge of limited resources, particularly when it comes to hosting bulletin board data or maintaining a comprehensive website for public record access. However, a recent trend offers a practical solution with static website hosting platforms. These platforms allow the creation of a static website directly from source code stored in a git repository without the hassle of setting up and managing certificates. A popular example is GitHub Pages, which simplifies deployment using action scripts to compile websites from sources.
+
+Integrating a GitHub workflow to compile a webpage makes it an ideal platform for hosting a bulletin board interface. This setup has a dual advantage. The GitHub repository can serve as an authentic storage space for bulletin board records. Secondly, these records are easily accessible to the public via a web interface. Continuous integration further enhances this with build scripts, ensuring the integrity and verification of the bulletin board's contents. Those interested in verifying the bulletin board's integrity independently can either fork the repository and run the action script or clone the data locally.
+
+Additionally, the use of the Zenodo repository enriches this system. Zenodo provides excellent archival workflows and the capability to generate a DOI link. This link serves a similar purpose to dataset references in scientific research, offering a reliable and citable record.
+
+### Cast as intended verification during the vote
+
+**https://github.com/PeaceFounder/PeaceFounder.jl/issues/21**
+
+At present, voters can only confirm that their vote has been cast as intended and accurately counted after the vote has ended and the votes are published. As the publication of votes can be delayed as a measure against coercion, it might discourage voters' participation from verifying that their vote is indeed cast as intended and counted as cast. The key issue lies in the possibility of unnoticed malware on voting devices. If voters don't verify their votes, the likelihood of malware affecting a significant number of votes without detection increases. Thus, having a procedure that enables immediate verification of the voting process is essential to engage more voters to check their votes.
+
+The PeaceFounder system can address this by providing voters with a token displayed on the client's screen for vote verification. This token can be used in a web browser to confirm that the vote has been cast as intended. It also indicates if the vote has been superseded by a subsequent vote or one with a higher sequence number, which may occur if the member's key is compromised. To maintain receipt-freeness, the token remains valid for only a short period, such as 15 minutes. The expiration is crucial; it allows voters to verify their votes while preventing coercion or bribery attempts. It also hinders any unsolicited checks on voters' choices.
+
+### Evidence auditing with terminal API
+
+**https://github.com/PeaceFounder/PeaceFounder.jl/issues/19**
+
+The PeaceFounder system is universally verifiable, a feature ensuring that every vote is cryptographically proven to come from a registered member, even if all involved parties are corrupt. To mitigate the influence of coercion or bribery, the authority can strategically delay the publication of votes, which weakens the link between coercers and their subjects before the voters lose receipt freeness. After the votes are published, every aspect of the voting process is transparent: all proofs of votes are made publicly available. This transparency allows any interested party to audit the election results and, at their convenience, independently reproduce the announced tally.
+
+### Membership termination
+
+**https://github.com/PeaceFounder/PeaceFounder.jl/issues/18**
+
+Under the current state of PeaceFounder, administrators face a significant limitation: they lack the capability to terminate memberships. This function is crucial in various scenarios. For instance, when a member fails to submit necessary authenticity documents within the allotted time post-registration, their membership must be annulled. Additionally, this feature is vital for addressing privacy concerns, such as when members wish to withdraw and have their associated records deleted. Furthermore, an essential aspect of membership management involves issuing new credentials in cases where a member loses their device or experiences a security breach with their key being compromised.
+
+The process of terminating a membership in PeaceFounder presents its own set of challenges. The core difficulty lies in the inability to link a member's real identity and their current pseudonym, which prevents the removal of it in subsequent braidings. This link is only known exclusively to the member's client device, as it only knows the private key that can generate them.
+
+A straightforward approach to address this issue involves resetting the generator in the braidchain and taking identity pseudonyms of the membership certificates as inputs to subsequent braidings. However, this method presents a significant hurdle, particularly for larger organisations. Implementing this reset each time a member is terminated can be prohibitively expensive. In particular, taking into account that the frequency of membership termination cases increases proportionally with the number of members as well as the required compute to do braidings, making this approach to scale as $O(N^2)$. Therefore, a more sophisticated and nuanced solution is needed.
+
 ## Extensions
 
 In order to avoid over-commitment, the peacefounder project currently focuses on smaller-scale organisations. This implies that a single developer must be able to maintain the system, that coercion/bribery is not of the utmost importance, and that the electoral roll is not necessary to satisfy the requirements of a law. Thus, those features are not integrated into the current design and can be considered separately as system extensions.
 
 ### Proof of participation
+
+**https://github.com/PeaceFounder/PeaceFounder.jl/issues/12**
 
 Some communities may wish to nudge their members to vote, providing benefits for those who have already cast a vote or punishing those who ignore democratic decision-making. In ordinary e-voting systems, that can be easily achieved through a voter’s registry. However, this is not possible for PeaceFounder because voters are completely anonymous when they cast a vote.
 
@@ -101,9 +145,13 @@ The voter then receives an acknowledgement that the vote is permanently recorded
 
 ### Selection's asymmetric encryption
 
+**https://github.com/PeaceFounder/PeaceFounder.jl/issues/16**
+
 To maintain the impartiality of auditors/monitors with regard to votes they oversee and further deter potential bribery attempts, an asymmetric encryption method for vote selection is advisable. Under this protocol, the voter's device encrypts a symmetric key asymmetrically and then proceeds to encrypt the vote selection using this symmetric key. The key and the encrypted selection are included in the vote, which is then signed using a pseudonym. Upon receiving the vote, after authenticating its signature, the system decrypts the symmetric key, followed by the vote selection. To ensure the decryption's integrity, a zero-knowledge proof is provided and subsequently published alongside the vote on the bulletin board.
 
 ### Coerced vote tagging
+
+**https://github.com/PeaceFounder/PeaceFounder.jl/issues/16**
 
 A threat where coercers forcibly dictate voters' choices while confiscating their devices is a pressing concern beyond the PeaceFounder system. A common solution to such a problem is equipping voters with an option to create a secondary PIN code, which works exactly as the primary PIN code except that the votes are tagged as coerced. 
 
@@ -112,6 +160,16 @@ To safeguard against coercers potentially discerning this distinction using a pr
 Votes are disclosed at the conclusion of the process, indicating any tags applied. By lengthening the gap between the tally announcement and the release of the votes, we can diminish the impact of coercive threats and deter unscrupulous voters from awaiting compensation, hinging on the assumption of the briber's credibility. Technically, this mechanism ensures receipt freeness until they appear on the ballot box ledger.
 
 This strategy presumes that no adversarial entity has infiltrated the collector system. To mitigate such risks, deploying multiple collectors, to which voters are randomly pre-assigned, is advised. This introduces a level of inter-collector accountability, as aggregated results should align. Notably, while receipt freeness is limited, the method retains full transparency: all parties can validate the tally's accuracy and verify every vote's eligibility and unlinkability, as well as the validity of the coercion tag. 
+
+
+
+### Sempled Electoral Roll Audits
+
+**https://github.com/PeaceFounder/PeaceFounder.jl/issues/17**
+
+In order to ensure the integrity of elections, it is crucial that independent auditors audit the legitimacy of members. However, the records that support the membership cannot be made public as it would violate the members' right to freedom of association and would also infringe on GDPR. Keeping these records confidential while ensuring they are sufficiently audited can be challenging and may require reducing openness to prevent any possible leaks.
+
+To overcome this dilemma in favour of more openness, a sampling of the electoral roll could be used. A large enough sample size can provide sufficient confidence that a potentially corrupt registrar could not have affected the election result, whereas keeping it small reduces the impact of leaks from the auditors. This lowers the trust barrier and opens the electoral roll auditing for more independent parties.
 
 ### Early leaked private key detection
 
