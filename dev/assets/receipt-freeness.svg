@@ -27,15 +27,15 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
      showgrid="false"
-     inkscape:zoom="0.85768239"
-     inkscape:cx="251.25851"
-     inkscape:cy="64.709268"
+     inkscape:zoom="0.93712598"
+     inkscape:cx="221.42167"
+     inkscape:cy="196.345"
      inkscape:window-width="1512"
-     inkscape:window-height="857"
+     inkscape:window-height="858"
      inkscape:window-x="0"
      inkscape:window-y="38"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer1" />
+     inkscape:current-layer="g4891" />
   <defs
      id="defs2">
     <marker
@@ -72,82 +72,6 @@
        x="33.625015"
        y="141.59526"
        ry="0.037559424" />
-    <rect
-       style="fill:#81b4fe;stroke:#000000;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.5;stroke-opacity:1"
-       id="rect788"
-       width="45.575024"
-       height="9.499999"
-       x="38.223133"
-       y="44.406506"
-       ry="0.034459859" />
-    <rect
-       style="fill:#ffdf7e;fill-opacity:1;stroke:#000000;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.2;stroke-opacity:1"
-       id="rect788-8"
-       width="120.3289"
-       height="9.499959"
-       x="83.859795"
-       y="44.406548"
-       ry="0.034459714" />
-    <rect
-       style="fill:#febc85;stroke:#000000;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.5;stroke-opacity:1"
-       id="rect788-3"
-       width="108.63911"
-       height="9.499999"
-       x="38.223133"
-       y="57.354603"
-       ry="0.034459859" />
-    <rect
-       style="fill:#8fd19e;stroke:#000000;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.5;stroke-opacity:1"
-       id="rect788-3-7"
-       width="57.326454"
-       height="9.499999"
-       x="146.86224"
-       y="57.354603"
-       ry="0.034459859" />
-    <text
-       xml:space="preserve"
-       style="font-size:5.64444px;font-family:'Helvetica Neue';-inkscape-font-specification:'Helvetica Neue, Normal';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.755906;stroke-opacity:1"
-       x="70.506844"
-       y="63.56369"
-       id="text1070"><tspan
-         sodipodi:role="line"
-         id="tspan1068"
-         style="font-size:5.64444px;fill:#000000;stroke:none;stroke-width:0.2"
-         x="70.506844"
-         y="63.56369">Receipt Freeness</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-size:5.64444px;font-family:'Helvetica Neue';-inkscape-font-specification:'Helvetica Neue, Normal';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.755906;stroke-opacity:1"
-       x="50.215679"
-       y="51.140526"
-       id="text1070-3"><tspan
-         sodipodi:role="line"
-         id="tspan1068-6"
-         style="font-size:5.64444px;fill:#000000;stroke:none;stroke-width:0.2"
-         x="50.215679"
-         y="51.140526">Fairness</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-size:5.64444px;font-family:'Helvetica Neue';-inkscape-font-specification:'Helvetica Neue, Normal';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.755906;stroke-opacity:1"
-       x="95.454414"
-       y="51.140526"
-       id="text1070-3-7"><tspan
-         sodipodi:role="line"
-         id="tspan1068-6-1"
-         style="font-size:5.64444px;fill:#000000;stroke:none;stroke-width:0.2"
-         x="95.454414"
-         y="51.140526">Tally Anounced</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-size:5.64444px;font-family:'Helvetica Neue';-inkscape-font-specification:'Helvetica Neue, Normal';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.755906;stroke-opacity:1"
-       x="157.36453"
-       y="64.12249"
-       id="text1070-39"><tspan
-         sodipodi:role="line"
-         id="tspan1068-0"
-         style="font-size:5.64444px;fill:#000000;stroke:none;stroke-width:0.2"
-         x="157.36453"
-         y="64.12249">Tallied as Cast</tspan></text>
     <g
        id="g4891"
        transform="translate(4.0103229,31.157124)">
@@ -259,14 +183,14 @@
       <text
          xml:space="preserve"
          style="font-size:5.64444px;font-family:'Helvetica Neue';-inkscape-font-specification:'Helvetica Neue, Normal';fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.2;stroke-dasharray:none;stroke-dashoffset:0.755906;stroke-opacity:1"
-         x="133.75987"
-         y="167.82095"
+         x="129.61688"
+         y="167.85291"
          id="text1070-39-0"><tspan
            sodipodi:role="line"
            id="tspan1068-0-1"
            style="font-size:5.64444px;fill:#000000;stroke:none;stroke-width:0.2"
-           x="133.75987"
-           y="167.82095">Tallied as Cast</tspan></text>
+           x="129.61688"
+           y="167.85291">Public Verifiability</tspan></text>
     </g>
   </g>
 </svg>
