@@ -97,7 +97,7 @@ The PeaceFounder system is actively focusing on integrating key features in its 
 
 ### PeaceFounderBB
 
-**https://github.com/PeaceFounder/PeaceFounder.jl/issues/22**
+**[https://github.com/PeaceFounder/PeaceFounder.jl/issues/22](https://github.com/PeaceFounder/PeaceFounder.jl/issues/22)**
 
 A small democratic community often faces the challenge of limited resources, particularly when it comes to hosting bulletin board data or maintaining a comprehensive website for public record access. However, a recent trend offers a practical solution with static website hosting platforms. These platforms allow the creation of a static website directly from source code stored in a git repository without the hassle of setting up and managing certificates. A popular example is GitHub Pages, which simplifies deployment using action scripts to compile websites from sources.
 
@@ -107,7 +107,7 @@ Additionally, the use of the Zenodo repository enriches this system. Zenodo prov
 
 ### Cast as intended verification during the vote
 
-**https://github.com/PeaceFounder/PeaceFounder.jl/issues/21**
+**[https://github.com/PeaceFounder/PeaceFounder.jl/issues/21](https://github.com/PeaceFounder/PeaceFounder.jl/issues/21)**
 
 At present, voters can only confirm that their vote has been cast as intended and accurately counted after the vote has ended and the votes are published. As the publication of votes can be delayed as a measure against coercion, it might discourage voters' participation from verifying that their vote is indeed cast as intended and counted as cast. The key issue lies in the possibility of unnoticed malware on voting devices. If voters don't verify their votes, the likelihood of malware affecting a significant number of votes without detection increases. Thus, having a procedure that enables immediate verification of the voting process is essential to engage more voters to check their votes.
 
@@ -115,13 +115,13 @@ The PeaceFounder system can address this by providing voters with a token displa
 
 ### Evidence auditing with terminal API
 
-**https://github.com/PeaceFounder/PeaceFounder.jl/issues/19**
+**[https://github.com/PeaceFounder/PeaceFounder.jl/issues/19](https://github.com/PeaceFounder/PeaceFounder.jl/issues/19)**
 
 The PeaceFounder system is universally verifiable, a feature ensuring that every vote is cryptographically proven to come from a registered member, even if all involved parties are corrupt. To mitigate the influence of coercion or bribery, the authority can strategically delay the publication of votes, which weakens the link between coercers and their subjects before the voters lose receipt freeness. After the votes are published, every aspect of the voting process is transparent: all proofs of votes are made publicly available. This transparency allows any interested party to audit the election results and, at their convenience, independently reproduce the announced tally.
 
-### Membership termination
+### Membership Termination
 
-**https://github.com/PeaceFounder/PeaceFounder.jl/issues/18**
+**[https://github.com/PeaceFounder/PeaceFounder.jl/issues/18](https://github.com/PeaceFounder/PeaceFounder.jl/issues/18)**
 
 Under the current state of PeaceFounder, administrators face a significant limitation: they lack the capability to terminate memberships. This function is crucial in various scenarios. For instance, when a member fails to submit necessary authenticity documents within the allotted time post-registration, their membership must be annulled. Additionally, this feature is vital for addressing privacy concerns, such as when members wish to withdraw and have their associated records deleted. Furthermore, an essential aspect of membership management involves issuing new credentials in cases where a member loses their device or experiences a security breach with their key being compromised.
 
@@ -135,7 +135,7 @@ In order to avoid over-commitment, the peacefounder project currently focuses on
 
 ### Proof of participation
 
-**https://github.com/PeaceFounder/PeaceFounder.jl/issues/12**
+**[https://github.com/PeaceFounder/PeaceFounder.jl/issues/12](https://github.com/PeaceFounder/PeaceFounder.jl/issues/12)**
 
 Some communities may wish to nudge their members to vote, providing benefits for those who have already cast a vote or punishing those who ignore democratic decision-making. In ordinary e-voting systems, that can be easily achieved through a voter’s registry. However, this is not possible for PeaceFounder because voters are completely anonymous when they cast a vote.
 
@@ -145,13 +145,13 @@ The voter then receives an acknowledgement that the vote is permanently recorded
 
 ### Selection's asymmetric encryption
 
-**https://github.com/PeaceFounder/PeaceFounder.jl/issues/16**
+**[https://github.com/PeaceFounder/PeaceFounder.jl/issues/16](https://github.com/PeaceFounder/PeaceFounder.jl/issues/16)**
 
 To maintain the impartiality of auditors/monitors with regard to votes they oversee and further deter potential bribery attempts, an asymmetric encryption method for vote selection is advisable. Under this protocol, the voter's device encrypts a symmetric key asymmetrically and then proceeds to encrypt the vote selection using this symmetric key. The key and the encrypted selection are included in the vote, which is then signed using a pseudonym. Upon receiving the vote, after authenticating its signature, the system decrypts the symmetric key, followed by the vote selection. To ensure the decryption's integrity, a zero-knowledge proof is provided and subsequently published alongside the vote on the bulletin board.
 
 ### Coerced vote tagging
 
-**https://github.com/PeaceFounder/PeaceFounder.jl/issues/16**
+**[https://github.com/PeaceFounder/PeaceFounder.jl/issues/16](https://github.com/PeaceFounder/PeaceFounder.jl/issues/16)**
 
 A threat where coercers forcibly dictate voters' choices while confiscating their devices is a pressing concern beyond the PeaceFounder system. A common solution to such a problem is equipping voters with an option to create a secondary PIN code, which works exactly as the primary PIN code except that the votes are tagged as coerced. 
 
@@ -165,7 +165,7 @@ This strategy presumes that no adversarial entity has infiltrated the collector 
 
 ### Sempled Electoral Roll Audits
 
-**https://github.com/PeaceFounder/PeaceFounder.jl/issues/17**
+**[https://github.com/PeaceFounder/PeaceFounder.jl/issues/17](https://github.com/PeaceFounder/PeaceFounder.jl/issues/17)**
 
 In order to ensure the integrity of elections, it is crucial that independent auditors audit the legitimacy of members. However, the records that support the membership cannot be made public as it would violate the members' right to freedom of association and would also infringe on GDPR. Keeping these records confidential while ensuring they are sufficiently audited can be challenging and may require reducing openness to prevent any possible leaks.
 

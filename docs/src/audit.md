@@ -1,8 +1,6 @@
 # Audit
 
-**Note: The demonstrated audit API is in progress. Currently, the best auditing strategy is to recreate the braid chain and ballot box ledger from one record at a time.**
-
-**Update: follow the feature proposal https://github.com/PeaceFounder/PeaceFounder.jl/issues/19**
+**Note: The demonstrated audit API is in progress and is discussed further in a feature proposal [Evidence Auditing with Terminal API](https://github.com/PeaceFounder/PeaceFounder.jl/issues/19). Currently, the best auditing strategy is to recreate the braid chain and ballot box ledger from one record at a time.**
 
 After elections have ended, the collector publishes a tally. After elections, every voter receives a final tally together with consistency proof, which proves that their vote is included in the ledger that has produced the tally. From the voter client, the voter reads four important parameters for the ballotbox:
 

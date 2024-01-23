@@ -4,7 +4,7 @@ In the PeaceFounder, communities are referred to as demes. To start a deme, we f
 
 ## System Setup
 
-![](../peacefounder-setup.webp)
+![](../assets/peacefounder-setup.webp)
 
 The first step to begin using the PeaceFounder e-voting system is to host it, which is a straightforward process on Linux servers. Begin by downloading the snap package with the command below, and remember to change the architecture to `arm64` if necessary:
 
