@@ -3,18 +3,19 @@ module Service
 # This is the outermost layer for the sercvice concerned with providing services for outsied world. 
 # Defines how HTTP requests are processed
 
-
 using ..Mapper
 using ..Parser: marshal, unmarshal
-using Base: UUID
-
-using HTTP: Request, Response, HTTP
 using ..Model: TicketID, Digest, Pseudonym, Digest, Member, Proposal, Vote
 using Dates: DateTime
+using Base: UUID
+using SwaggerMarkdown
 
-const ROUTER = HTTP.Router()
+module OxygenInstance using Oxygen; @oxidise end
+import .OxygenInstance: @get, @put, @post, mergeschema, serve, Request, Response
 
+const ROUTER = OxygenInstance.CONTEXT[].router
 
+export serve
 # POST /braidchain/members : Member -> AckInclusion
 # GET /braidchain/members : Vector{Tuple{Int, Member}}
 # GET /braidchain/members?id={Pseudonym} : Tuple{Int, Member}
@@ -41,11 +42,28 @@ const ROUTER = HTTP.Router()
 # GET /pollingstation/collectors # necessary to make a proposal
 
 
-get_deme(req::Request) = Response(200, marshal(Mapper.get_deme()))
-HTTP.register!(ROUTER, "GET", "/deme", get_deme)
+# @swagger """
+# /deme:
+#    get:
+#      description: description
+#      responses:
+#        '200':
+#          description: Successfully returned an number.
+# """
+@get "/deme" function(req::Request)
+    return Response(200, marshal(Mapper.get_deme()))
+end
 
 
-function enlist_ticket(req::Request) 
+# @swagger """
+# /tickets:
+#    post:
+#      description: description
+#      responses:
+#        '200':
+#          description: Successfully returned an number.
+# """
+@post "/tickets" function(req::Request) 
     
     ticketid, timestamp, auth_code = unmarshal(req.body, Tuple{TicketID, DateTime, Digest})
     response = Mapper.enlist_ticket(ticketid, timestamp, auth_code)
@@ -53,15 +71,18 @@ function enlist_ticket(req::Request)
     return Response(200, marshal(response))
 end
 
-HTTP.register!(ROUTER, "POST", "/tickets", enlist_ticket)
 
-
+@swagger """
+/tickets/{tid}:
+   put:
+     description: A client submits his public key ID together with a tooken. If succesful admission is returned which client could use further to enroll into braidchain.
+     responses:
+       '200':
+         description: Successfully returned an admission.
 """
-A client submits his public key ID together with a tooken. If succesful admission is returned which client could use further to enroll into braidchain.
-"""
-function seek_admission(req::Request) 
+@put "/tickets/{tid}" function(req::Request, tid::String) 
 
-    tid = HTTP.getparam(req, "ticketid")
+    #tid = HTTP.getparam(req, "ticketid")
     ticketid = TicketID(hex2bytes(tid))
 
     id, auth_code = unmarshal(req.body, Tuple{Pseudonym, Digest})
@@ -70,11 +91,9 @@ function seek_admission(req::Request)
     return Response(200, marshal(response))
 end
 
-HTTP.register!(ROUTER, "PUT", "/tickets/{ticketid}", seek_admission)
 
-function get_ticket_status(req::Request)
+@get "/tickets/{tid}" function(req::Request, tid::String)
 
-    tid = HTTP.getparam(req, "ticketid")
     ticketid = TicketID(hex2bytes(tid))
 
     status = Mapper.get_ticket_status(ticketid)
@@ -82,10 +101,8 @@ function get_ticket_status(req::Request)
     return Response(200, marshal(status))
 end
 
-HTTP.register!(ROUTER, "GET", "/tickets/{ticketid}", get_ticket_status)
 
-
-function enroll_member(req::Request)
+@post "/braidchain/members" function(req::Request)
     
     member = unmarshal(req.body, Member)
     response = Mapper.enroll_member(member)
@@ -93,20 +110,16 @@ function enroll_member(req::Request)
     return Response(200, marshal(response))
 end
 
-HTTP.register!(ROUTER, "POST", "/braidchain/members", enroll_member)
 
-
-function get_chain_commit(req::Request)
+@get "/braidchain/commit" function(req::Request)
     
     response = Mapper.get_chain_commit()
 
     return Response(200, marshal(response))
 end
 
-HTTP.register!(ROUTER, "GET", "/braidchain/commit", get_chain_commit)
 
-
-function enlist_proposal(req::Request)
+@post "/braidchain/proposals" function(req::Request)
 
     proposal = unmarshal(req.body, Proposal)
     ack = Mapper.enlist_proposal(proposal)
@@ -114,55 +127,41 @@ function enlist_proposal(req::Request)
     return Response(200, marshal(ack))
 end
 
-HTTP.register!(ROUTER, "POST", "/braidchain/proposals", enlist_proposal)
 
-
-function get_proposal_list(req::Request)
+@get "/braidchain/proposals" function(req::Request)
 
     proposal_list = Mapper.get_chain_proposal_list()
     
     return Response(200, marshal(proposal_list))
 end
 
-HTTP.register!(ROUTER, "GET", "/braidchain/proposals", get_proposal_list)
 
+@get "/braidchain/{N}/leaf" function(req::Request, N::Int)
 
-function get_chain_leaf(req::Request)
-
-    N = parse(Int, HTTP.getparam(req, "N"))
     ack = Mapper.get_chain_ack_leaf(N)
 
     return Response(200, marshal(ack))
 end
 
-HTTP.register!(ROUTER, "GET", "/braidchain/{N:[0-9]+}/leaf", get_chain_leaf)
 
+@get "/braidchain/{N}/root" function(req::Request, N::Int)
 
-function get_chain_root(req::Request)
-
-    N = parse(Int, HTTP.getparam(req, "N"))
     ack = Mapper.get_chain_ack_root(N)
 
     return Response(200, marshal(ack))
 end
 
-HTTP.register!(ROUTER, "GET", "/braidchain/{N:[0-9]+}/root", get_chain_root)
 
+@get "/braidchain/{N}/record" function get_chain_record(req::Request, N::Int)
 
-function get_chain_record(req::Request)
-
-    N = parse(Int, HTTP.getparam(req, "N"))
     record = Mapper.get_chain_record(N)
 
     return Response(200, marshal(record)) # type information is important here for receiver!
 end
 
-HTTP.register!(ROUTER, "GET", "/braidchain/{N:[0-9]+}/record", get_chain_record)
 
-
-function get_ballotbox_commit(req::Request)
+@get "/poolingstation/{uuid_hex}/commit" function(req::Request, uuid_hex::String)
     
-    uuid_hex = HTTP.getparam(req, "uuid")
     uuid = UUID(uuid_hex)
 
     commit = Mapper.get_ballotbox_commit(uuid)
@@ -170,12 +169,9 @@ function get_ballotbox_commit(req::Request)
     return Response(200, marshal(commit))
 end
 
-HTTP.register!(ROUTER, "GET", "/poolingstation/{uuid}/commit", get_ballotbox_commit)
 
-
-function get_ballotbox_proposal(req::Request)
+@get "/poolingstation/{uuid_hex}/proposal" function(req::Request, uuid_hex::String)
     
-    uuid_hex = HTTP.getparam(req, "uuid")
     uuid = UUID(uuid_hex)
 
     proposal = Mapper.get_ballotbox_proposal(uuid)
@@ -183,12 +179,9 @@ function get_ballotbox_proposal(req::Request)
     return Response(200, marshal(proposal))
 end
 
-HTTP.register!(ROUTER, "GET", "/poolingstation/{uuid}/proposal", get_ballotbox_proposal)
 
-
-function get_ballotbox_spine(req::Request)
+@get "/poolingstation/{uuid_hex}/spine" function(req::Request, uuid_hex::String)
     
-    uuid_hex = HTTP.getparam(req, "uuid")
     uuid = UUID(uuid_hex)
 
     spine = Mapper.get_ballotbox_spine(uuid)
@@ -196,12 +189,9 @@ function get_ballotbox_spine(req::Request)
     return Response(200, marshal(spine))
 end
 
-HTTP.register!(ROUTER, "GET", "/poolingstation/{uuid}/spine", get_ballotbox_spine)
 
-
-function cast_vote(req::Request)
+@post "/poolingstation/{uuid_hex}/votes" function cast_vote(req::Request, uuid_hex::String)
     
-    uuid_hex = HTTP.getparam(req, "uuid")
     uuid = UUID(uuid_hex)
 
     vote = unmarshal(req.body, Vote)
@@ -210,64 +200,50 @@ function cast_vote(req::Request)
     return Response(200, marshal(ack))
 end
 
-HTTP.register!(ROUTER, "POST", "/poolingstation/{uuid}/votes", cast_vote)
 
-
-function get_ballotbox_record(req::Request)
+@get "/poolingstation/{uuid_hex}/votes/{N}/record" function(req::Request, uuid_hex::String, N::Int)
     
-    uuid_hex = HTTP.getparam(req, "uuid")
     uuid = UUID(uuid_hex)
-    N = parse(Int, HTTP.getparam(req, "N"))
-
     record = Mapper.get_ballotbox_record(uuid, N)
     
     return Response(200, marshal(record))
 end
 
-HTTP.register!(ROUTER, "GET", "/poolingstation/{uuid}/votes/{N:[0-9]+}/record", get_ballotbox_record)
 
+@get "/poolingstation/{uuid_hex}/votes/{N}/receipt" function get_ballotbox_receipt(req::Request, uuid_hex::String, N::Int)
 
-function get_ballotbox_receipt(req::Request)
-
-    uuid_hex = HTTP.getparam(req, "uuid")
     uuid = UUID(uuid_hex)
-    N = parse(Int, HTTP.getparam(req, "N"))
-
     receipt = Mapper.get_ballotbox_receipt(uuid, N)
 
     return Response(200, marshal(receipt))
 end
 
-HTTP.register!(ROUTER, "GET", "/poolingstation/{uuid}/votes/{N:[0-9]+}/receipt", get_ballotbox_receipt)
 
+@get "/poolingstation/{uuid_hex}/votes/{N}/leaf" function get_ballotbox_leaf(req::Request, uuid_hex::String, N::Int)
 
-function get_ballotbox_leaf(req::Request)
-
-    uuid_hex = HTTP.getparam(req, "uuid")
     uuid = UUID(uuid_hex)
-    N = parse(Int, HTTP.getparam(req, "N"))
-
     ack = Mapper.get_ballotbox_ack_leaf(uuid, N)
 
     return Response(200, marshal(ack))
 end
 
-HTTP.register!(ROUTER, "GET", "/poolingstation/{uuid}/votes/{N:[0-9]+}/leaf", get_ballotbox_leaf)
 
+@get "/poolingstation/{uuid_hex}/votes/{N}/root" function get_ballotbox_root(req::Request, uuid_hex::String, N::Int)
 
-function get_ballotbox_root(req::Request)
-    
-
-    uuid_hex = HTTP.getparam(req, "uuid")
     uuid = UUID(uuid_hex)
-    N = parse(Int, HTTP.getparam(req, "N"))
-
     ack = Mapper.get_ballotbox_ack_root(uuid, N)
 
     return Response(200, marshal(ack))
 end
 
-HTTP.register!(ROUTER, "GET", "/poolingstation/{uuid}/votes/{N:[0-9]+}/root", get_ballotbox_root)
+
+# title and version are required
+info = Dict("title" => "PeaceFounder API", "version" => "0.4.0")
+openApi = OpenAPI("3.0", info)
+swagger_document = build(openApi)
+  
+# merge the SwaggerMarkdown schema with the internal schema
+mergeschema(swagger_document)
 
 
 end

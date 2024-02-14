@@ -25,6 +25,3 @@ end
 module RemoteTest
 include("remote.jl")
 end
-
-
-

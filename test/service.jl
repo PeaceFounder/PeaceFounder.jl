@@ -100,7 +100,7 @@ Client.check_vote!(alice, proposal.uuid)
 Client.get_ballotbox_commit!(alice, proposal.uuid)
 @test !Client.istallied(alice, proposal.uuid)
 
-Schedulers.waituntil(proposal.closed + Dates.Millisecond(1000))
+Schedulers.waituntil(proposal.closed + Dates.Millisecond(1500))
 
 Client.get_ballotbox_commit!(alice, proposal.uuid)
 @test Client.istallied(alice, proposal.uuid)

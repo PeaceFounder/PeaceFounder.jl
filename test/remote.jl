@@ -2,7 +2,8 @@ using Test
 using PeaceFounder: Client, Service, Mapper, Model, Schedulers
 import .Model: CryptoSpec, DemeSpec, Signer, id, approve, Selection
 import Dates
-import HTTP
+
+const PORT = 3222
 
 crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
 
@@ -26,11 +27,13 @@ demespec = DemeSpec(;
 
 Mapper.capture!(demespec)
 
-service = HTTP.serve!(Service.ROUTER, "0.0.0.0", 80)
+#service = HTTP.serve!(Service.ROUTER, "0.0.0.0", 80)
+
+service = Service.serve(async=true, port=PORT)
 
 
 try
-    SERVER = Client.route("http://0.0.0.0:80")
+    SERVER = Client.route("http://0.0.0.0:$PORT")
 
     RECRUIT_HMAC = Model.HMAC(Mapper.get_recruit_key(), Model.hasher(demespec))
 
@@ -58,7 +61,7 @@ try
     """,
         ballot = Model.Ballot(["yes", "no"]),
         open = Dates.now() + Dates.Millisecond(200),
-        closed = Dates.now() + Dates.Second(7)
+        closed = Dates.now() + Dates.Second(10)
     ) |> Client.configure(SERVER) |> approve(PROPOSER)
 
 
