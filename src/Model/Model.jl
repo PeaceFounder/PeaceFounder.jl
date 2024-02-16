@@ -126,8 +126,8 @@ end
 
 
 include("crypto.jl")
-include("admissions.jl")
 include("braidchains.jl")
+include("registrar.jl")
 include("proposals.jl")
 include("dealer.jl")
 include("braids.jl")

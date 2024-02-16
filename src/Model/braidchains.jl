@@ -138,12 +138,6 @@ isbinding(ack::AckInclusion{ChainState}, deme::DemeSpec) = issuer(ack) == deme.r
 
 isbinding(record::Transaction, ack::AckInclusion{ChainState}, deme::DemeSpec) = isbinding(ack, deme) && isbinding(record, ack, hasher(deme))
 
-"""
-    isbinding(admission::Admission, spec::DemeSpec)
-
-Check whether issuer of `admission` is a recruiter set in `spec`.
-"""
-isbinding(admission::Admission, deme::DemeSpec) = issuer(admission) == deme.recruiter
 
 isbinding(commit::Commit{ChainState}, deme::DemeSpec) = issuer(commit) == deme.recorder
 
@@ -432,6 +426,94 @@ function commit!(chain::BraidChain, signer::Signer)
 end
 
 members(chain::BraidChain, state::ChainState) = members(chain, state.index)
+
+
+"""
+    struct TicketID
+        id::Vector{UInt8}
+    end
+
+Represents a unique identifier for which a recruit tooken is issued. In case of necessity `id` can contain
+a full document, for instance, registration form, proof of identity and etc. In case a privacy is an issue
+the `id` can contain a unique identifier which can be matched to an identity in an external database.
+"""
+struct TicketID
+    id::Vector{UInt8}
+end
+
+
+bytes(ticketid::TicketID) = ticketid.id
+Base.bytes2hex(ticketid::TicketID) = bytes2hex(bytes(ticketid))
+
+Base.:(==)(x::TicketID, y::TicketID) = x.id == y.id
+
+TicketID(x::String) = TicketID(copy(Vector{UInt8}(x)))
+
+"""
+    struct Admission
+        ticketid::TicketID
+        id::Pseudonym
+        timestamp::DateTime
+        approval::Union{Seal, Nothing}
+    end
+
+Represents an admission certificate for a pseudonym `id`. 
+
+**Interface:** [`approve`](@ref), [`issuer`](@ref), [`id`](@ref), [`ticket`](@ref), [`isadmitted`](@ref)
+"""
+struct Admission
+    ticketid::TicketID # document on which basis recruiter have decided to approve the member
+    id::Pseudonym
+    timestamp::DateTime # Timestamp could be used as a deadline
+    approval::Union{Seal, Nothing}
+    # demespec::Digest # To prevent malicios guardian to downgrade cryptographic parameters, set a selective route compromising anonimity. Uppon receiving admission member would test that demespec is the one as sent in the invite.  
+end
+
+
+
+Admission(ticketid::TicketID, id::Pseudonym, timestamp::DateTime) = Admission(ticketid, id, timestamp, nothing)
+
+Base.:(==)(x::Admission, y::Admission) = x.ticketid == y.ticketid && x.id == y.id && x.timestamp == y.timestamp && x.approval == y.approval
+
+"""
+    isbinding(admission::Admission, spec::DemeSpec)
+
+Check whether issuer of `admission` is a recruiter set in `spec`.
+"""
+isbinding(admission::Admission, deme::DemeSpec) = issuer(admission) == deme.recruiter
+
+
+"""
+    approve(x::T, signer::Signer)::T
+    
+Cryptographically sign a document `x::T` and returns a signed document with the same type. To check whether a document
+is signed see `issuer` method.
+"""
+approve(admission::Admission, signer::Signer) = @set admission.approval = seal(admission, signer)
+
+issuer(admission::Admission) = isnothing(admission.approval) ? nothing : pseudonym(admission.approval)
+
+id(admission::Admission) = admission.id
+
+"""
+    ticket(x::Admission)
+
+Return a TicketID which is admitted.
+"""
+ticket(admission::Admission) = admission.ticketid
+
+
+function Base.show(io::IO, admission::Admission)
+    
+    println(io, "Admission:")
+    println(io, "  ticket : $(string(admission.ticketid))")
+    println(io, "  identity : $(string(admission.id))")
+    println(io, "  timestamp : $(admission.timestamp)")
+    print(io, "  issuer : $(string(issuer(admission)))")
+
+end
+
+
 
 """
     struct Member <: Transaction

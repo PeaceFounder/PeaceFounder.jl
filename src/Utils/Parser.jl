@@ -1,6 +1,6 @@
 module Parser
 
-using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Member, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, NonceCommitment, Lot, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Hash, TicketStatus, Commit, AckInclusion, Generator, CryptoSpec, DemeSpec, Hash, parse_groupspec, lower_groupspec, BraidWork
+using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Member, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, NonceCommitment, Lot, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Hash, TicketStatus, Commit, AckInclusion, Generator, CryptoSpec, DemeSpec, Hash, parse_groupspec, lower_groupspec, BraidWork, Invite
 using HistoryTrees: InclusionProof, ConsistencyProof
 
 using Dates: DateTime
@@ -11,6 +11,7 @@ using StructTypes
 using StructTypes: constructfrom, construct
 
 using Base64: base64encode, base64decode
+using URIs: URI
 
 
 # Should be removed when canonicalization methods will be implemented.
@@ -224,6 +225,22 @@ export marshal, unmarshal
 StructTypes.StructType(::Type{BraidWork}) = StructTypes.Struct()
 StructTypes.omitempties(::Type{BraidWork}) = (:approval,)
 
+
+
+StructTypes.StructType(::Type{Invite}) = StructTypes.CustomStruct()
+
+StructTypes.lower(invite::Invite) = Dict(:demehash => invite.demehash, :ticketid => invite.ticketid, :token => invite.token, :hasher => invite.hasher, :route => string(invite.route))
+
+function StructTypes.construct(::Type{Invite}, data::Dict)
+
+    demehash = StructTypes.constructfrom(Digest, data["demehash"])
+    ticketid = StructTypes.constructfrom(TicketID, data["ticketid"])
+    token = StructTypes.constructfrom(Digest, data["token"])
+    hasher = StructTypes.constructfrom(Hash, data["hasher"])
+    route = URI(data["route"])
+    
+    return Invite(demehash, ticketid, token, hasher, route)
+end
 
 
 end

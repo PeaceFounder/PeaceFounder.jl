@@ -28,14 +28,14 @@ demespec = DemeSpec(;
 
 Mapper.capture!(demespec)
 
-RECRUIT_HMAC = Model.HMAC(Mapper.get_recruit_key(), Model.hasher(demespec))
+#RECRUIT_HMAC = Model.HMAC(Mapper.get_recruit_key(), Model.hasher(demespec))
 
-alice_invite = Client.enlist_ticket(SERVER, Model.TicketID("Alice"), RECRUIT_HMAC) 
-bob_invite = Client.enlist_ticket(SERVER, Model.TicketID("Bob"), RECRUIT_HMAC) 
-eve_invite = Client.enlist_ticket(SERVER, Model.TicketID("Eve"), RECRUIT_HMAC) 
+alice_invite = Mapper.enlist_ticket(Model.TicketID("Alice")) 
+bob_invite = Mapper.enlist_ticket(Model.TicketID("Bob")) 
+eve_invite = Mapper.enlist_ticket(Model.TicketID("Eve")) 
 
 # If ticketid is already is registered and is unadmitted the same invite shall be returned (unless token have expired)
-@test alice_invite == Client.enlist_ticket(SERVER, Model.TicketID("Alice"), RECRUIT_HMAC) 
+@test alice_invite == Mapper.enlist_ticket(Model.TicketID("Alice")) 
 @test Parser.unmarshal(Parser.marshal(eve_invite), Client.Invite) == eve_invite
 
 alice = Client.DemeClient()
@@ -47,8 +47,9 @@ Client.enroll!(bob, bob_invite; server = SERVER, key = 3)
 eve = Client.DemeClient()
 Client.enroll!(eve, eve_invite; server = SERVER, key = 4)
 
+
 # As the ticket is already expired there is no valid invite available and this should throw an error
-@test_throws ErrorException Client.enlist_ticket(SERVER, Model.TicketID("Alice"), RECRUIT_HMAC)
+@test_throws ErrorException Mapper.enlist_ticket(Model.TicketID("Alice"))
 
 ### A simple proposal submission
 
@@ -58,8 +59,9 @@ proposal = Model.Proposal(
     description = "",
     ballot = Model.Ballot(["yes", "no"]),
     open = Dates.now() + Dates.Millisecond(100),
-    closed = Dates.now() + Dates.Second(3)
+    closed = Dates.now() + Dates.Second(5)
 ) |> Client.configure(SERVER) |> approve(PROPOSER)
+
 
 
 ack = Client.enlist_proposal(SERVER, proposal)
@@ -85,7 +87,8 @@ Client.check_vote!(alice, uuid, index) # asks for consistency proof that previou
 
 Client.get_ballotbox_commit!(alice, uuid, index)
 @test Client.istallied(alice, uuid, index) == false
-sleep(2)
+
+sleep(5)
 
 Client.get_ballotbox_commit!(alice, uuid, index)
 @test Client.istallied(alice, uuid, index) == true

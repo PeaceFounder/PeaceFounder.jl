@@ -2,7 +2,7 @@ using Test
 
 import PeaceFounder.Model
 import PeaceFounder.Mapper
-using PeaceFounder.Model: CryptoSpec, pseudonym, TicketID, Member, Proposal, Ballot, Selection, generator, state, id, vote, seed, tally, approve, istallied, DemeSpec, hasher, HMAC, auth, token, isbinding, Generator, generate, Signer
+using PeaceFounder.Model: CryptoSpec, pseudonym, TicketID, Member, Proposal, Ballot, Selection, generator, state, id, vote, seed, tally, approve, istallied, DemeSpec, hasher, HMAC, auth, token, isbinding, Generator, generate, Signer, Invite
 
 import Dates: Dates, Date
 
@@ -35,13 +35,15 @@ Mapper.capture!(demespec)
 RECRUIT_AUTHORIZATION_KEY = Mapper.get_recruit_key() 
 RECRUIT_HMAC = HMAC(RECRUIT_AUTHORIZATION_KEY, hasher(crypto))
 
-function enroll(signer, ticketid, token)
+#function enroll(signer, ticketid, token)
 
-    auth_code = auth(id(signer), token, hasher(signer))
+function enroll(signer, invite::Invite)
+
+    auth_code = auth(id(signer), invite.token, hasher(invite))
 
     # ---- evesdropers listening --------
     
-    admission = Mapper.seek_admission(id(signer), ticketid, auth_code)
+    admission = Mapper.seek_admission(id(signer), invite.ticketid, auth_code)
     
     commit = Mapper.get_chain_commit()
     g = generator(commit)
@@ -53,41 +55,41 @@ function enroll(signer, ticketid, token)
 end
 
 
-function enlist_ticket(ticketid)
+# function enlist_ticket(ticketid)
 
-    timestamp = Dates.now()
-    ticket_auth_code = auth(ticketid, timestamp, RECRUIT_HMAC)
+#     timestamp = Dates.now()
+#     ticket_auth_code = auth(ticketid, timestamp, RECRUIT_HMAC)
 
-    # ---- evesdropers listening --------
+#     # ---- evesdropers listening --------
     
-    metadata, salt, reply_auth_code = Mapper.enlist_ticket(ticketid, timestamp, ticket_auth_code) # ouptut is sent to main server    
+#     metadata, salt, reply_auth_code = Mapper.enlist_ticket(ticketid, timestamp, ticket_auth_code) # ouptut is sent to main server    
 
-    # ---- evesdropers listening --------
+#     # ---- evesdropers listening --------
 
-    @test isbinding(metadata, ticketid, salt, reply_auth_code, RECRUIT_HMAC)  # done on the server
-    @test isbinding(demespec, metadata, hasher(RECRUIT_HMAC)) 
+#     @test isbinding(metadata, ticketid, salt, reply_auth_code, RECRUIT_HMAC)  # done on the server
+#     @test isbinding(demespec, metadata, hasher(RECRUIT_HMAC)) 
 
-    return token(ticketid, salt, RECRUIT_HMAC)
-end
+#     return token(ticketid, salt, RECRUIT_HMAC)
+# end
 
 ticketid_alice = TicketID("Alice")
-token_alice = enlist_ticket(ticketid_alice)
+invite_alice = Mapper.enlist_ticket(ticketid_alice)
 
 ticketid_bob = TicketID("Bob")
-token_bob = enlist_ticket(ticketid_bob)
+invite_bob = Mapper.enlist_ticket(ticketid_bob)
 
 ticketid_eve = TicketID("Eve")
-token_eve = enlist_ticket(ticketid_eve)
+invite_eve = Mapper.enlist_ticket(ticketid_eve)
 
 
 alice = Signer(crypto, 2)
-access_alice, ack = enroll(alice, ticketid_alice, token_alice)
+access_alice, ack = enroll(alice, invite_alice)
 
 bob = Signer(crypto, 3)
-access_bob, ack = enroll(bob, ticketid_bob, token_bob)
+access_bob, ack = enroll(bob, invite_bob)
 
 eve = Signer(crypto, 4)
-access_eve, ack = enroll(eve, ticketid_eve, token_eve)
+access_eve, ack = enroll(eve, invite_eve)
 
 @test Mapper.get_ticket_status(ticketid_alice) isa Model.TicketStatus
 @test Mapper.get_ticket_admission(ticketid_alice) isa Model.Admission

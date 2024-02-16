@@ -50,13 +50,13 @@ record!(BRAID_CHAIN, promises)
 # If there are no elements in the chain this errors. 
 # as well as asking for a root, leaf elements.
 
-function enroll(signer, ticketid, token)
+function enroll(signer, invite)
 
-    auth_code = auth(id(signer), token, hasher(signer))
+    auth_code = auth(id(signer), invite.token, hasher(invite))
 
     # ---- evesdropers listening --------
 
-    admission = admit!(RECRUITER, id(signer), ticketid, auth_code)
+    admission = admit!(RECRUITER, id(signer), invite.ticketid, auth_code)
     @test verify(admission, crypto)
     _commit = commit(BRAID_CHAIN)
     @test id(_commit) == id(BRAID_CHAIN_RECORDER)
@@ -71,35 +71,38 @@ function enroll(signer, ticketid, token)
     return access, ack
 end
 
-function enlist(ticketid)
+# function enlist(ticketid)
 
-    timestamp = Dates.now()
-    ticket_auth_code = auth(ticketid, timestamp, RECRUIT_HMAC)
+#     timestamp = Dates.now()
+#     ticket_auth_code = auth(ticketid, timestamp, RECRUIT_HMAC)
 
-    # ---- evesdropers listening --------
+#     # ---- evesdropers listening --------
     
-    metadata, salt, salt_auth_code = enlist!(RECRUITER, ticketid, timestamp, ticket_auth_code) # ouptut is sent to main server    
+#     metadata, salt, salt_auth_code = enlist!(RECRUITER, ticketid, timestamp, ticket_auth_code) # ouptut is sent to main server    
 
-    # ---- evesdropers listening --------
+#     # ---- evesdropers listening --------
     
-    #@test isbinding(ticketid, salt, salt_auth_code, RECRUIT_HMAC)  # done on the server
-    @test isbinding(metadata, ticketid, salt, salt_auth_code, RECRUIT_HMAC)  # done on the server
-    return token(ticketid, salt, RECRUIT_HMAC)    
-end
+#     #@test isbinding(ticketid, salt, salt_auth_code, RECRUIT_HMAC)  # done on the server
+#     @test isbinding(metadata, ticketid, salt, salt_auth_code, RECRUIT_HMAC)  # done on the server
+#     return token(ticketid, salt, RECRUIT_HMAC)    
+# end
+
+
+enlist(ticketid) = enlist!(RECRUITER, ticketid, Dates.now())
 
 
 ticketid_alice = TicketID("Alice")
-token_alice = enlist(ticketid_alice)
+invite_alice = enlist(ticketid_alice)
 
 ticketid_bob = TicketID("Bob")
-token_bob = enlist(ticketid_bob)
+invite_bob = enlist(ticketid_bob)
 
 ticketid_eve = TicketID("Eve")
-token_eve = enlist(ticketid_eve)
+invite_eve = enlist(ticketid_eve)
 
 #alice = generate(Signer, crypto)
 alice = Signer(crypto, 2)
-access, ack = enroll(alice, ticketid_alice, token_alice)
+access, ack = enroll(alice, invite_alice)
 
 @test isbinding(access, ack, crypto) # true if acknolwedgemnt is a witness for access; perhaps iswitness could be a better one
 @test id(ack) == id(BRAID_CHAIN_RECORDER)
@@ -117,11 +120,11 @@ access, ack = enroll(alice, ticketid_alice, token_alice)
 
 #bob = generate(Signer, crypto)
 bob = Signer(crypto, 3)
-access, ack = enroll(bob, ticketid_bob, token_bob)
+access, ack = enroll(bob, invite_bob)
 
 #eve = generate(Signer, crypto)
 eve = Signer(crypto, 4)
-access, ack = enroll(eve, ticketid_eve, token_eve)
+access, ack = enroll(eve, invite_eve)
 
 ### Now I have a three members
 

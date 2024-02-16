@@ -148,7 +148,12 @@ get_recruit_key() = Model.key(RECRUITER[])
 
 get_deme() = BRAID_CHAIN[].spec
 
-enlist_ticket(ticketid::TicketID, timestamp::DateTime, auth_code::Digest; expiration_time = nothing) = Model.enlist!(RECRUITER[], ticketid, timestamp, auth_code)
+#enlist_ticket(ticketid::TicketID, timestamp::DateTime, auth_code::Digest; expiration_time = nothing) = Model.enlist!(RECRUITER[], ticketid, timestamp, auth_code)
+
+enlist_ticket(ticketid::TicketID, timestamp::DateTime; expiration_time = nothing) = Model.enlist!(RECRUITER[], ticketid, timestamp)
+enlist_ticket(ticketid::TicketID; expiration_time = nothing) = enlist_ticket(ticketid, Dates.now(); expiration_time)
+
+# Useful for an admin
 #delete_ticket!(ticketid::TicketID) = Model.remove!(RECRUITER[], ticketid) # 
 
 get_ticket_ids() = Model.ticket_ids(RECRUITER[])

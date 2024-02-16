@@ -5,7 +5,7 @@ using ..Model
 using ..Model: Member, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, Hash, AckConsistency, AckInclusion, CastAck, DemeSpec, Signer, TicketStatus, Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen
 using Base: UUID
 
-using ..Model: id, hasher, pseudonym, isbinding, generator, isadmitted, state, verify, crypto, index, root, commit, isconsistent, istallied, issuer
+using ..Model: id, hasher, pseudonym, isbinding, generator, isadmitted, state, verify, crypto, index, root, commit, isconsistent, istallied, issuer, Invite
 
 using HTTP: Router, Request, Response, Handler, HTTP, iserror, StatusError
 
@@ -80,26 +80,27 @@ function get_deme(server::Route)
 end
 
 
-function enlist_ticket(server::Route, ticketid::TicketID, hmac::HMAC; dest = destination(server))
+# REFACTOR: needs a special HMAC authetification at Service layer
+# function enlist_ticket(server::Route, ticketid::TicketID, hmac::HMAC; dest = destination(server))
 
-    timestamp = Dates.now()
-    ticket_auth_code = Model.auth(ticketid, timestamp, hmac)
-    body = marshal((ticketid, timestamp, ticket_auth_code))
+#     timestamp = Dates.now()
+#     ticket_auth_code = Model.auth(ticketid, timestamp, hmac)
+#     body = marshal((ticketid, timestamp, ticket_auth_code))
 
-    response = post(server, "/tickets", body)
+#     response = post(server, "/tickets", body)
 
-    metadata, salt, reply_auth_code = unmarshal(response.body, Tuple{Vector{UInt8}, Vector{UInt8}, Digest})
+#     metadata, salt, reply_auth_code = unmarshal(response.body, Tuple{Vector{UInt8}, Vector{UInt8}, Digest})
 
-    @assert isbinding(metadata, ticketid, salt, reply_auth_code, hmac)
+#     @assert isbinding(metadata, ticketid, salt, reply_auth_code, hmac)
 
-    if salt == UInt8[]
-        error("TicketID with $(bytes2hex(ticketid)) is already admitted.")
-    end
+#     if salt == UInt8[]
+#         error("TicketID with $(bytes2hex(ticketid)) is already admitted.")
+#     end
 
-    invite = Invite(Digest(metadata), ticketid, Model.token(ticketid, salt, hmac), hasher(hmac), dest)
+#     invite = Invite(Digest(metadata), ticketid, Model.token(ticketid, salt, hmac), hasher(hmac), dest)
 
-    return invite
-end
+#     return invite
+# end
 
 
 function seek_admission(server::Route, id::Pseudonym, ticketid::TicketID, token::Digest, hasher::Hash)
@@ -751,37 +752,6 @@ function blame(voter::DemeAccount, uuid::UUID)
     end
 end
 
-
-struct Invite
-    demehash::Digest
-    ticketid::TicketID
-    token::Digest
-    hasher::Hash # HashSpec
-    route::URI
-end
-
-Base.:(==)(x::Invite, y::Invite) = x.demehash == y.demehash && x.ticketid == y.ticketid && x.token == y.token && x.hasher == y.hasher && x.route == y.route
-
-# This gives a nasty error for some reason when CryptoGroups are imported.
-#@batteries Invite
-
-Model.isbinding(spec::DemeSpec, invite::Invite) = Model.digest(spec, invite.hasher) == invite.demehash
-
-# Parsing to string and back
-StructTypes.StructType(::Type{Invite}) = StructTypes.CustomStruct()
-
-StructTypes.lower(invite::Invite) = Dict(:demehash => invite.demehash, :ticketid => invite.ticketid, :token => invite.token, :hasher => invite.hasher, :route => string(invite.route))
-
-function StructTypes.construct(::Type{Invite}, data::Dict)
-
-    demehash = StructTypes.constructfrom(Digest, data["demehash"])
-    ticketid = StructTypes.constructfrom(TicketID, data["ticketid"])
-    token = StructTypes.constructfrom(Digest, data["token"])
-    hasher = StructTypes.constructfrom(Hash, data["hasher"])
-    route = URI(data["route"])
-    
-    return Invite(demehash, ticketid, token, hasher, route)
-end
 
 
 # Parser.marshal, Parser.unmarshal ; Client.enroll method seems like a good fit where to do parsing 

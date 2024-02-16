@@ -1,82 +1,7 @@
 import Random
+using URIs
+
 # One could add expiration policy and etc. Currently that is not needed.
-
-"""
-    struct TicketID
-        id::Vector{UInt8}
-    end
-
-Represents a unique identifier for which a recruit tooken is issued. In case of necessity `id` can contain
-a full document, for instance, registration form, proof of identity and etc. In case a privacy is an issue
-the `id` can contain a unique identifier which can be matched to an identity in an external database.
-"""
-struct TicketID
-    id::Vector{UInt8}
-end
-
-
-bytes(ticketid::TicketID) = ticketid.id
-Base.bytes2hex(ticketid::TicketID) = bytes2hex(bytes(ticketid))
-
-Base.:(==)(x::TicketID, y::TicketID) = x.id == y.id
-
-TicketID(x::String) = TicketID(copy(Vector{UInt8}(x)))
-
-"""
-    struct Admission
-        ticketid::TicketID
-        id::Pseudonym
-        timestamp::DateTime
-        approval::Union{Seal, Nothing}
-    end
-
-Represents an admission certificate for a pseudonym `id`. 
-
-**Interface:** [`approve`](@ref), [`issuer`](@ref), [`id`](@ref), [`ticket`](@ref), [`isadmitted`](@ref)
-"""
-struct Admission
-    ticketid::TicketID # document on which basis recruiter have decided to approve the member
-    id::Pseudonym
-    timestamp::DateTime # Timestamp could be used as a deadline
-    approval::Union{Seal, Nothing}
-    # demespec::Digest # To prevent malicios guardian to downgrade cryptographic parameters, set a selective route compromising anonimity. Uppon receiving admission member would test that demespec is the one as sent in the invite.  
-end
-
-
-
-Admission(ticketid::TicketID, id::Pseudonym, timestamp::DateTime) = Admission(ticketid, id, timestamp, nothing)
-
-Base.:(==)(x::Admission, y::Admission) = x.ticketid == y.ticketid && x.id == y.id && x.timestamp == y.timestamp && x.approval == y.approval
-
-"""
-    approve(x::T, signer::Signer)::T
-    
-Cryptographically sign a document `x::T` and returns a signed document with the same type. To check whether a document
-is signed see `issuer` method.
-"""
-approve(admission::Admission, signer::Signer) = @set admission.approval = seal(admission, signer)
-
-issuer(admission::Admission) = isnothing(admission.approval) ? nothing : pseudonym(admission.approval)
-
-id(admission::Admission) = admission.id
-
-"""
-    ticket(x::Admission)
-
-Return a TicketID which is admitted.
-"""
-ticket(admission::Admission) = admission.ticketid
-
-
-function Base.show(io::IO, admission::Admission)
-    
-    println(io, "Admission:")
-    println(io, "  ticket : $(string(admission.ticketid))")
-    println(io, "  identity : $(string(admission.id))")
-    println(io, "  timestamp : $(admission.timestamp)")
-    print(io, "  issuer : $(string(issuer(admission)))")
-
-end
 
 """
     mutable struct Ticket
@@ -268,54 +193,81 @@ Replace metadata for a recruiter. Note when data is replaced all unfinalized tok
 set_metadata!(recruiter::TokenRecruiter, metadata::Vector{UInt8}) = recruiter.metadata[] = metadata
 
 
-"""
-    enlist!(recruiter::TokenRecruiter, ticketid::TicketID, timestamp::DateTime, ticket_auth_code::Digest)::Tuple{Vector{UInt8}, Vector{UInt8}, Digest}
+# """
+#     enlist!(recruiter::TokenRecruiter, ticketid::TicketID, timestamp::DateTime, ticket_auth_code::Digest)::Tuple{Vector{UInt8}, Vector{UInt8}, Digest}
 
-Attempt to enlist a ticket with given `ticketid` authetificated by a recruit client at `timestmap`. This function checks
-the age of the request which need to be less than 60 seconds to be considered. Then the hash authorization code is checked after which a triplet of `metadata`, `salt` and `reply_auth_code` is returned. If either of theses checks fail an error is raised and needs to be dealt by the user. See a [`token`](@ref) method on how the token is derived.
-"""
-function enlist!(recruiter::TokenRecruiter, ticketid::TicketID, timestamp::DateTime, ticket_auth_code::Digest)
+# Attempt to enlist a ticket with given `ticketid` authetificated by a recruit client at `timestmap`. This function checks
+# the age of the request which need to be less than 60 seconds to be considered. Then the hash authorization code is checked after which a triplet of `metadata`, `salt` and `reply_auth_code` is returned. If either of theses checks fail an error is raised and needs to be dealt by the user. See a [`token`](@ref) method on how the token is derived.
+# """
+# function enlist!(recruiter::TokenRecruiter, ticketid::TicketID, timestamp::DateTime, ticket_auth_code::Digest)
    
-    @assert (Dates.now() - timestamp) < Second(60) "Old request"
+#     @assert (Dates.now() - timestamp) < Second(3600) "Old request"
 
-    @assert isbinding(ticketid, timestamp, ticket_auth_code, hmac(recruiter)) # need to be aware of replay attack and bouncing back
+#     @assert isbinding(ticketid, timestamp, ticket_auth_code, hmac(recruiter)) # need to be aware of replay attack and bouncing back
 
-    for ticket in recruiter.tickets
-        if ticket.ticketid == ticketid
-            return recruiter.metadata[], ticket.salt, ticket.auth_code
-        end
-    end
+#     for ticket in recruiter.tickets
+#         if ticket.ticketid == ticketid
+#             return recruiter.metadata[], ticket.salt, ticket.auth_code
+#         end
+#     end
     
-    salt = rand(UInt8, 16) # Needs a real random number generator
-    _token = token(ticketid, salt, hmac(recruiter))
+#     salt = rand(UInt8, 16) # Needs a real random number generator
+#     _token = token(ticketid, salt, hmac(recruiter))
     
-    metadata = recruiter.metadata[]
+#     metadata = recruiter.metadata[]
 
-    reply_auth_code = auth(metadata, ticketid, salt, hmac(recruiter))
+#     reply_auth_code = auth(metadata, ticketid, salt, hmac(recruiter))
 
-    push!(recruiter.tickets, Ticket(ticketid, timestamp, salt, reply_auth_code, _token, nothing))
+#     push!(recruiter.tickets, Ticket(ticketid, timestamp, salt, reply_auth_code, _token, nothing))
 
-    return metadata, salt, reply_auth_code
+#     return metadata, salt, reply_auth_code
+# end
+
+
+
+struct Invite
+    demehash::Digest
+    ticketid::TicketID
+    token::Digest
+    hasher::Hash # HashSpec
+    route::URI
 end
 
+Base.:(==)(x::Invite, y::Invite) = x.demehash == y.demehash && x.ticketid == y.ticketid && x.token == y.token && x.hasher == y.hasher && x.route == y.route
 
-function enlist_locally!(recruiter::TokenRecruiter, ticketid::TicketID, timestamp::DateTime)
+# This gives a nasty error for some reason when CryptoGroups are imported.
+#@batteries Invite
 
-    @assert (Dates.now() - timestamp) < Second(60) "Request too old"
+isbinding(spec::DemeSpec, invite::Invite) = Model.digest(spec, invite.hasher) == invite.demehash
+
+# Parsing to string and back
+
+hasher(invite::Invite) = invite.hasher
+
+
+function enlist!(recruiter::TokenRecruiter, ticketid::TicketID, timestamp::DateTime; route=URI())
+
+    @assert (Dates.now() - timestamp) < Second(3600) "Request too old"
+
+    metadata = Digest(recruiter.metadata[])
 
     for ticket in recruiter.tickets
         if ticket.ticketid == ticketid
-            return ticket.token
+            if isadmitted(ticket)
+                error("Ticket with $ticketid is already admitted.")
+            else
+                return Invite(metadata, ticketid, ticket.token, hasher(recruiter.hmac), route)
+            end
         end
     end
 
     # Just to follow
     salt = rand(UInt8, 16) # Needs a real random number generator
-    _token = token(ticketid, salt, hmac(recruiter))    
+    _token = token(ticketid, salt, hmac(recruiter))
 
-    push!(recruiter.tickets, Ticket(ticketid, timestamp, Digest[], Digest[], _token, nothing))
+    push!(recruiter.tickets, Ticket(ticketid, timestamp, salt, Digest(), _token, nothing))
 
-    return _token
+    return Invite(metadata, ticketid, _token, hasher(recruiter.hmac), route)
 end
 
 

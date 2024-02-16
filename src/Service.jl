@@ -42,27 +42,11 @@ export serve
 # GET /pollingstation/collectors # necessary to make a proposal
 
 
-# @swagger """
-# /deme:
-#    get:
-#      description: description
-#      responses:
-#        '200':
-#          description: Successfully returned an number.
-# """
 @get "/deme" function(req::Request)
     return Response(200, marshal(Mapper.get_deme()))
 end
 
 
-# @swagger """
-# /tickets:
-#    post:
-#      description: description
-#      responses:
-#        '200':
-#          description: Successfully returned an number.
-# """
 @post "/tickets" function(req::Request) 
     
     ticketid, timestamp, auth_code = unmarshal(req.body, Tuple{TicketID, DateTime, Digest})
@@ -81,8 +65,7 @@ end
          description: Successfully returned an admission.
 """
 @put "/tickets/{tid}" function(req::Request, tid::String) 
-
-    #tid = HTTP.getparam(req, "ticketid")
+    
     ticketid = TicketID(hex2bytes(tid))
 
     id, auth_code = unmarshal(req.body, Tuple{Pseudonym, Digest})
@@ -243,7 +226,7 @@ openApi = OpenAPI("3.0", info)
 swagger_document = build(openApi)
   
 # merge the SwaggerMarkdown schema with the internal schema
-mergeschema(swagger_document)
+OxygenInstance.mergeschema(swagger_document)
 
 
 end
