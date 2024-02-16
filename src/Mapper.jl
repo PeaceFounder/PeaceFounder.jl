@@ -7,11 +7,11 @@ import Dates: Dates, DateTime
 import ..Schedulers: Schedulers, Scheduler
 
 using ..Model
-using ..Model: CryptoSpec, pseudonym, BraidChain, TokenRecruiter, PollingStation, TicketID, Member, Proposal, Ballot, Selection, Transaction, Signer, Dealer, BraidBroker, Pseudonym, Vote, id, DemeSpec, Digest, Admission
+using ..Model: CryptoSpec, pseudonym, BraidChain, Registrar, PollingStation, TicketID, Member, Proposal, Ballot, Selection, Transaction, Signer, Dealer, BraidBroker, Pseudonym, Vote, id, DemeSpec, Digest, Admission
 using Base: UUID
 
 const RECORDER = Ref{Signer}()
-const RECRUITER = Ref{TokenRecruiter}()
+const REGISTRAR = Ref{Registrar}()
 const BRAIDER = Ref{Signer}()
 const COLLECTOR = Ref{Signer}()
 
@@ -102,21 +102,21 @@ end
 function initialize!(spec::CryptoSpec)
 
     RECORDER[] = Model.generate(Signer, spec)
-    RECRUITER[] = Model.generate(TokenRecruiter, spec)
+    REGISTRAR[] = Model.generate(Registrar, spec)
     BRAIDER[] = Model.generate(Signer, spec)
     COLLECTOR[] = Model.generate(Signer, spec)
 
     return
 end
 
-system_roles() = (; recorder = id(RECORDER[]), recruiter = id(RECRUITER[]), braider = id(BRAIDER[]), collector = id(COLLECTOR[]))
+system_roles() = (; recorder = id(RECORDER[]), recruiter = id(REGISTRAR[]), braider = id(BRAIDER[]), collector = id(COLLECTOR[]))
 
 
 function capture!(spec::DemeSpec)
 
     BRAID_CHAIN[] = BraidChain(spec)
 
-    RECRUITER[].metadata[] = Model.bytes(Model.digest(spec, Model.hasher(spec))) 
+    REGISTRAR[].metadata[] = Model.bytes(Model.digest(spec, Model.hasher(spec))) 
 
 
     DEALER[] = Dealer(spec; delay = 1)
@@ -144,27 +144,27 @@ function capture!(spec::DemeSpec)
 end
 
 
-get_recruit_key() = Model.key(RECRUITER[])
+get_recruit_key() = Model.key(REGISTRAR[])
 
 get_deme() = BRAID_CHAIN[].spec
 
-#enlist_ticket(ticketid::TicketID, timestamp::DateTime, auth_code::Digest; expiration_time = nothing) = Model.enlist!(RECRUITER[], ticketid, timestamp, auth_code)
+#enlist_ticket(ticketid::TicketID, timestamp::DateTime, auth_code::Digest; expiration_time = nothing) = Model.enlist!(REGISTRAR[], ticketid, timestamp, auth_code)
 
-enlist_ticket(ticketid::TicketID, timestamp::DateTime; expiration_time = nothing) = Model.enlist!(RECRUITER[], ticketid, timestamp)
+enlist_ticket(ticketid::TicketID, timestamp::DateTime; expiration_time = nothing) = Model.enlist!(REGISTRAR[], ticketid, timestamp)
 enlist_ticket(ticketid::TicketID; expiration_time = nothing) = enlist_ticket(ticketid, Dates.now(); expiration_time)
 
 # Useful for an admin
-#delete_ticket!(ticketid::TicketID) = Model.remove!(RECRUITER[], ticketid) # 
+#delete_ticket!(ticketid::TicketID) = Model.remove!(REGISTRAR[], ticketid) # 
 
-get_ticket_ids() = Model.ticket_ids(RECRUITER[])
+get_ticket_ids() = Model.ticket_ids(REGISTRAR[])
 
-get_ticket_status(ticketid::TicketID) = Model.ticket_status(ticketid, RECRUITER[])
-get_ticket_admission(ticketid::TicketID) = Model.select(Admission, ticketid, RECRUITER[])
-get_ticket_timestamp(ticketid::TicketID) = Model.select(Ticket, ticketid, RECRUITER[]).timestamp
+get_ticket_status(ticketid::TicketID) = Model.ticket_status(ticketid, REGISTRAR[])
+get_ticket_admission(ticketid::TicketID) = Model.select(Admission, ticketid, REGISTRAR[])
+get_ticket_timestamp(ticketid::TicketID) = Model.select(Ticket, ticketid, REGISTRAR[]).timestamp
 
-seek_admission(id::Pseudonym, ticketid::TicketID, auth_code::Digest) = Model.admit!(RECRUITER[], id, ticketid, auth_code)
-get_admission(id::Pseudonym) = Model.select(Admission, id, RECRUITER[])
-list_admissions() = [i.admission for i in RECRUITER[].tickets]
+seek_admission(id::Pseudonym, ticketid::TicketID, auth_code::Digest) = Model.admit!(REGISTRAR[], id, ticketid, auth_code)
+get_admission(id::Pseudonym) = Model.select(Admission, id, REGISTRAR[])
+list_admissions() = [i.admission for i in REGISTRAR[].tickets]
 
 get_chain_roll() = Model.roll(BRAID_CHAIN[])
 get_member(_id::Pseudonym) = filter(x -> Model.id(x) == _id, list_members())[1] # Model.select

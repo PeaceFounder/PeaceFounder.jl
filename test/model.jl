@@ -2,7 +2,7 @@ using Dates
 using Test
 import PeaceFounder.Model
 
-import .Model: CryptoSpec, pseudonym, BraidChain, commit!, TokenRecruiter, PollingStation, TicketID, add!, id, admit!, commit, verify, generator, Member, approve, record!, ack_leaf, isbinding, roll, constituents, members, state, Proposal, vote, Ballot, Selection, uuid, record, spine, tally, BeaconClient, Dealer, charge_nonces!, pulse_timestamp, nonce_promise, schedule!, next_job, pass!, draw, seed, set_seed!, ack_cast, hasher, HMAC, enlist!, token, auth, DemeSpec, generate, Signer, key, braid, Model
+import .Model: CryptoSpec, pseudonym, BraidChain, commit!, Registrar, PollingStation, TicketID, add!, id, admit!, commit, verify, generator, Member, approve, record!, ack_leaf, isbinding, roll, constituents, members, state, Proposal, vote, Ballot, Selection, uuid, record, spine, tally, BeaconClient, Dealer, charge_nonces!, pulse_timestamp, nonce_promise, schedule!, next_job, pass!, draw, seed, set_seed!, ack_cast, hasher, HMAC, enlist!, token, auth, DemeSpec, generate, Signer, key, braid, Model
 
 
 crypto = CryptoSpec("sha256", "EC: P_192")
@@ -14,9 +14,9 @@ GUARDIAN = generate(Signer, crypto)
 PROPOSER = generate(Signer, crypto)
 COLLECTOR = generate(Signer, crypto)
 
-RECRUITER = generate(TokenRecruiter, crypto)
-RECRUIT_HMAC = HMAC(key(RECRUITER), hasher(crypto))
-RECRUITER.metadata[] = UInt8[1, 2, 3, 4] # Optional
+REGISTRAR = generate(Registrar, crypto)
+RECRUIT_HMAC = HMAC(key(REGISTRAR), hasher(crypto))
+REGISTRAR.metadata[] = UInt8[1, 2, 3, 4] # Optional
 
 BRAIDER = generate(Signer, crypto)
 
@@ -29,7 +29,7 @@ demespec = DemeSpec(;
                     crypto = crypto,
                     guardian = id(GUARDIAN),
                     recorder = id(BRAID_CHAIN_RECORDER),
-                    recruiter = id(RECRUITER),
+                    recruiter = id(REGISTRAR),
                     braider = id(BRAIDER),
                     proposer = id(PROPOSER),
                     collector = id(COLLECTOR)
@@ -56,7 +56,7 @@ function enroll(signer, invite)
 
     # ---- evesdropers listening --------
 
-    admission = admit!(RECRUITER, id(signer), invite.ticketid, auth_code)
+    admission = admit!(REGISTRAR, id(signer), invite.ticketid, auth_code)
     @test verify(admission, crypto)
     _commit = commit(BRAID_CHAIN)
     @test id(_commit) == id(BRAID_CHAIN_RECORDER)
@@ -78,7 +78,7 @@ end
 
 #     # ---- evesdropers listening --------
     
-#     metadata, salt, salt_auth_code = enlist!(RECRUITER, ticketid, timestamp, ticket_auth_code) # ouptut is sent to main server    
+#     metadata, salt, salt_auth_code = enlist!(REGISTRAR, ticketid, timestamp, ticket_auth_code) # ouptut is sent to main server    
 
 #     # ---- evesdropers listening --------
     
@@ -88,7 +88,7 @@ end
 # end
 
 
-enlist(ticketid) = enlist!(RECRUITER, ticketid, Dates.now())
+enlist(ticketid) = enlist!(REGISTRAR, ticketid, Dates.now())
 
 
 ticketid_alice = TicketID("Alice")
