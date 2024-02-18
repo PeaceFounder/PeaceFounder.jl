@@ -10,6 +10,11 @@ module ParserTest
 include("parser.jl")
 end
 
+module AuthorizationTest
+include("authorization.jl")
+end
+
+
 module MapperTest
 include("mapper.jl")
 end
