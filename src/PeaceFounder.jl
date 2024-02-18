@@ -18,6 +18,9 @@ import .AuditTools
 include("Utils/Parser.jl")
 import .Parser
 
+include("Utils/Authorization.jl")
+import .Authorization
+
 include("Mapper.jl")
 using .Mapper
 

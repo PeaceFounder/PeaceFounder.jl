@@ -110,6 +110,29 @@ Return admission for a ticket with given a given identity pseudonym from `recrui
 select(::Type{Admission}, id::Pseudonym, recruiter::Registrar) = select(Admission, i -> isnothing(i) ? false : i.admission.id == id, recruiter::Registrar)
 
 
+
+# Need to refactor it into select
+
+using Base64: base64encode # an alternative would be to do base64decode on credential
+
+function get_ticket(registrar::Registrar, tokenid::AbstractString)
+
+    for ticket in registrar.tickets
+        if digest(bytes(ticket.token), hasher(registrar)) |> bytes |> base64encode == tokenid
+            return ticket
+        end
+    end
+
+    error("Ticket not found")
+end
+
+#get_ticket(tokenid::AbstractString) = get_ticket(Mapper.REGISTRAR[], tokenid)
+
+
+
+
+
+
 ticket_ids(recruiter::Registrar) = tickets(recruiter)
 
 """
@@ -277,14 +300,15 @@ end
 
 Attempt to admit an identity pseudonym `id` for ticket `ticketid` with provided authorization code. This function retrieves a ticket with given `ticketid` and uses it's recorded `token` to check whether the request is binding. In the case of success an admnission certificate is formed with provided indenty pseudonym `id` and is signed by the recruter's private key. Otherwise when either of checks fail an error is raised. In the case ticket is already addmitted, returns previously stored admission. 
 """
-function admit!(recruiter::Registrar, id::Pseudonym, ticketid::TicketID, auth_code::Digest)
+#function admit!(recruiter::Registrar, id::Pseudonym, ticketid::TicketID, auth_code::Digest)
+function admit!(recruiter::Registrar, id::Pseudonym, ticketid::TicketID) # ticketid is the authorization
     
     N = findfirst(x -> x.ticketid == ticketid, recruiter.tickets)
     isnothing(N) && error("Ticket not found")
 
     ticket = recruiter.tickets[N]
 
-    @assert isbinding(id, auth_code, token(ticket, hmac(recruiter)), hasher(recruiter))
+    #@assert isbinding(id, auth_code, token(ticket, hmac(recruiter)), hasher(recruiter))
 
     if isnothing(ticket.admission)
 
@@ -297,8 +321,8 @@ function admit!(recruiter::Registrar, id::Pseudonym, ticketid::TicketID, auth_co
         # To invalidate this cancellation message metadata could also contain a hash of 
         # the current state generator or index at which unused amdissions had been erased
 
-        ticket.salt = UInt8[]
-        ticket.auth_code = auth(recruiter.metadata[], ticketid, ticket.salt, hmac(recruiter))
+        #ticket.salt = UInt8[]
+        #ticket.auth_code = auth(recruiter.metadata[], ticketid, ticket.salt, hmac(recruiter))
 
         #ticket.token = token(ticketid, ticket.salt, hmac(recruiter))
     end

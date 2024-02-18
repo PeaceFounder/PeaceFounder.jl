@@ -10,7 +10,10 @@ crypto = CryptoSpec("sha256", "EC: P_192")
 GUARDIAN = Model.generate(Signer, crypto)
 PROPOSER = Model.generate(Signer, crypto)
 
-SERVER = Client.route(Service.ROUTER)
+# I may need to implement a custom request method to support middleware in the Context
+# or build a handler instance here. For now though I can use middleware explicitly in the code
+SERVER = Client.route(Service.ROUTER) 
+
 
 Mapper.initialize!(crypto)
 roles = Mapper.system_roles()

@@ -162,7 +162,9 @@ get_ticket_status(ticketid::TicketID) = Model.ticket_status(ticketid, REGISTRAR[
 get_ticket_admission(ticketid::TicketID) = Model.select(Admission, ticketid, REGISTRAR[])
 get_ticket_timestamp(ticketid::TicketID) = Model.select(Ticket, ticketid, REGISTRAR[]).timestamp
 
-seek_admission(id::Pseudonym, ticketid::TicketID, auth_code::Digest) = Model.admit!(REGISTRAR[], id, ticketid, auth_code)
+get_ticket(tokenid::AbstractString) = Model.get_ticket(REGISTRAR[], tokenid)
+
+seek_admission(id::Pseudonym, ticketid::TicketID) = Model.admit!(REGISTRAR[], id, ticketid)
 get_admission(id::Pseudonym) = Model.select(Admission, id, REGISTRAR[])
 list_admissions() = [i.admission for i in REGISTRAR[].tickets]
 

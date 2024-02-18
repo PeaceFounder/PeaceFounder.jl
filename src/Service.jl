@@ -5,8 +5,9 @@ module Service
 
 using ..Mapper
 using ..Parser: marshal, unmarshal
-using ..Model: TicketID, Digest, Pseudonym, Digest, Member, Proposal, Vote
-using Dates: DateTime
+using ..Model: TicketID, Digest, Pseudonym, Digest, Member, Proposal, Vote, Registrar, bytes
+using ..Authorization: AuthServerMiddleware, timestamp, credential
+using Dates: DateTime, Second, now
 using Base: UUID
 using SwaggerMarkdown
 
@@ -46,33 +47,54 @@ export serve
     return Response(200, marshal(Mapper.get_deme()))
 end
 
-
-@post "/tickets" function(req::Request) 
+# This could be done with a simple encryption of the request
+# @post "/tickets" function(req::Request) 
     
-    ticketid, timestamp, auth_code = unmarshal(req.body, Tuple{TicketID, DateTime, Digest})
-    response = Mapper.enlist_ticket(ticketid, timestamp, auth_code)
+#     ticketid, timestamp, auth_code = unmarshal(req.body, Tuple{TicketID, DateTime, Digest})
+#     response = Mapper.enlist_ticket(ticketid, timestamp, auth_code)
 
-    return Response(200, marshal(response))
-end
+#     return Response(200, marshal(response))
+# end
 
+using Infiltrator
 
 @swagger """
-/tickets/{tid}:
+/registrar:
    put:
      description: A client submits his public key ID together with a tooken. If succesful admission is returned which client could use further to enroll into braidchain.
      responses:
        '200':
          description: Successfully returned an admission.
 """
-@put "/tickets/{tid}" function(req::Request, tid::String) 
-    
-    ticketid = TicketID(hex2bytes(tid))
+@put "/registrar" function(request::Request)
 
-    id, auth_code = unmarshal(req.body, Tuple{Pseudonym, Digest})
-    response = Mapper.seek_admission(id, ticketid, auth_code)
+    tstamp = timestamp(request)
+
+    if now() - tstamp > Second(60)
+        return Response(401, "Old request")
+    end
     
-    return Response(200, marshal(response))
+    local tokenid, ticket
+
+    try
+        tokenid = credential(request)
+        ticket = Mapper.get_ticket(tokenid)
+        @assert !isnothing(ticket)
+    catch
+        return Response(401, "Invalid Credential")
+    end
+    
+    handler = AuthServerMiddleware(tokenid, bytes(ticket.token)) do req
+
+        id = unmarshal(req.body, Pseudonym)
+        admission = Mapper.seek_admission(id, ticket.ticketid)
+        
+        Response(200, marshal(admission)) # will this exit the function though? This would produce response without headers.
+    end
+    
+    return handler(request)
 end
+
 
 
 @get "/tickets/{tid}" function(req::Request, tid::String)
@@ -221,12 +243,12 @@ end
 
 
 # title and version are required
-info = Dict("title" => "PeaceFounder API", "version" => "0.4.0")
-openApi = OpenAPI("3.0", info)
-swagger_document = build(openApi)
+# info = Dict("title" => "PeaceFounder API", "version" => "0.4.0")
+# openApi = OpenAPI("3.0", info)
+# swagger_document = build(openApi)
   
-# merge the SwaggerMarkdown schema with the internal schema
-OxygenInstance.mergeschema(swagger_document)
+# # merge the SwaggerMarkdown schema with the internal schema
+# OxygenInstance.mergeschema(swagger_document)
 
 
 end

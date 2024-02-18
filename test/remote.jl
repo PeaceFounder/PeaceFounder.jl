@@ -37,10 +37,9 @@ try
 
     RECRUIT_HMAC = Model.HMAC(Mapper.get_recruit_key(), Model.hasher(demespec))
 
-    alice_invite = Client.enlist_ticket(SERVER, Model.TicketID("Alice"), RECRUIT_HMAC) 
-    bob_invite = Client.enlist_ticket(SERVER, Model.TicketID("Bob"), RECRUIT_HMAC) 
-    eve_invite = Client.enlist_ticket(SERVER, Model.TicketID("Eve"), RECRUIT_HMAC) 
-
+    alice_invite = Mapper.enlist_ticket(Model.TicketID("Alice")) 
+    bob_invite = Mapper.enlist_ticket(Model.TicketID("Bob")) 
+    eve_invite = Mapper.enlist_ticket(Model.TicketID("Eve")) 
 
     alice = Client.DemeClient()
     Client.enroll!(alice, alice_invite; key = 2) # internally instantiates a RemoteRouter for the client

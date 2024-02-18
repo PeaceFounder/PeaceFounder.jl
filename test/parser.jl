@@ -45,3 +45,5 @@ event = DemeSpec(;
 event = Member(admission, Generator(UInt8[1, 2, 3, 4]), Pseudonym(UInt8[1, 2, 3, 4]), Signature(123, 4242))
 @test isconsistent(event)
 
+event = Pseudonym(UInt8[1, 2, 3, 4])
+@test isconsistent(event)

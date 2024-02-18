@@ -55,6 +55,7 @@ StructTypes.construct(::Type{Digest}, s::AbstractString) = Digest(hex2bytes(s))
 StructTypes.StructType(::Type{Pseudonym}) = StructTypes.StringType()
 Base.string(x::Pseudonym) = bytes2hex(bytes(x))
 StructTypes.construct(::Type{Pseudonym}, s::AbstractString) = Pseudonym(hex2bytes(s))
+#unmarshal(bytes, ::Type{Pseudonym}) = construct(Pseudonym, bytes)
 
 
 StructTypes.StructType(::Type{Generator}) = StructTypes.StringType()
@@ -73,7 +74,6 @@ function marshal(x)
 end
 
 unmarshal(bytes) = JSON3.read(bytes)
-
 unmarshal(bytes, T::DataType) = JSON3.read(bytes, T)
 
 

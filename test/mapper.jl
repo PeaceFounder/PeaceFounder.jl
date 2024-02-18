@@ -39,11 +39,12 @@ RECRUIT_HMAC = HMAC(RECRUIT_AUTHORIZATION_KEY, hasher(crypto))
 
 function enroll(signer, invite::Invite)
 
-    auth_code = auth(id(signer), invite.token, hasher(invite))
+    # Authorization will be done in the service layer now!
+    # auth_code = auth(id(signer), invite.token, hasher(invite))
 
     # ---- evesdropers listening --------
     
-    admission = Mapper.seek_admission(id(signer), invite.ticketid, auth_code)
+    admission = Mapper.seek_admission(id(signer), invite.ticketid)
     
     commit = Mapper.get_chain_commit()
     g = generator(commit)

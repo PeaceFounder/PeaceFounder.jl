@@ -2,7 +2,7 @@ module Client
 # Methods to interact with HTTP server
 
 using ..Model
-using ..Model: Member, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, Hash, AckConsistency, AckInclusion, CastAck, DemeSpec, Signer, TicketStatus, Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen
+using ..Model: Member, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, Hash, AckConsistency, AckInclusion, CastAck, DemeSpec, Signer, TicketStatus, Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen, digest
 using Base: UUID
 
 using ..Model: id, hasher, pseudonym, isbinding, generator, isadmitted, state, verify, crypto, index, root, commit, isconsistent, istallied, issuer, Invite
@@ -80,42 +80,36 @@ function get_deme(server::Route)
 end
 
 
-# REFACTOR: needs a special HMAC authetification at Service layer
-# function enlist_ticket(server::Route, ticketid::TicketID, hmac::HMAC; dest = destination(server))
 
-#     timestamp = Dates.now()
-#     ticket_auth_code = Model.auth(ticketid, timestamp, hmac)
-#     body = marshal((ticketid, timestamp, ticket_auth_code))
-
-#     response = post(server, "/tickets", body)
-
-#     metadata, salt, reply_auth_code = unmarshal(response.body, Tuple{Vector{UInt8}, Vector{UInt8}, Digest})
-
-#     @assert isbinding(metadata, ticketid, salt, reply_auth_code, hmac)
-
-#     if salt == UInt8[]
-#         error("TicketID with $(bytes2hex(ticketid)) is already admitted.")
-#     end
-
-#     invite = Invite(Digest(metadata), ticketid, Model.token(ticketid, salt, hmac), hasher(hmac), dest)
-
-#     return invite
-# end
+import ..Authorization: AuthClientMiddleware, timestamp, credential
+using Base64
 
 
-function seek_admission(server::Route, id::Pseudonym, ticketid::TicketID, token::Digest, hasher::Hash)
+function seek_admission(server::Route, id::Pseudonym, invite::Invite)
 
-    auth_code = Model.auth(id, token, hasher)
-    body = marshal((id, auth_code))
-    tid = bytes2hex(bytes(ticketid))
-    response = put(server, "/tickets/$tid", body)
+    # create request body for the id
+    # generate request headers for hmac
+    # Form the request with the coresponding headers
+    # Send the request to the server
+    
+    body = marshal(id)
+    tokenid = digest(bytes(invite.token), hasher(invite)) |> bytes |> base64encode
 
-    admission = unmarshal(response.body, Admission)
+    request = Request("PUT", "/registrar", ["Host" => invite.route.host], body)
+    
+    response = request |> AuthClientMiddleware(server, tokenid, bytes(invite.token))
+
+    if response.status == 200
+
+        admission = unmarshal(response.body, Admission)
 
     #@assert Model.verify(admission, crypto)
     #@assert id == Model.id(admission)
 
-    return admission # A deme file is used to verify 
+        return admission # A deme file is used to verify 
+    else
+        error("Request failure $(response.status): $(String(response.body))")
+    end
 end
 
 
@@ -513,10 +507,12 @@ function Base.show(io::IO, voter::DemeAccount)
 end
 
 
-function enroll!(voter::DemeAccount, router, ticketid, token) # EnrollGuard 
+#function enroll!(voter::DemeAccount, router, ticketid, token) # EnrollGuard 
+
+function enroll!(voter::DemeAccount, router, invite::Invite) # EnrollGuard 
 
     if !isadmitted(voter)
-        admission = seek_admission(router, id(voter), ticketid, token, hasher(voter))
+        admission = seek_admission(router, id(voter), invite)
         @assert isbinding(admission, voter.deme) # checks the guardian
         @assert verify(admission, crypto(voter.deme))
         voter.guard = EnrollGuard(admission)
@@ -769,7 +765,8 @@ function enroll!(invite::Invite; server::Route = route(invite.route), key::Union
         account = DemeAccount(spec, key, server)
     end
 
-    enroll!(account, server, invite.ticketid, invite.token)
+    #enroll!(account, server, invite.ticketid, invite.token)
+    enroll!(account, server, invite)
     
     return account
 end

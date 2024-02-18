@@ -52,11 +52,10 @@ record!(BRAID_CHAIN, promises)
 
 function enroll(signer, invite)
 
-    auth_code = auth(id(signer), invite.token, hasher(invite))
+    # The authorization is being put within a service layer which exposes the API
+    #auth_code = auth(id(signer), invite.token, hasher(invite))
 
-    # ---- evesdropers listening --------
-
-    admission = admit!(REGISTRAR, id(signer), invite.ticketid, auth_code)
+    admission = admit!(REGISTRAR, id(signer), invite.ticketid) #, auth_code)
     @test verify(admission, crypto)
     _commit = commit(BRAID_CHAIN)
     @test id(_commit) == id(BRAID_CHAIN_RECORDER)
