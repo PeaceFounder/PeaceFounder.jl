@@ -2,10 +2,11 @@ module Client
 # Methods to interact with HTTP server
 
 using ..Model
-using ..Model: Member, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, Hash, AckConsistency, AckInclusion, CastAck, DemeSpec, Signer, TicketStatus, Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen, digest
+using ..Model: Member, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, Hash, AckConsistency, AckInclusion, CastAck, DemeSpec, Signer, TicketStatus, Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen, digest, tokenid
 using Base: UUID
 
 using ..Model: id, hasher, pseudonym, isbinding, generator, isadmitted, state, verify, crypto, index, root, commit, isconsistent, istallied, issuer, Invite
+import ..Authorization: AuthClientMiddleware
 
 using HTTP: Router, Request, Response, Handler, HTTP, iserror, StatusError
 
@@ -80,31 +81,21 @@ function get_deme(server::Route)
 end
 
 
-
-import ..Authorization: AuthClientMiddleware, timestamp, credential
-using Base64
-
-
 function seek_admission(server::Route, id::Pseudonym, invite::Invite)
 
-    # create request body for the id
-    # generate request headers for hmac
-    # Form the request with the coresponding headers
-    # Send the request to the server
-    
     body = marshal(id)
-    tokenid = digest(bytes(invite.token), hasher(invite)) |> bytes |> base64encode
+    _tokenid = tokenid(invite.token, hasher(invite))
 
-    request = Request("PUT", "/registrar", ["Host" => invite.route.host], body)
+    request = Request("PUT", "/tickets", ["Host" => invite.route.host], body)
     
-    response = request |> AuthClientMiddleware(server, tokenid, bytes(invite.token))
+    response = request |> AuthClientMiddleware(server, _tokenid, invite.token)
 
     if response.status == 200
 
         admission = unmarshal(response.body, Admission)
 
-    #@assert Model.verify(admission, crypto)
-    #@assert id == Model.id(admission)
+        #@assert Model.verify(admission, crypto)
+        #@assert id == Model.id(admission)
 
         return admission # A deme file is used to verify 
     else

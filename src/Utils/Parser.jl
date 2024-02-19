@@ -92,68 +92,6 @@ function StructTypes.construct(::Type{Seal}, x)
 end
 
 
-function marshal(event::Tuple{TicketID, DateTime, Digest})
-
-    ticketid, timestamp, auth_code = event
-    payload = Dict(:ticketid => ticketid, :timestamp => timestamp, :auth_code => auth_code)
-
-    return marshal(payload)
-end
-
-
-function unmarshal(bytes, ::Type{Tuple{TicketID, DateTime, Digest}})
-
-    payload = unmarshal(bytes)
-
-    ticketid = constructfrom(TicketID, payload.ticketid)
-    timestamp = constructfrom(DateTime, payload.timestamp)
-    auth_code = constructfrom(Digest, payload.auth_code)
-
-    return (ticketid, timestamp, auth_code)
-end
-
-
-function marshal(event::Tuple{Vector{UInt8}, Vector{UInt8}, Digest})
-    
-    metadata, salt, auth_code = event
-    payload = Dict(:metadata => bytes2hex(metadata), :salt => bytes2hex(salt), :auth_code => auth_code)
-
-    return marshal(payload)
-end
-
-function unmarshal(bytes, ::Type{Tuple{Vector{UInt8}, Vector{UInt8}, Digest}})
-    
-    payload = unmarshal(bytes)
-
-    metadata = hex2bytes(payload.metadata)
-    salt = hex2bytes(payload.salt)
-    auth_code = constructfrom(Digest, payload.auth_code)
-    
-    return (metadata, salt, auth_code)
-end
-
-
-
-function marshal(event::Tuple{TicketID, Pseudonym, Digest})
-    
-    id, auth_code = event
-    payload = Dict(:id => id, :auth_code => auth_code)
-
-    return marshal(payload)
-end
-
-
-function unmarshal(bytes, ::Type{Tuple{TicketID, Digest}})
-
-    payload = unmarshal(bytes)
-    
-    id = constructfrom(Pseudonym, payload.id)
-    auth_code = constructfrom(Digest, payload.auth_code)
-
-    return (id, auth_code)
-end
-
-
 StructTypes.StructType(::Type{CryptoSpec}) = StructTypes.CustomStruct()
 StructTypes.lower(crypto::CryptoSpec) = Dict(:hash => crypto.hasher, :group => lower_groupspec(crypto.group), :generator => bytes2hex(bytes(crypto.generator)))
 
@@ -219,28 +157,27 @@ function StructTypes.construct(::Type{ConsistencyProof}, event)
 end
 
 
-export marshal, unmarshal
-
-
 StructTypes.StructType(::Type{BraidWork}) = StructTypes.Struct()
 StructTypes.omitempties(::Type{BraidWork}) = (:approval,)
 
 
-
 StructTypes.StructType(::Type{Invite}) = StructTypes.CustomStruct()
 
-StructTypes.lower(invite::Invite) = Dict(:demehash => invite.demehash, :ticketid => invite.ticketid, :token => invite.token, :hasher => invite.hasher, :route => string(invite.route))
+StructTypes.lower(invite::Invite) = Dict(:demehash => base64encode(bytes(invite.demehash)), :token => base64encode(invite.token), :hasher => invite.hasher, :route => string(invite.route))
 
 function StructTypes.construct(::Type{Invite}, data::Dict)
 
-    demehash = StructTypes.constructfrom(Digest, data["demehash"])
-    ticketid = StructTypes.constructfrom(TicketID, data["ticketid"])
-    token = StructTypes.constructfrom(Digest, data["token"])
+    #demehash = StructTypes.constructfrom(Digest, data["demehash"])
+    demehash = Digest(base64decode(data["demehash"]))
+    token = base64decode(data["token"])
     hasher = StructTypes.constructfrom(Hash, data["hasher"])
     route = URI(data["route"])
     
-    return Invite(demehash, ticketid, token, hasher, route)
+    return Invite(demehash, token, hasher, route)
 end
 
+
+
+export marshal, unmarshal
 
 end

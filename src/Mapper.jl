@@ -7,8 +7,9 @@ import Dates: Dates, DateTime
 import ..Schedulers: Schedulers, Scheduler
 
 using ..Model
-using ..Model: CryptoSpec, pseudonym, BraidChain, Registrar, PollingStation, TicketID, Member, Proposal, Ballot, Selection, Transaction, Signer, Dealer, BraidBroker, Pseudonym, Vote, id, DemeSpec, Digest, Admission
+using ..Model: CryptoSpec, pseudonym, BraidChain, Registrar, PollingStation, TicketID, Member, Proposal, Ballot, Selection, Transaction, Signer, Dealer, BraidBroker, Pseudonym, Vote, id, DemeSpec, Digest, Admission, Ticket
 using Base: UUID
+using URIs: URI
 
 const RECORDER = Ref{Signer}()
 const REGISTRAR = Ref{Registrar}()
@@ -112,12 +113,17 @@ end
 system_roles() = (; recorder = id(RECORDER[]), recruiter = id(REGISTRAR[]), braider = id(BRAIDER[]), collector = id(COLLECTOR[]))
 
 
+set_demehash(spec::DemeSpec) = Model.set_demehash!(REGISTRAR[], spec)
+set_route(route::Union{URI, String}) = Model.set_route!(REGISTRAR[], route)
+get_route() = REGISTRAR[].route
+
 function capture!(spec::DemeSpec)
 
     BRAID_CHAIN[] = BraidChain(spec)
 
-    REGISTRAR[].metadata[] = Model.bytes(Model.digest(spec, Model.hasher(spec))) 
+    set_demehash(spec)
 
+    #REGISTRAR[].demehash = Model.digest(spec, Model.hasher(spec))
 
     DEALER[] = Dealer(spec; delay = 1)
 
@@ -162,9 +168,10 @@ get_ticket_status(ticketid::TicketID) = Model.ticket_status(ticketid, REGISTRAR[
 get_ticket_admission(ticketid::TicketID) = Model.select(Admission, ticketid, REGISTRAR[])
 get_ticket_timestamp(ticketid::TicketID) = Model.select(Ticket, ticketid, REGISTRAR[]).timestamp
 
-get_ticket(tokenid::AbstractString) = Model.get_ticket(REGISTRAR[], tokenid)
+get_ticket(tokenid::AbstractString) = Model.select(Ticket, tokenid, REGISTRAR[])
 
-seek_admission(id::Pseudonym, ticketid::TicketID) = Model.admit!(REGISTRAR[], id, ticketid)
+# The benfit of refering to a single ticketid is that it is long lasting
+seek_admission(id::Pseudonym, ticketid::TicketID) = Model.admit!(REGISTRAR[], id, ticketid) 
 get_admission(id::Pseudonym) = Model.select(Admission, id, REGISTRAR[])
 list_admissions() = [i.admission for i in REGISTRAR[].tickets]
 
@@ -257,13 +264,9 @@ end
 
 @deprecate cast_vote! cast_vote
 
-
-
-
 ballotbox(uuid::UUID) = Model.ballotbox(POLLING_STATION[], uuid)
 proposal(uuid::UUID) = ballotbox(uuid).proposal
 tally(uuid::UUID) = ballotbox(uuid).tally
-
 
 get_ballotbox_commit(uuid::UUID) = Model.commit(POLLING_STATION[], uuid)
 

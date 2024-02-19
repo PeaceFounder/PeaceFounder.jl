@@ -14,7 +14,7 @@ Mapper.initialize!(crypto)
 roles = Mapper.system_roles()
 
 demespec = DemeSpec(; 
-                    uuid = Base.UUID(121432),
+                    uuid = Base.UUID(rand(UInt128)),
                     title = "A local democratic communituy",
                     crypto = crypto,
                     guardian = id(GUARDIAN),
@@ -30,7 +30,7 @@ Mapper.capture!(demespec)
 #service = HTTP.serve!(Service.ROUTER, "0.0.0.0", 80)
 
 service = Service.serve(async=true, port=PORT)
-
+Mapper.set_route("http://0.0.0.0:$PORT") # 
 
 try
     SERVER = Client.route("http://0.0.0.0:$PORT")
@@ -53,7 +53,7 @@ try
     ### A simple proposal submission
 
     proposal = Model.Proposal(
-        uuid = Base.UUID(23445325),
+        uuid = Base.UUID(rand(UInt128)),
         summary = "Should the city ban all personal vehicle usage and invest in alternative forms of transportation such as public transit, biking and walking infrastructure?",
         description = """
  A very long description

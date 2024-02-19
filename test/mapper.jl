@@ -2,7 +2,7 @@ using Test
 
 import PeaceFounder.Model
 import PeaceFounder.Mapper
-using PeaceFounder.Model: CryptoSpec, pseudonym, TicketID, Member, Proposal, Ballot, Selection, generator, state, id, vote, seed, tally, approve, istallied, DemeSpec, hasher, HMAC, auth, token, isbinding, Generator, generate, Signer, Invite
+using PeaceFounder.Model: CryptoSpec, pseudonym, TicketID, Member, Proposal, Ballot, Selection, generator, state, id, vote, seed, tally, approve, istallied, DemeSpec, hasher, HMAC, token, isbinding, Generator, generate, Signer, Invite, tokenid
 
 import Dates: Dates, Date
 
@@ -39,12 +39,13 @@ RECRUIT_HMAC = HMAC(RECRUIT_AUTHORIZATION_KEY, hasher(crypto))
 
 function enroll(signer, invite::Invite)
 
-    # Authorization will be done in the service layer now!
+    # Authorization is done in the service layer now!
     # auth_code = auth(id(signer), invite.token, hasher(invite))
 
-    # ---- evesdropers listening --------
+    _tokenid = tokenid(invite.token, invite.hasher)
+    ticket = Mapper.get_ticket(_tokenid) # This is done at the service layer
     
-    admission = Mapper.seek_admission(id(signer), invite.ticketid)
+    admission = Mapper.seek_admission(id(signer), ticket.ticketid)
     
     commit = Mapper.get_chain_commit()
     g = generator(commit)
@@ -55,23 +56,6 @@ function enroll(signer, invite::Invite)
     return access, ack
 end
 
-
-# function enlist_ticket(ticketid)
-
-#     timestamp = Dates.now()
-#     ticket_auth_code = auth(ticketid, timestamp, RECRUIT_HMAC)
-
-#     # ---- evesdropers listening --------
-    
-#     metadata, salt, reply_auth_code = Mapper.enlist_ticket(ticketid, timestamp, ticket_auth_code) # ouptut is sent to main server    
-
-#     # ---- evesdropers listening --------
-
-#     @test isbinding(metadata, ticketid, salt, reply_auth_code, RECRUIT_HMAC)  # done on the server
-#     @test isbinding(demespec, metadata, hasher(RECRUIT_HMAC)) 
-
-#     return token(ticketid, salt, RECRUIT_HMAC)
-# end
 
 ticketid_alice = TicketID("Alice")
 invite_alice = Mapper.enlist_ticket(ticketid_alice)

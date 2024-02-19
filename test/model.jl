@@ -2,7 +2,7 @@ using Dates
 using Test
 import PeaceFounder.Model
 
-import .Model: CryptoSpec, pseudonym, BraidChain, commit!, Registrar, PollingStation, TicketID, add!, id, admit!, commit, verify, generator, Member, approve, record!, ack_leaf, isbinding, roll, constituents, members, state, Proposal, vote, Ballot, Selection, uuid, record, spine, tally, BeaconClient, Dealer, charge_nonces!, pulse_timestamp, nonce_promise, schedule!, next_job, pass!, draw, seed, set_seed!, ack_cast, hasher, HMAC, enlist!, token, auth, DemeSpec, generate, Signer, key, braid, Model
+import .Model: CryptoSpec, pseudonym, BraidChain, commit!, Registrar, PollingStation, TicketID, add!, id, admit!, commit, verify, generator, Member, approve, record!, ack_leaf, isbinding, roll, constituents, members, state, Proposal, vote, Ballot, Selection, uuid, record, spine, tally, BeaconClient, Dealer, charge_nonces!, pulse_timestamp, nonce_promise, schedule!, next_job, pass!, draw, seed, set_seed!, ack_cast, hasher, HMAC, enlist!, DemeSpec, generate, Signer, key, braid, Model, set_demehash!, Ticket, tokenid, select
 
 
 crypto = CryptoSpec("sha256", "EC: P_192")
@@ -16,7 +16,8 @@ COLLECTOR = generate(Signer, crypto)
 
 REGISTRAR = generate(Registrar, crypto)
 RECRUIT_HMAC = HMAC(key(REGISTRAR), hasher(crypto))
-REGISTRAR.metadata[] = UInt8[1, 2, 3, 4] # Optional
+#REGISTRAR.metadata[] = UInt8[1, 2, 3, 4] # Optional
+
 
 BRAIDER = generate(Signer, crypto)
 
@@ -39,11 +40,13 @@ demespec = DemeSpec(;
 BRAID_CHAIN = BraidChain(demespec)
 
 commit!(BRAID_CHAIN, BRAID_CHAIN_RECORDER)
+set_demehash!(REGISTRAR, demespec)
 
 POLLING_STATION = PollingStation(crypto)
 
 DEALER = Dealer(demespec)
 
+# need to deprecate
 promises = charge_nonces!(DEALER, 100)
 record!(BRAID_CHAIN, promises)
 
@@ -55,7 +58,15 @@ function enroll(signer, invite)
     # The authorization is being put within a service layer which exposes the API
     #auth_code = auth(id(signer), invite.token, hasher(invite))
 
-    admission = admit!(REGISTRAR, id(signer), invite.ticketid) #, auth_code)
+    #admission = admit!(REGISTRAR, id(signer), invite.ticketid) #, auth_code)
+
+    # Need to get the ticketid from invite.token
+
+    _tokenid = tokenid(invite.token, invite.hasher)
+    ticket = select(Ticket, _tokenid, REGISTRAR)
+
+    admission = admit!(REGISTRAR, id(signer), ticket.ticketid) #, auth_code)
+
     @test verify(admission, crypto)
     _commit = commit(BRAID_CHAIN)
     @test id(_commit) == id(BRAID_CHAIN_RECORDER)

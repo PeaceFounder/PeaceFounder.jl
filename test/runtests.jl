@@ -14,7 +14,6 @@ module AuthorizationTest
 include("authorization.jl")
 end
 
-
 module MapperTest
 include("mapper.jl")
 end
@@ -27,6 +26,6 @@ module ClientTest
 include("client.jl")
 end
 
-# module RemoteTest
-# include("remote.jl")
-# end
+module RemoteTest
+include("remote.jl")
+end

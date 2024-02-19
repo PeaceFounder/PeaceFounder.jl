@@ -34,15 +34,17 @@ Mapper.capture!(demespec)
 
 RECRUIT_HMAC = Model.HMAC(Mapper.get_recruit_key(), Model.hasher(demespec))
 
-alice_invite = Mapper.enlist_ticket(Model.TicketID("Alice")) 
+alice_ticketid = Model.TicketID("Alice")
+alice_invite = Mapper.enlist_ticket(alice_ticketid) 
 bob_invite = Mapper.enlist_ticket(Model.TicketID("Bob")) 
 eve_invite = Mapper.enlist_ticket(Model.TicketID("Eve")) 
 
 # ------------- invite gets sent over a QR code --------------
 
-@test !Model.isadmitted(Client.get_ticket_status(SERVER, alice_invite.ticketid))
+# 
+@test !Model.isadmitted(Client.get_ticket_status(SERVER, alice_ticketid))
 alice = Client.enroll!(alice_invite; server = SERVER, key = 2)
-@test Model.isadmitted(Client.get_ticket_status(SERVER, alice_invite.ticketid))
+@test Model.isadmitted(Client.get_ticket_status(SERVER, alice_ticketid))
 
 bob = Client.enroll!(bob_invite; server = SERVER, key = 3) 
 

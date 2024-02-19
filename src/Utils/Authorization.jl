@@ -196,16 +196,17 @@ function AuthServerMiddleware(handler, credential::AbstractString, secret::Union
             response = handler(req)
 
             host = get_header(req.headers, "Host")
+            isnothing(host) && @warn "Host is not specified"
+
             auth_headers = signRequest(host, "REPLY", req.target, response.body, credential, secret; now = () -> timestamp(req))
             
             append!(response.headers, auth_headers)
-            push!(response.headers, "Host" => host)
+            push!(response.headers, "Host" => string(host))
 
             return response
         else
             return Response(401, "Unauthorized Access")
         end
-        
     end
 end
 

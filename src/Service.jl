@@ -59,14 +59,14 @@ end
 using Infiltrator
 
 @swagger """
-/registrar:
+/tickets:
    put:
      description: A client submits his public key ID together with a tooken. If succesful admission is returned which client could use further to enroll into braidchain.
      responses:
        '200':
          description: Successfully returned an admission.
 """
-@put "/registrar" function(request::Request)
+@put "/tickets" function(request::Request)
 
     tstamp = timestamp(request)
 
@@ -84,7 +84,7 @@ using Infiltrator
         return Response(401, "Invalid Credential")
     end
     
-    handler = AuthServerMiddleware(tokenid, bytes(ticket.token)) do req
+    handler = AuthServerMiddleware(tokenid, ticket.token) do req
 
         id = unmarshal(req.body, Pseudonym)
         admission = Mapper.seek_admission(id, ticket.ticketid)
@@ -94,7 +94,6 @@ using Infiltrator
     
     return handler(request)
 end
-
 
 
 @get "/tickets/{tid}" function(req::Request, tid::String)
