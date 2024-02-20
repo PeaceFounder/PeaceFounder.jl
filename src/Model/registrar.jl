@@ -14,7 +14,7 @@ using Base64: base64encode # for tokenid
         admission::Union{Admission, Nothing}
     end
 
-Represents a ticket state for ticket with `ticketid`. `timestamp` represents time when the ticket have been issued by a recruiter client in authorization system of choice, for instance, Recruiters.jl; `attempt` is a counter with which token can be reset which is calculated with `token(ticketid, attempt, hmac)`. Lastly `admission` contains a certified member pseudonym which was authetificated by the user with `token`.
+Represents a ticket state for ticket with `ticketid`. `timestamp` represents time when the ticket have been issued by a registrar client in authorization system of choice, for instance, Registrars.jl; `attempt` is a counter with which token can be reset which is calculated with `token(ticketid, attempt, hmac)`. Lastly `admission` contains a certified member pseudonym which was authetificated by the user with `token`.
 """
 mutable struct Ticket
     const ticketid::TicketID
@@ -65,7 +65,7 @@ isadmitted(ticket::Ticket) = !isnothing(ticket.admission)
         hmac::HMAC
     end
 
-Represents a state for token recruiter service. To initialize the service it's necessary to create a signer who can issue a valid admisssion certificates and a secret key with which a recruit client can exchange authorized messages. See also method `generate(Registrar, spec)`.
+Represents a state for token registrar service. To initialize the service it's necessary to create a signer who can issue a valid admisssion certificates and a secret key with which a recruit client can exchange authorized messages. See also method `generate(Registrar, spec)`.
 
 Metadata is used as means to securelly deliver to the client most recent server specification. 
 
@@ -87,14 +87,14 @@ Registrar(signer::Signer, key::Vector{UInt8}) = Registrar(Digest(), Ticket[], si
 """
     generate(Registrar, spec::CryptoSpec)
 
-Generate a new token recruiter with unique signer and athorization key.
+Generate a new token registrar with unique signer and athorization key.
 """
 function generate(::Type{Registrar}, spec::CryptoSpec)
 
     key = rand(Random.RandomDevice(), UInt8, 32) # Alternativelly I could derive it from a global SEED
-    recruiter = generate(Signer, spec)
+    registrar = generate(Signer, spec)
 
-    return Registrar(recruiter, key)
+    return Registrar(registrar, key)
 end
 
 """
@@ -102,20 +102,20 @@ end
 
 Return HMAC authorizer from a given object.
 """
-hmac(recruiter::Registrar) = recruiter.hmac
-hasher(recruiter::Registrar) = hasher(hmac(recruiter))
-key(recruiter::Registrar) = key(hmac(recruiter))
-id(recruiter::Registrar) = id(recruiter.signer)
+hmac(registrar::Registrar) = registrar.hmac
+hasher(registrar::Registrar) = hasher(hmac(registrar))
+key(registrar::Registrar) = key(hmac(registrar))
+id(registrar::Registrar) = id(registrar.signer)
 
 
 """
-    select(T, predicate::Function, recruiter::Registrar)::Union{T, Nothing}
+    select(T, predicate::Function, registrar::Registrar)::Union{T, Nothing}
 
-From a list of all `recruiter` tickets return `T <: Union{Ticket, Admission}` for which predicate is true. If none succeds returns nothing.
+From a list of all `registrar` tickets return `T <: Union{Ticket, Admission}` for which predicate is true. If none succeds returns nothing.
 """
-function select(::Type{Ticket}, f::Function, recruiter::Registrar)
+function select(::Type{Ticket}, f::Function, registrar::Registrar)
     
-    for i in recruiter.tickets
+    for i in registrar.tickets
         if f(i) == true
             return i
         end
@@ -124,43 +124,43 @@ function select(::Type{Ticket}, f::Function, recruiter::Registrar)
     return nothing
 end
 
-select(::Type{Ticket}, ticketid::TicketID, recruiter::Registrar) = select(Ticket, i -> i.ticketid == ticketid, recruiter)
+select(::Type{Ticket}, ticketid::TicketID, registrar::Registrar) = select(Ticket, i -> i.ticketid == ticketid, registrar)
 
-select(::Type{Admission}, f::Function, recruiter::Registrar) = select(Ticket, f, recruiter).admission
-
-"""
-    select(Admission, ticketid::TicketID, recruiter::Registrar)::Union{Admission, Nothing}
-
-Return admission for a ticket with given `ticketid` from `recruiter`. If no ticket with given `ticketid` is found OR ticket is not yet admitted returns nothing.
-"""
-select(::Type{Admission}, ticketid::TicketID, recruiter::Registrar) = select(Admission, i -> i.ticketid == ticketid, recruiter)
+select(::Type{Admission}, f::Function, registrar::Registrar) = select(Ticket, f, registrar).admission
 
 """
-    select(Admission, ticketid::TicketID, recruiter::Registrar)::Union{Admission, Nothing}
+    select(Admission, ticketid::TicketID, registrar::Registrar)::Union{Admission, Nothing}
 
-Return admission for a ticket with given a given identity pseudonym from `recruiter`. If no ticket with given `id` is found OR ticket is not yet admitted returns nothing.
+Return admission for a ticket with given `ticketid` from `registrar`. If no ticket with given `ticketid` is found OR ticket is not yet admitted returns nothing.
 """
-select(::Type{Admission}, id::Pseudonym, recruiter::Registrar) = select(Admission, i -> isnothing(i) ? false : i.admission.id == id, recruiter::Registrar)
+select(::Type{Admission}, ticketid::TicketID, registrar::Registrar) = select(Admission, i -> i.ticketid == ticketid, registrar)
+
+"""
+    select(Admission, ticketid::TicketID, registrar::Registrar)::Union{Admission, Nothing}
+
+Return admission for a ticket with given a given identity pseudonym from `registrar`. If no ticket with given `id` is found OR ticket is not yet admitted returns nothing.
+"""
+select(::Type{Admission}, id::Pseudonym, registrar::Registrar) = select(Admission, i -> isnothing(i) ? false : i.admission.id == id, registrar::Registrar)
 
 
 select(::Type{Ticket}, tokenid::AbstractString, registrar::Registrar) = select(Ticket, i -> i.tokenid == tokenid, registrar)
 
 
-ticket_ids(recruiter::Registrar) = tickets(recruiter)
+ticket_ids(registrar::Registrar) = tickets(registrar)
 
 """
-    tickets(recruiter::Registrar)::Vector{TicketID}
+    tickets(registrar::Registrar)::Vector{TicketID}
 
 Return a list of registered ticket ids. 
 """
-tickets(recruiter::Registrar) = (i.ticketid for i in recruiter.tickets)
+tickets(registrar::Registrar) = (i.ticketid for i in registrar.tickets)
 
 """
-    in(ticketid::TicketID, recruiter::Registrar)::Bool
+    in(ticketid::TicketID, registrar::Registrar)::Bool
 
 Return true if there already is a ticket with `ticketid`.
 """
-Base.in(ticketid::TicketID, recruiter::Registrar) = ticketid in ticket_ids(recruiter)
+Base.in(ticketid::TicketID, registrar::Registrar) = ticketid in ticket_ids(registrar)
 
 
 using Infiltrator
@@ -189,11 +189,11 @@ tokenid(token::Vector{UInt8}, hash::Hash) = digest(token, hash) |> bytes |> base
 
 
 """
-    set_demespec!(recruiter::Registrar, spec::Union{Digest, DemeSpec})
+    set_demespec!(registrar::Registrar, spec::Union{Digest, DemeSpec})
 
-Replace metadata for a recruiter. Note when data is replaced all unfinalized tokens need to be flushed. 
+Replace metadata for a registrar. Note when data is replaced all unfinalized tokens need to be flushed. 
 """
-set_demehash!(recruiter::Registrar, spec::Digest) = recruiter.demehash = spec
+set_demehash!(registrar::Registrar, spec::Digest) = registrar.demehash = spec
 set_demehash!(registrar::Registrar, spec::DemeSpec) = set_demehash!(registrar, digest(spec, hasher(spec)))
 
 set_route!(registrar::Registrar, route::URI) = registrar.route = route
@@ -218,48 +218,48 @@ isbinding(spec::DemeSpec, invite::Invite) = Model.digest(spec, invite.hasher) ==
 
 hasher(invite::Invite) = invite.hasher
 
-function enlist!(recruiter::Registrar, ticketid::TicketID, timestamp::DateTime; route::URI=recruiter.route)
+function enlist!(registrar::Registrar, ticketid::TicketID, timestamp::DateTime; route::URI=registrar.route)
 
     # Assertion for request is needed to be done at Service layer
     # @assert (Dates.now() - timestamp) < Second(3600) "Request too old"
 
-    demehash = recruiter.demehash
+    demehash = registrar.demehash
 
-    for ticket in recruiter.tickets
+    for ticket in registrar.tickets
         if ticket.ticketid == ticketid
             if isadmitted(ticket)
                 error("Ticket with $ticketid is already admitted.")
             else
-                return Invite(demehash, ticket.token, hasher(recruiter.hmac), route)
+                return Invite(demehash, ticket.token, hasher(registrar.hmac), route)
             end
         end
     end
 
-    ticket = Ticket(ticketid, timestamp, hmac(recruiter); nlen = recruiter.nlen)
-    push!(recruiter.tickets, ticket)
+    ticket = Ticket(ticketid, timestamp, hmac(registrar); nlen = registrar.nlen)
+    push!(registrar.tickets, ticket)
 
-    return Invite(demehash, ticket.token, hasher(recruiter.hmac), route)
+    return Invite(demehash, ticket.token, hasher(registrar.hmac), route)
 end
 
 
 
 """
-    admit!(recruiter::Registrar, id::Pseudonym, ticketid::TicketID, auth_code::Digest)::Admission
+    admit!(registrar::Registrar, id::Pseudonym, ticketid::TicketID, auth_code::Digest)::Admission
 
 Attempt to admit an identity pseudonym `id` for ticket `ticketid` with provided authorization code. This function retrieves a ticket with given `ticketid` and uses it's recorded `token` to check whether the request is binding. In the case of success an admnission certificate is formed with provided indenty pseudonym `id` and is signed by the recruter's private key. Otherwise when either of checks fail an error is raised. In the case ticket is already addmitted, returns previously stored admission. 
 """
-#function admit!(recruiter::Registrar, id::Pseudonym, ticketid::TicketID, auth_code::Digest)
-function admit!(recruiter::Registrar, id::Pseudonym, ticketid::TicketID) # ticketid is the authorization
+#function admit!(registrar::Registrar, id::Pseudonym, ticketid::TicketID, auth_code::Digest)
+function admit!(registrar::Registrar, id::Pseudonym, ticketid::TicketID) # ticketid is the authorization
     
-    N = findfirst(x -> x.ticketid == ticketid, recruiter.tickets)
+    N = findfirst(x -> x.ticketid == ticketid, registrar.tickets)
     isnothing(N) && error("Ticket not found")
 
-    ticket = recruiter.tickets[N]
+    ticket = registrar.tickets[N]
 
     if isnothing(ticket.admission)
 
         admission_draft = Admission(ticket.ticketid, id, ticket.timestamp)
-        ticket.admission = approve(admission_draft, recruiter.signer)
+        ticket.admission = approve(admission_draft, registrar.signer)
         
     end
 
@@ -267,13 +267,13 @@ function admit!(recruiter::Registrar, id::Pseudonym, ticketid::TicketID) # ticke
 end
 
 """
-    isadmitted(ticketid::TicketID, recruiter::Registrar)
+    isadmitted(ticketid::TicketID, registrar::Registrar)
 
 Check whether a ticket is already admitted. Returns false when either ticket is nonexistent or it's admission is nothing.
 """
-function isadmitted(ticketid::TicketID, recruiter::Registrar)
+function isadmitted(ticketid::TicketID, registrar::Registrar)
 
-    admission = select(Admission, ticketid, recruiter)
+    admission = select(Admission, ticketid, registrar)
 
     if isnothing(admission)
         return false
@@ -302,13 +302,13 @@ struct TicketStatus
 end
 
 """
-    ticket_status(ticketid::TicketID, recruiter::Registrar)::Union{TicketStatus, Nothing}
+    ticket_status(ticketid::TicketID, registrar::Registrar)::Union{TicketStatus, Nothing}
 
 Return a ticket status for a ticketid. In case ticket is not found return nothing.
 """
-function ticket_status(ticketid::TicketID, recruiter::Registrar)
+function ticket_status(ticketid::TicketID, registrar::Registrar)
 
-    ticket = select(Ticket, ticketid, recruiter)
+    ticket = select(Ticket, ticketid, registrar)
     
     if isnothing(ticket)
         return nothing

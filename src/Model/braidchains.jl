@@ -15,7 +15,7 @@ abstract type Transaction end # an alternative name is Transaction
         crypto::CryptoSpec
         guardian::Pseudonym
         recorder::Pseudonym
-        recruiter::Pseudonym
+        registrar::Pseudonym
         braider::Pseudonym
         proposer::Pseudonym 
         collector::Pseudonym
@@ -30,7 +30,7 @@ Represents a deme configuration parameters issued by the guardian.
 - `crypto::CryptoSpec` cryptographic parameters for the deme;
 - `guardian::Pseudonym` an issuer for this demespec file. Has authorithy to set a roster:
     - `recorder::Pseudonym` an authorithy which has rights to add new transactions and is responsable for braidchain's ledger integrity. Issues `Commit{ChainState}`;
-    - `recruiter::Pseudonym` an authorithy which has rights to authorize new admissions to the deme. See [`Admission`](@ref) and [`Member`](@ref);
+    - `registrar::Pseudonym` an authorithy which has rights to authorize new admissions to the deme. See [`Admission`](@ref) and [`Member`](@ref);
     - `braider::Pseudonym` an authorithy which can do a legitimate braid jobs for other demes. See [`BraidWork`](@ref);   
     - `proposer::Pseudonym` an authorithy which has rights to issue a proposals for the braidchain. See [`Proposal`](@ref);
     - `collector::Pseudonym` an authorithy which is repsonsable for collecting votes for proposals. This is also recorded in the proposal itself.
@@ -44,7 +44,7 @@ Represents a deme configuration parameters issued by the guardian.
 
     guardian::Pseudonym
     recorder::Pseudonym
-    recruiter::Pseudonym
+    registrar::Pseudonym
     braider::Pseudonym
     proposer::Pseudonym 
     collector::Pseudonym
@@ -73,7 +73,7 @@ function Base.show(io::IO, deme::DemeSpec)
     println(io, "  uuid : $(deme.uuid)")
     println(io, "  guardian : $(string(deme.guardian))")
     println(io, "  recorder : $(string(deme.recorder))")
-    println(io, "  recruiter : $(string(deme.recruiter))")
+    println(io, "  registrar : $(string(deme.registrar))")
     println(io, "  proposer : $(string(deme.proposer))")
     println(io, "  braider : $(string(deme.braider))")
     #println(io, "  cert : $(deme.cert)")
@@ -462,7 +462,7 @@ Represents an admission certificate for a pseudonym `id`.
 **Interface:** [`approve`](@ref), [`issuer`](@ref), [`id`](@ref), [`ticket`](@ref), [`isadmitted`](@ref)
 """
 struct Admission
-    ticketid::TicketID # document on which basis recruiter have decided to approve the member
+    ticketid::TicketID # document on which basis registrar have decided to approve the member
     id::Pseudonym
     timestamp::DateTime # Timestamp could be used as a deadline
     approval::Union{Seal, Nothing}
@@ -478,9 +478,9 @@ Base.:(==)(x::Admission, y::Admission) = x.ticketid == y.ticketid && x.id == y.i
 """
     isbinding(admission::Admission, spec::DemeSpec)
 
-Check whether issuer of `admission` is a recruiter set in `spec`.
+Check whether issuer of `admission` is a registrar set in `spec`.
 """
-isbinding(admission::Admission, deme::DemeSpec) = issuer(admission) == deme.recruiter
+isbinding(admission::Admission, deme::DemeSpec) = issuer(admission) == deme.registrar
 
 
 """
@@ -614,7 +614,7 @@ function record!(chain::BraidChain, m::Member)
     
     @assert generator(chain) == generator(m)
     @assert !(pseudonym(m) in members(chain))
-    @assert pseudonym(m.admission.approval) == chain.spec.recruiter
+    @assert pseudonym(m.admission.approval) == chain.spec.registrar
 
     @assert verify(m, crypto(chain.spec)) # verifies also admission 
 

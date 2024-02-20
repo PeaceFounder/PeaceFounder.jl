@@ -110,7 +110,7 @@ function initialize!(spec::CryptoSpec)
     return
 end
 
-system_roles() = (; recorder = id(RECORDER[]), recruiter = id(REGISTRAR[]), braider = id(BRAIDER[]), collector = id(COLLECTOR[]))
+system_roles() = (; recorder = id(RECORDER[]), registrar = id(REGISTRAR[]), braider = id(BRAIDER[]), collector = id(COLLECTOR[]))
 
 
 set_demehash(spec::DemeSpec) = Model.set_demehash!(REGISTRAR[], spec)
