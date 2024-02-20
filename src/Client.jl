@@ -2,7 +2,7 @@ module Client
 # Methods to interact with HTTP server
 
 using ..Model
-using ..Model: Member, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, Hash, AckConsistency, AckInclusion, CastAck, DemeSpec, Signer, TicketStatus, Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen, digest, tokenid
+using ..Model: MembershipCertificate, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, Hash, AckConsistency, AckInclusion, CastAck, DemeSpec, Signer, TicketStatus, Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen, digest, tokenid
 using Base: UUID
 
 using ..Model: id, hasher, pseudonym, isbinding, generator, isadmitted, state, verify, crypto, index, root, commit, isconsistent, istallied, issuer, Invite
@@ -115,7 +115,7 @@ function get_ticket_status(server::Route, ticketid::TicketID)
 end
 
 
-function enroll_member(server::Route, member::Member)
+function enroll_member(server::Route, member::MembershipCertificate)
     
     response = post(server, "/braidchain/members", marshal(member))
     ack = unmarshal(response.body, AckInclusion{ChainState})
@@ -335,7 +335,7 @@ Model.isconsistent(guard::CastGuard, ack::AckConsistency{BallotBoxState}) = isco
 
 struct EnrollGuard
     admission::Union{Admission, Nothing}
-    enrollee::Union{Member, Nothing}
+    enrollee::Union{MembershipCertificate, Nothing}
     ack::Union{AckInclusion, Nothing}
 end
 
@@ -545,7 +545,7 @@ function enroll!(voter::DemeAccount, route::Route) # For continuing from the las
     
     g = generator(voter.commit)
 
-    enrollee = Model.approve(Member(admission, g, pseudonym(voter, g)), voter.signer)
+    enrollee = Model.approve(MembershipCertificate(admission, g, pseudonym(voter, g)), voter.signer)
 
     ack = enroll_member(route, enrollee)
 

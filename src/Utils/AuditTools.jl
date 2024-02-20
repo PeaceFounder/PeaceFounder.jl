@@ -139,7 +139,7 @@ function audit_braids end
 
 Check every member registration certificate consistency with the ledger. In particular:
     - Admission approved by a trusted entity at that time;
-    - Member approved by a admitted identity only once;
+    - MembershipCertificate approved by a admitted identity only once;
     - Every member psuedonym is generated with the current relative generator in the braidchain ledger;
 """
 function audit_members end

@@ -6,7 +6,7 @@ function canonicalize end
 # """
 # One to one mapping from a value to byte vector. Necessary to uniquelly hash an object.
 # """
-# function canonicalize(m::Member)
+# function canonicalize(m::MembershipCertificate)
 #     io = IOBuffer()
 #     JSON3.write(io, m)
 #     return take!(io)
@@ -86,9 +86,9 @@ function body(proposal::Proposal)
 end
 
 
-body(member::Member) = @set member.approval = nothing
+body(member::MembershipCertificate) = @set member.approval = nothing
 
-function sign(member::Member, signer::Signer)
+function sign(member::MembershipCertificate, signer::Signer)
     @assert id(signer) == id(member)
     return sign(canonicalize(body(member)), signer)
 end
@@ -184,7 +184,7 @@ function verify(admission::Admission, crypto::CryptoSpec)
 end
 
 
-function verify(member::Member, crypto::CryptoSpec)
+function verify(member::MembershipCertificate, crypto::CryptoSpec)
     return verify(member.admission, crypto) && verify(canonicalize(body(member)), id(member.admission), member.approval, crypto)
 end
 

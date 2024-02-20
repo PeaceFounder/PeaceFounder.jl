@@ -30,7 +30,7 @@ Represents a deme configuration parameters issued by the guardian.
 - `crypto::CryptoSpec` cryptographic parameters for the deme;
 - `guardian::Pseudonym` an issuer for this demespec file. Has authorithy to set a roster:
     - `recorder::Pseudonym` an authorithy which has rights to add new transactions and is responsable for braidchain's ledger integrity. Issues `Commit{ChainState}`;
-    - `registrar::Pseudonym` an authorithy which has rights to authorize new admissions to the deme. See [`Admission`](@ref) and [`Member`](@ref);
+    - `registrar::Pseudonym` an authorithy which has rights to authorize new admissions to the deme. See [`Admission`](@ref) and [`MembershipCertificate`](@ref);
     - `braider::Pseudonym` an authorithy which can do a legitimate braid jobs for other demes. See [`BraidWork`](@ref);   
     - `proposer::Pseudonym` an authorithy which has rights to issue a proposals for the braidchain. See [`Proposal`](@ref);
     - `collector::Pseudonym` an authorithy which is repsonsable for collecting votes for proposals. This is also recorded in the proposal itself.
@@ -272,11 +272,11 @@ end
 
 
 """
-    roll(ledger::BraidChain)::Vector{Member}
+    roll(ledger::BraidChain)::Vector{MembershipCertificate}
 
 Return all member certificates from a braidchain ledger.
 """
-roll(chain::BraidChain) = (m for m in chain.ledger if m isa Member)
+roll(chain::BraidChain) = (m for m in chain.ledger if m isa MembershipCertificate)
 
 """
     constituents(ledger::BraidChain)::Set{Pseudonym}
@@ -381,7 +381,7 @@ function members(chain::BraidChain, n::Int)
     mset = Set{Pseudonym}()
     for i in view(chain.ledger, n:-1:1)
 
-        if i isa Member
+        if i isa MembershipCertificate
             push!(mset, pseudonym(i))
         end
         
@@ -516,7 +516,7 @@ end
 
 
 """
-    struct Member <: Transaction
+    struct MembershipCertificate <: Transaction
         admission::Admission
         generator::Generator
         pseudonym::Pseudonym
@@ -527,65 +527,65 @@ A new member certificate which rolls in (anouances) it's `pseudonym` at current 
 certified with admission certificate issued by registrar. This two step process is necessary as a checkpoint in situations when 
 braidchain ledger get's locked during a new member resgistration procedure.
 """
-struct Member <: Transaction
+struct MembershipCertificate <: Transaction
     admission::Admission
     generator::Generator
     pseudonym::Pseudonym
     approval::Union{Signature, Nothing} # In principle it could also be a proof log_G(A) == log_Y(B)
 end
 
-Member(admission::Admission, generator::Generator, pseudonym::Pseudonym) = Member(admission, generator, pseudonym, nothing)
+MembershipCertificate(admission::Admission, generator::Generator, pseudonym::Pseudonym) = MembershipCertificate(admission, generator, pseudonym, nothing)
 
 
-Base.:(==)(x::Member, y::Member) = x.admission == y.admission && x.generator == y.generator && x.pseudonym == y.pseudonym && x.approval == y.approval
+Base.:(==)(x::MembershipCertificate, y::MembershipCertificate) = x.admission == y.admission && x.generator == y.generator && x.pseudonym == y.pseudonym && x.approval == y.approval
 
 """
-    approve(member::Member, signer::Signer)::Member
+    approve(member::MembershipCertificate, signer::Signer)::MembershipCertificate
 
 Sign a member certificate and return it with `approval` field filled.
 """
-approve(member::Member, signer::Signer) = @set member.approval = sign(member, signer)
+approve(member::MembershipCertificate, signer::Signer) = @set member.approval = sign(member, signer)
 
 """
-    issuer(member::Member)::Pseudonym
+    issuer(member::MembershipCertificate)::Pseudonym
 
 The identiy of registrar who signed admission.
 """
-issuer(member::Member) = issuer(member.admission)
+issuer(member::MembershipCertificate) = issuer(member.admission)
 
 """
-    id(member::Member)::Pseudonym
+    id(member::MembershipCertificate)::Pseudonym
 
 Identity pseudonym for a member. 
 """
-id(member::Member) = id(member.admission)
+id(member::MembershipCertificate) = id(member.admission)
 
 
 """
-    pseudonym(member::Member)::Pseudonym
+    pseudonym(member::MembershipCertificate)::Pseudonym
 
 Pseudonym for a member at the `generator(member)`. 
 """
-pseudonym(member::Member) = member.pseudonym
+pseudonym(member::MembershipCertificate) = member.pseudonym
 
 
 """
-    generator(member::Member)::Generator
+    generator(member::MembershipCertificate)::Generator
 
 Generator at which member tries to roll in the braidchain.
 """
-generator(member::Member) = member.generator
+generator(member::MembershipCertificate) = member.generator
 
 """
-    ticket(member::Member)
+    ticket(member::MembershipCertificate)
 
 Ticket for a member admission certificate.
 """
-ticket(member::Member) = ticket(member.admission)
+ticket(member::MembershipCertificate) = ticket(member.admission)
 
-function Base.show(io::IO, member::Member)
+function Base.show(io::IO, member::MembershipCertificate)
 
-    println(io, "Member:")
+    println(io, "MembershipCertificate:")
     println(io, "  issuer : $(string(issuer(member)))")
     println(io, "  ticket : $(string(ticket(member)))")
     println(io, "  identity : $(string(id(member)))")
@@ -596,7 +596,7 @@ end
 
 
 
-function Base.push!(chain::BraidChain, m::Member)
+function Base.push!(chain::BraidChain, m::MembershipCertificate)
 
     push!(chain.ledger, m)
     push!(chain.members, pseudonym(m))
@@ -606,7 +606,7 @@ function Base.push!(chain::BraidChain, m::Member)
 end
 
 
-function record!(chain::BraidChain, m::Member)
+function record!(chain::BraidChain, m::MembershipCertificate)
 
     N = findfirst(==(m), ledger(chain))
     !isnothing(N) && return N

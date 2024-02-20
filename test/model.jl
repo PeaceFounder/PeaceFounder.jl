@@ -2,7 +2,7 @@ using Dates
 using Test
 import PeaceFounder.Model
 
-import .Model: CryptoSpec, pseudonym, BraidChain, commit!, Registrar, PollingStation, TicketID, add!, id, admit!, commit, verify, generator, Member, approve, record!, ack_leaf, isbinding, roll, constituents, members, state, Proposal, vote, Ballot, Selection, uuid, record, spine, tally, BeaconClient, Dealer, charge_nonces!, pulse_timestamp, nonce_promise, schedule!, next_job, pass!, draw, seed, set_seed!, ack_cast, hasher, HMAC, enlist!, DemeSpec, generate, Signer, key, braid, Model, set_demehash!, Ticket, tokenid, select
+import .Model: CryptoSpec, pseudonym, BraidChain, commit!, Registrar, PollingStation, TicketID, add!, id, admit!, commit, verify, generator, MembershipCertificate, approve, record!, ack_leaf, isbinding, roll, constituents, members, state, Proposal, vote, Ballot, Selection, uuid, record, spine, tally, BeaconClient, Dealer, charge_nonces!, pulse_timestamp, nonce_promise, schedule!, next_job, pass!, draw, seed, set_seed!, ack_cast, hasher, HMAC, enlist!, DemeSpec, generate, Signer, key, braid, Model, set_demehash!, Ticket, tokenid, select
 
 
 crypto = CryptoSpec("sha256", "EC: P_192")
@@ -72,7 +72,7 @@ function enroll(signer, invite)
     @test id(_commit) == id(BRAID_CHAIN_RECORDER)
     @test verify(_commit, crypto)
     g = generator(_commit)
-    access = approve(Member(admission, g, pseudonym(signer, g)), signer)
+    access = approve(MembershipCertificate(admission, g, pseudonym(signer, g)), signer)
     N = record!(BRAID_CHAIN, access)
 
     commit!(BRAID_CHAIN, BRAID_CHAIN_RECORDER)
