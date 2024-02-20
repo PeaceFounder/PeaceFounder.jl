@@ -37,7 +37,7 @@ Verify a cryptographic signature of the `document` returning `true` if valid.
 
 --- 
         
-    verify(braidwork::BraidWork, crypto::CryptoSpec)::Bool
+    verify(braidwork::BraidReceipt, crypto::CryptoSpec)::Bool
 
 Verify a braider issued cryptographic signature for the `braidwork` and a zero knowledge proofs.
 Returns true if both checks succeed.

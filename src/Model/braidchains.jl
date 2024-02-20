@@ -31,7 +31,7 @@ Represents a deme configuration parameters issued by the guardian.
 - `guardian::Pseudonym` an issuer for this demespec file. Has authorithy to set a roster:
     - `recorder::Pseudonym` an authorithy which has rights to add new transactions and is responsable for braidchain's ledger integrity. Issues `Commit{ChainState}`;
     - `registrar::Pseudonym` an authorithy which has rights to authorize new admissions to the deme. See [`Admission`](@ref) and [`MembershipCertificate`](@ref);
-    - `braider::Pseudonym` an authorithy which can do a legitimate braid jobs for other demes. See [`BraidWork`](@ref);   
+    - `braider::Pseudonym` an authorithy which can do a legitimate braid jobs for other demes. See [`BraidReceipt`](@ref);   
     - `proposer::Pseudonym` an authorithy which has rights to issue a proposals for the braidchain. See [`Proposal`](@ref);
     - `collector::Pseudonym` an authorithy which is repsonsable for collecting votes for proposals. This is also recorded in the proposal itself.
 - `timestamp::Union{DateTime, Nothing}` time when signature is being issued;
@@ -360,7 +360,7 @@ function generator(chain::BraidChain, n::Int)
     
     for i in view(chain.ledger, n:-1:1)
 
-        if i isa BraidWork
+        if i isa BraidReceipt
             return output_generator(i)
         end
 
@@ -385,7 +385,7 @@ function members(chain::BraidChain, n::Int)
             push!(mset, pseudonym(i))
         end
         
-        if i isa BraidWork
+        if i isa BraidReceipt
 
             for j in output_members(i)
                 push!(mset, j)

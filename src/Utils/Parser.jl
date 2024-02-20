@@ -1,6 +1,6 @@
 module Parser
 
-using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, MembershipCertificate, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, NonceCommitment, Lot, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Hash, TicketStatus, Commit, AckInclusion, Generator, CryptoSpec, DemeSpec, Hash, parse_groupspec, lower_groupspec, BraidWork, Invite
+using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, MembershipCertificate, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, NonceCommitment, Lot, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Hash, TicketStatus, Commit, AckInclusion, Generator, CryptoSpec, DemeSpec, Hash, parse_groupspec, lower_groupspec, BraidReceipt, Invite
 using HistoryTrees: InclusionProof, ConsistencyProof
 
 using Dates: DateTime
@@ -157,8 +157,8 @@ function StructTypes.construct(::Type{ConsistencyProof}, event)
 end
 
 
-StructTypes.StructType(::Type{BraidWork}) = StructTypes.Struct()
-StructTypes.omitempties(::Type{BraidWork}) = (:approval,)
+StructTypes.StructType(::Type{BraidReceipt}) = StructTypes.Struct()
+StructTypes.omitempties(::Type{BraidReceipt}) = (:approval,)
 
 
 StructTypes.StructType(::Type{Invite}) = StructTypes.CustomStruct()

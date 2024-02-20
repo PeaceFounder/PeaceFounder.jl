@@ -16,7 +16,7 @@ group(spec::ECP) = CryptoGroups.specialize(ECGroup, spec)
 group(spec::MODP) = CryptoGroups.specialize(PGroup, spec) 
 
 """
-    struct BraidWork <: Transaction
+    struct BraidReceipt <: Transaction
         braid::Simulator
         consumer::DemeSpec
         producer::DemeSpec
@@ -30,25 +30,25 @@ See a [`braid`](@ref) method.
 
 **Interface:** [`approve`](@ref), [`verify`](@ref), [`input_generator`](@ref), [`input_members`](@ref), [`output_generator`](@ref), [`output_members`](@ref)
 """
-struct BraidWork <: Transaction 
+struct BraidReceipt <: Transaction 
     braid::Simulator
     consumer::DemeSpec
     producer::DemeSpec
     approval::Union{Seal, Nothing}
 
-    function BraidWork(braid::Simulator, consumer::DemeSpec, producer::DemeSpec)
+    function BraidReceipt(braid::Simulator, consumer::DemeSpec, producer::DemeSpec)
         
         @assert braid.proposition isa Braid
 
         return new(braid, consumer, producer, nothing)
     end
 
-    BraidWork(braid::Simulator, consumer::DemeSpec, producer::DemeSpec, ::Nothing) = BraidWork(braid, consumer, producer)
+    BraidReceipt(braid::Simulator, consumer::DemeSpec, producer::DemeSpec, ::Nothing) = BraidReceipt(braid, consumer, producer)
 
-    BraidWork(braidwork::BraidWork, approval::Seal) = new(braidwork.braid, braidwork.consumer, braidwork.producer, approval)
+    BraidReceipt(braidwork::BraidReceipt, approval::Seal) = new(braidwork.braid, braidwork.consumer, braidwork.producer, approval)
 
     # Necessary for deserialization
-    BraidWork(braid::Simulator, consumer::DemeSpec, producer::DemeSpec, approval) = new(braid, consumer, producer, approval)
+    BraidReceipt(braid::Simulator, consumer::DemeSpec, producer::DemeSpec, approval) = new(braid, consumer, producer, approval)
 end 
 
 @doc raw"""
@@ -73,20 +73,20 @@ function braid(generator::Generator, members::Union{Vector{Pseudonym}, Set{Pseud
     spec_g = G(consumer.crypto.generator.data)
     braid = ShuffleProofs.braid(g, m, verifier(spec_g))
 
-    return BraidWork(braid, consumer, producer)
+    return BraidReceipt(braid, consumer, producer)
 end
 
 """
-    approve(braid::BraidWork, braider::Signer)
+    approve(braid::BraidReceipt, braider::Signer)
 
 Sign a braidwork with a braider. Throws an error if braider is not in the `producer` demespec.
 """
-function approve(braidwork::BraidWork, braider::Signer)
+function approve(braidwork::BraidReceipt, braider::Signer)
 
     @assert pseudonym(braider) == braidwork.producer.braider
     @assert ShuffleProofs.verify(braidwork.braid) "Braid is not consistent."
 
-    return BraidWork(braidwork, seal(braidwork, braider))
+    return BraidReceipt(braidwork, seal(braidwork, braider))
 end
 
 
@@ -99,12 +99,12 @@ function braid(generator::Generator, members::Union{Vector{Pseudonym}, Set{Pseud
 end
 
 """
-    verify(braid::BraidWork, crypto::CryptoSpec)
+    verify(braid::BraidReceipt, crypto::CryptoSpec)
 
 Verifies a braid approval and then it's zero knowledge proofs. A `crypto` argument is 
 provided to avoid downgrading attacks. 
 """
-function verify(braidwork::BraidWork, crypto::CryptoSpec)
+function verify(braidwork::BraidReceipt, crypto::CryptoSpec)
 
     @assert !isnothing(braidwork.approval) "Only signed braids can be verified"
 
@@ -119,37 +119,37 @@ function verify(braidwork::BraidWork, crypto::CryptoSpec)
 end
 
 """
-    input_generator(braid::BraidWork)
+    input_generator(braid::BraidReceipt)
 
 Return input generator of the braid.
 """
-input_generator(braidwork::BraidWork) = generator(ShuffleProofs.input_generator(braidwork.braid.proposition)) # |> Generator
+input_generator(braidwork::BraidReceipt) = generator(ShuffleProofs.input_generator(braidwork.braid.proposition)) # |> Generator
 
 """
-    input_members(braid::BraidWork)
+    input_members(braid::BraidReceipt)
 
 Return input member pseudonyms of the braid at provided input generator. See [`input_generator`](@ref)
 """
-input_members(braidwork::BraidWork) = Set(Pseudonym[pseudonym(i) for i in ShuffleProofs.input_members(braidwork.braid.proposition)])
+input_members(braidwork::BraidReceipt) = Set(Pseudonym[pseudonym(i) for i in ShuffleProofs.input_members(braidwork.braid.proposition)])
 
 """
-    output_generator(braid::BraidWork)
+    output_generator(braid::BraidReceipt)
 
 Return output genertor of the braid.
 """
-output_generator(braidwork::BraidWork) = generator(ShuffleProofs.output_generator(braidwork.braid.proposition))
+output_generator(braidwork::BraidReceipt) = generator(ShuffleProofs.output_generator(braidwork.braid.proposition))
 
 """
-    output_members(braid::BraidWork)
+    output_members(braid::BraidReceipt)
 
 Return output member pseudonyms of the braid at a resulting output generator. See [`output_generator`](@ref)
 """
-output_members(braidwork::BraidWork) = Set(Pseudonym[pseudonym(i) for i in ShuffleProofs.output_members(braidwork.braid.proposition)])
+output_members(braidwork::BraidReceipt) = Set(Pseudonym[pseudonym(i) for i in ShuffleProofs.output_members(braidwork.braid.proposition)])
 
 
-function Base.show(io::IO, braid::BraidWork)
+function Base.show(io::IO, braid::BraidReceipt)
     
-    println(io, "BraidWork:")
+    println(io, "BraidReceipt:")
     println(io, "  input_generator : $(string(input_generator(braid)))")
     #println(io, "  input_members : $(input_members(braid))")
     print(io, "  output_generator : $(string(output_generator(braid)))")
@@ -158,7 +158,7 @@ function Base.show(io::IO, braid::BraidWork)
 end
 
 
-function Base.push!(chain::BraidChain, braidwork::BraidWork)
+function Base.push!(chain::BraidChain, braidwork::BraidReceipt)
 
     push!(chain.ledger, braidwork)
     push!(chain.tree, digest(braidwork, hasher(chain.spec)))
@@ -170,7 +170,7 @@ function Base.push!(chain::BraidChain, braidwork::BraidWork)
 end
 
 
-function record!(chain::BraidChain, braidwork::BraidWork)
+function record!(chain::BraidChain, braidwork::BraidReceipt)
 
     @assert generator(chain) == input_generator(braidwork)
     @assert members(chain) == input_members(braidwork)
