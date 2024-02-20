@@ -50,7 +50,7 @@ bob = Client.enroll!(bob_invite; server = SERVER, key = 3)
 
 
 # Braiding in between registration. Within this time admission can be attained, wheras 
-# no new MembershipCertificate certificates can be added to the BraidChain. 
+# no new Membership certificates can be added to the BraidChain. 
 
 input_generator = Mapper.get_generator()
 input_members = Mapper.get_members()

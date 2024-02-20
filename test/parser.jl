@@ -1,6 +1,6 @@
 using Test
 import PeaceFounder: Model, Parser
-import .Model: TicketID, Digest, Pseudonym, Admission, Seal, DemeSpec, CryptoSpec, MembershipCertificate, Signature, Generator, id
+import .Model: TicketID, Digest, Pseudonym, Admission, Seal, DemeSpec, CryptoSpec, Membership, Signature, Generator, id
 import .Parser: marshal, unmarshal
 import Dates: DateTime, now
 
@@ -42,7 +42,7 @@ event = DemeSpec(;
 ) |> Model.approve(SIGNER) 
 @test isconsistent(event)
 
-event = MembershipCertificate(admission, Generator(UInt8[1, 2, 3, 4]), Pseudonym(UInt8[1, 2, 3, 4]), Signature(123, 4242))
+event = Membership(admission, Generator(UInt8[1, 2, 3, 4]), Pseudonym(UInt8[1, 2, 3, 4]), Signature(123, 4242))
 @test isconsistent(event)
 
 event = Pseudonym(UInt8[1, 2, 3, 4])

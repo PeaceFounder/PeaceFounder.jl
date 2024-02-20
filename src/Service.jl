@@ -5,7 +5,7 @@ module Service
 
 using ..Mapper
 using ..Parser: marshal, unmarshal
-using ..Model: TicketID, Digest, Pseudonym, Digest, MembershipCertificate, Proposal, Vote, Registrar, bytes
+using ..Model: TicketID, Digest, Pseudonym, Digest, Membership, Proposal, Vote, Registrar, bytes
 using ..Authorization: AuthServerMiddleware, timestamp, credential
 using Dates: DateTime, Second, now
 using Base: UUID
@@ -17,10 +17,10 @@ import .OxygenInstance: @get, @put, @post, mergeschema, serve, Request, Response
 const ROUTER = OxygenInstance.CONTEXT[].router
 
 export serve
-# POST /braidchain/members : MembershipCertificate -> AckInclusion
-# GET /braidchain/members : Vector{Tuple{Int, MembershipCertificate}}
-# GET /braidchain/members?id={Pseudonym} : Tuple{Int, MembershipCertificate}
-# GET /braidchain/members?pseudonym={Pseudonym} : Tuple{Int, MembershipCertificate}
+# POST /braidchain/members : Membership -> AckInclusion
+# GET /braidchain/members : Vector{Tuple{Int, Membership}}
+# GET /braidchain/members?id={Pseudonym} : Tuple{Int, Membership}
+# GET /braidchain/members?pseudonym={Pseudonym} : Tuple{Int, Membership}
 
 # POST /braidchain/proposals : Proposal -> AckInclusion
 # GET /braidcahin/proposals/{UUID} : Tuple{Int, Proposal}
@@ -108,7 +108,7 @@ end
 
 @post "/braidchain/members" function(req::Request)
     
-    member = unmarshal(req.body, MembershipCertificate)
+    member = unmarshal(req.body, Membership)
     response = Mapper.enroll_member(member)
 
     return Response(200, marshal(response))

@@ -1,6 +1,6 @@
 module Parser
 
-using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, MembershipCertificate, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, NonceCommitment, Lot, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Hash, TicketStatus, Commit, AckInclusion, Generator, CryptoSpec, DemeSpec, Hash, parse_groupspec, lower_groupspec, BraidReceipt, Invite
+using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Membership, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, NonceCommitment, Lot, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Hash, TicketStatus, Commit, AckInclusion, Generator, CryptoSpec, DemeSpec, Hash, parse_groupspec, lower_groupspec, BraidReceipt, Invite
 using HistoryTrees: InclusionProof, ConsistencyProof
 
 using Dates: DateTime
@@ -120,8 +120,8 @@ StructTypes.StructType(::Type{TicketStatus}) = StructTypes.Struct()
 StructTypes.omitempties(::Type{TicketStatus}) = (:admission,)
 
 
-StructTypes.StructType(::Type{MembershipCertificate}) = StructTypes.Struct()
-StructTypes.omitempties(::Type{MembershipCertificate}) = (:approval,)
+StructTypes.StructType(::Type{Membership}) = StructTypes.Struct()
+StructTypes.omitempties(::Type{Membership}) = (:approval,)
 
 
 StructTypes.StructType(::Type{Commit}) = StructTypes.Struct()

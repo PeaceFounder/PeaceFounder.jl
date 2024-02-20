@@ -7,7 +7,7 @@ import Dates: Dates, DateTime
 import ..Schedulers: Schedulers, Scheduler
 
 using ..Model
-using ..Model: CryptoSpec, pseudonym, BraidChain, Registrar, PollingStation, TicketID, MembershipCertificate, Proposal, Ballot, Selection, Transaction, Signer, Dealer, BraidBroker, Pseudonym, Vote, id, DemeSpec, Digest, Admission, Ticket
+using ..Model: CryptoSpec, pseudonym, BraidChain, Registrar, PollingStation, TicketID, Membership, Proposal, Ballot, Selection, Transaction, Signer, Dealer, BraidBroker, Pseudonym, Vote, id, DemeSpec, Digest, Admission, Ticket
 using Base: UUID
 using URIs: URI
 
@@ -193,7 +193,7 @@ get_chain_record(N::Int) = BRAID_CHAIN[][N]
 get_chain_ack_leaf(N::Int) = Model.ack_leaf(BRAID_CHAIN[], N)
 get_chain_ack_root(N::Int) = Model.ack_root(BRAID_CHAIN[], N)
 
-enroll_member(member::MembershipCertificate) = submit_chain_record!(member)
+enroll_member(member::Membership) = submit_chain_record!(member)
 enlist_proposal(proposal::Proposal) = submit_chain_record!(proposal)
 
 get_roll() = Model.roll(BRAID_CHAIN[])

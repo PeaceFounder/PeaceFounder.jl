@@ -2,7 +2,7 @@ using Test
 
 import PeaceFounder.Model
 import PeaceFounder.Mapper
-using PeaceFounder.Model: CryptoSpec, pseudonym, TicketID, MembershipCertificate, Proposal, Ballot, Selection, generator, state, id, vote, seed, tally, approve, istallied, DemeSpec, hasher, HMAC, token, isbinding, Generator, generate, Signer, Invite, tokenid
+using PeaceFounder.Model: CryptoSpec, pseudonym, TicketID, Membership, Proposal, Ballot, Selection, generator, state, id, vote, seed, tally, approve, istallied, DemeSpec, hasher, HMAC, token, isbinding, Generator, generate, Signer, Invite, tokenid
 
 import Dates: Dates, Date
 
@@ -49,7 +49,7 @@ function enroll(signer, invite::Invite)
     
     commit = Mapper.get_chain_commit()
     g = generator(commit)
-    access = approve(MembershipCertificate(admission, g, pseudonym(signer, g)), signer)
+    access = approve(Membership(admission, g, pseudonym(signer, g)), signer)
 
     ack = Mapper.submit_chain_record!(access)
     
