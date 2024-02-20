@@ -119,7 +119,7 @@ N, proposal = proposal_list[1]
 
 @test Model.isopen(proposal; time = proposal.open + Dates.Millisecond(100)) # Need to implement. Checks whether proposal is open
 
-Mapper.dealer_process_loop(force = true)
+Mapper.entropy_process_loop() # sleeping a second also works
 
 commit = Mapper.get_ballotbox_commit(proposal.uuid)
 _seed = seed(commit)

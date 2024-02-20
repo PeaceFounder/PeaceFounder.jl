@@ -4,10 +4,10 @@ module Mapper
 
 import Sockets
 import Dates: Dates, DateTime
-import ..Schedulers: Schedulers, Scheduler
+import ..Schedulers: Schedulers, Scheduler, next_event
 
 using ..Model
-using ..Model: CryptoSpec, pseudonym, BraidChain, Registrar, PollingStation, TicketID, Membership, Proposal, Ballot, Selection, Transaction, Signer, Dealer, BraidBroker, Pseudonym, Vote, id, DemeSpec, Digest, Admission, Ticket
+using ..Model: CryptoSpec, pseudonym, BraidChain, Registrar, PollingStation, TicketID, Membership, Proposal, Ballot, Selection, Transaction, Signer, BraidBroker, Pseudonym, Vote, id, DemeSpec, Digest, Admission, Ticket
 using Base: UUID
 using URIs: URI
 
@@ -27,42 +27,32 @@ const POLLING_STATION = Ref{PollingStation}()
 const TALLY_SCHEDULER = Scheduler(UUID, retry_interval = 5) 
 const TALLY_PROCESS = Ref{Task}()
 
-const DEALER = Ref{Dealer}()
-const DEALER_SCHEDULER = Scheduler(retry_interval = 1)
-const DEALER_PROCESS = Ref{Task}()
+#const ENTROPY = Ref{Dealer}()
+const ENTROPY_SCHEDULER = Scheduler(retry_interval = 1)
+const ENTROPY_PROCESS = Ref{Task}()
 
 const BRAID_BROKER = Ref{BraidBroker}
 const BRAID_BROKER_SCHEDULER = Scheduler(retry_interval = 5)
 const BRAID_BROKER_PROCESS = Ref{Task}()
 
 
-function dealer_process_loop(; force = false)
 
-    force || isready(DEALER[]) || wait(DEALER_SCHEDULER)
-    isready(DEALER[]) || return # for false triggers with pooling interval
+function entropy_process_loop()
+    
+    uuid = wait(ENTROPY_SCHEDULER)
+    bbox = Model.ballotbox(POLLING_STATION[], uuid)
 
-    job = Model.next_job(DEALER[])
+    if isnothing(bbox.commit)
 
-    try 
-        pulse = Model.get_pulse(DEALER[].beacon, job.timestamp) # retriving nothing seems plausable
-        Model.cast!(DEALER[], job.uuid, pulse)
-    catch
-        # In real code instead a notification would be scheduled at time ahead.
-        #retry!(DEALER_SCHEDULER)
-        Model.pass!(DEALER[], job.uuid)
+        spec = BRAID_CHAIN[].spec
+        _seed = Model.digest(rand(UInt8, 16), Model.hasher(spec))
+        Model.set_seed!(bbox, _seed)
+        Model.commit!(bbox, COLLECTOR[]; with_tally = false)
+
     end
-
-    lot = Model.draw(DEALER[], job.uuid)
-    Model.record!(BRAID_CHAIN[], lot)
-    Model.commit!(BRAID_CHAIN[], RECORDER[])
-
-    _seed = Model.seed(lot)
-    Model.set_seed!(POLLING_STATION[], job.uuid, _seed)
-    Model.commit!(POLLING_STATION[], job.uuid, COLLECTOR[]; with_tally = false)
 
     return
 end
-
 
 
 function broker_process_loop(; force = false)
@@ -120,26 +110,18 @@ get_route() = REGISTRAR[].route
 function capture!(spec::DemeSpec)
 
     BRAID_CHAIN[] = BraidChain(spec)
-
-    set_demehash(spec)
-
-    #REGISTRAR[].demehash = Model.digest(spec, Model.hasher(spec))
-
-    DEALER[] = Dealer(spec; delay = 1)
+    set_demehash(spec) # for registrar
 
     POLLING_STATION[] = PollingStation(Model.crypto(spec))
 
-    promises = Model.charge_nonces!(DEALER[], 100; reset = true)
-    Model.record!(BRAID_CHAIN[], promises)
-
     Model.commit!(BRAID_CHAIN[], RECORDER[]) # Errors if the braidchain server is not accepted. An option override=true could be provided 
 
-    DEALER_PROCESS[] = @async while true
-        dealer_process_loop()
+    ENTROPY_PROCESS[] = @async while true
+        entropy_process_loop()
     end
 
     BRAID_BROKER_PROCESS[] = @async while true
-        braidchain_process_loop()
+        broker_process_loop()
     end
 
     TALLY_PROCESS[] = @async while true
@@ -153,8 +135,6 @@ end
 get_recruit_key() = Model.key(REGISTRAR[])
 
 get_deme() = BRAID_CHAIN[].spec
-
-#enlist_ticket(ticketid::TicketID, timestamp::DateTime, auth_code::Digest; expiration_time = nothing) = Model.enlist!(REGISTRAR[], ticketid, timestamp, auth_code)
 
 enlist_ticket(ticketid::TicketID, timestamp::DateTime; expiration_time = nothing) = Model.enlist!(REGISTRAR[], ticketid, timestamp)
 enlist_ticket(ticketid::TicketID; expiration_time = nothing) = enlist_ticket(ticketid, Dates.now(); expiration_time)
@@ -227,13 +207,10 @@ function submit_chain_record!(proposal::Proposal)
     N = Model.record!(BRAID_CHAIN[], proposal)
     Model.commit!(BRAID_CHAIN[], RECORDER[])
 
-    Model.add!(POLLING_STATION[], proposal, Model.members(BRAID_CHAIN[], proposal))
+    anchored_members = Model.members(BRAID_CHAIN[], proposal)
+    Model.add!(POLLING_STATION[], proposal, anchored_members)
 
-    timestamp = Model.pulse_timestamp(BRAID_CHAIN[], proposal.uuid)
-    nonceid = Model.nonce_promise(BRAID_CHAIN[], proposal.uuid)
-
-    schedule_pulse!(proposal.uuid, timestamp, nonceid)
-
+    Schedulers.schedule!(ENTROPY_SCHEDULER, proposal.open, proposal.uuid)
     Schedulers.schedule!(TALLY_SCHEDULER, proposal.closed, proposal.uuid)
 
     ack = Model.ack_leaf(BRAID_CHAIN[], N)
@@ -304,7 +281,6 @@ function get_ballotbox_ledger(uuid::UUID; fairness::Bool = true, tally_trigger_d
     end
 
 end
-
 
 
 end

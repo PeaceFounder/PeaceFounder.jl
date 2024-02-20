@@ -1,6 +1,6 @@
 module Parser
 
-using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Membership, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, NonceCommitment, Lot, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Hash, TicketStatus, Commit, AckInclusion, Generator, CryptoSpec, DemeSpec, Hash, parse_groupspec, lower_groupspec, BraidReceipt, Invite
+using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Membership, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Hash, TicketStatus, Commit, AckInclusion, Generator, CryptoSpec, DemeSpec, Hash, parse_groupspec, lower_groupspec, BraidReceipt, Invite
 using HistoryTrees: InclusionProof, ConsistencyProof
 
 using Dates: DateTime
@@ -17,10 +17,8 @@ using URIs: URI
 # Should be removed when canonicalization methods will be implemented.
 Model.canonicalize(x) = marshal(x)
 
-
 # Needed for canonicalize method
 StructTypes.StructType(::Type{Signature}) = StructTypes.Struct()
-
 
 StructTypes.StructType(::Type{Proposal}) = StructTypes.Struct()
 StructTypes.omitempties(::Type{Proposal}) = (:approval,)
@@ -32,11 +30,6 @@ StructTypes.StructType(::Type{Ballot}) = StructTypes.Struct()
 
 StructTypes.StructType(::Type{BallotBoxState}) = StructTypes.Struct()
 StructTypes.omitempties(::Type{BallotBoxState}) = (:tally, :view)
-
-StructTypes.StructType(::Type{NonceCommitment}) = StructTypes.Struct()
-
-StructTypes.StructType(::Type{Lot}) = StructTypes.Struct()
-StructTypes.omitempties(::Type{Lot}) = (:pulse,)
 
 StructTypes.StructType(::Type{CastReceipt}) = StructTypes.Struct()
 StructTypes.StructType(::Type{CastRecord}) = StructTypes.Struct()
@@ -175,7 +168,6 @@ function StructTypes.construct(::Type{Invite}, data::Dict)
     
     return Invite(demehash, token, hasher, route)
 end
-
 
 
 export marshal, unmarshal

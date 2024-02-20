@@ -170,10 +170,8 @@ Represents a braidchain ledger with it's associated state. Can be instantitated 
 mutable struct BraidChain
     members::Set{Pseudonym}
     ledger::Vector{Transaction}
-    #crypto::CryptoSpec
     spec::DemeSpec
     generator::Generator
-    #guardian::Pseudonym
     tree::HistoryTree
     commit::Union{Commit{ChainState}, Nothing}
 end
@@ -203,8 +201,6 @@ function Base.show(io::IO, chain::BraidChain)
 
 end
 
-
-#BraidChain(guardian::Pseudonym, crypto::CryptoSpec) = BraidChain(Set{Pseudonym}(), Transaction[], crypto, generator(crypto), guardian, HistoryTree(Digest, hasher(crypto)), nothing)
 
 function BraidChain(spec::DemeSpec) 
     

@@ -129,7 +129,7 @@ include("crypto.jl")
 include("braidchains.jl")
 include("registrar.jl")
 include("proposals.jl")
-include("dealer.jl")
+#include("dealer.jl")
 include("braids.jl")
 include("seal.jl") # Defines how values should be canonicalized. Could contain means for a signer with a state.
 

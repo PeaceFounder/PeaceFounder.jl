@@ -2,7 +2,7 @@ using Dates
 using Test
 import PeaceFounder.Model
 
-import .Model: CryptoSpec, pseudonym, BraidChain, commit!, Registrar, PollingStation, TicketID, add!, id, admit!, commit, verify, generator, Membership, approve, record!, ack_leaf, isbinding, roll, constituents, members, state, Proposal, vote, Ballot, Selection, uuid, record, spine, tally, BeaconClient, Dealer, charge_nonces!, pulse_timestamp, nonce_promise, schedule!, next_job, pass!, draw, seed, set_seed!, ack_cast, hasher, HMAC, enlist!, DemeSpec, generate, Signer, key, braid, Model, set_demehash!, Ticket, tokenid, select
+import .Model: CryptoSpec, pseudonym, BraidChain, commit!, Registrar, PollingStation, TicketID, add!, id, admit!, commit, verify, generator, Membership, approve, record!, ack_leaf, isbinding, roll, constituents, members, state, Proposal, vote, Ballot, Selection, uuid, record, spine, tally, seed, set_seed!, ack_cast, hasher, HMAC, enlist!, DemeSpec, generate, Signer, key, braid, Model, set_demehash!, Ticket, tokenid, select, digest
 
 
 crypto = CryptoSpec("sha256", "EC: P_192")
@@ -44,11 +44,11 @@ set_demehash!(REGISTRAR, demespec)
 
 POLLING_STATION = PollingStation(crypto)
 
-DEALER = Dealer(demespec)
+#DEALER = Dealer(demespec)
 
 # need to deprecate
-promises = charge_nonces!(DEALER, 100)
-record!(BRAID_CHAIN, promises)
+#promises = charge_nonces!(DEALER, 100)
+#record!(BRAID_CHAIN, promises)
 
 # If there are no elements in the chain this errors. 
 # as well as asking for a root, leaf elements.
@@ -190,27 +190,33 @@ ack = ack_leaf(BRAID_CHAIN, N)
 @test id(ack) == id(BRAID_CHAIN_RECORDER)
 @test verify(ack, crypto)
 
-timestamp = pulse_timestamp(BRAID_CHAIN, proposal.uuid)
-nonceid = nonce_promise(BRAID_CHAIN, proposal.uuid)
+#timestamp = pulse_timestamp(BRAID_CHAIN, proposal.uuid)
+#nonceid = nonce_promise(BRAID_CHAIN, proposal.uuid)
 
-schedule!(DEALER, proposal.uuid, timestamp, nonceid)
+#schedule!(DEALER, proposal.uuid, timestamp, nonceid)
 
 add!(POLLING_STATION, proposal, members(BRAID_CHAIN, proposal))
 
-@test isready(DEALER)
+#@test isready(DEALER)
 
-job = next_job(DEALER)
+#job = next_job(DEALER)
 
-pass!(DEALER, job.uuid)
-lot = draw(DEALER, job.uuid)
-record!(BRAID_CHAIN, lot)
+#pass!(DEALER, job.uuid)
+#lot = draw(DEALER, job.uuid)
+#record!(BRAID_CHAIN, lot)
 
-_seed = seed(lot) # method needs to be stable
-set_seed!(POLLING_STATION, job.uuid, _seed)
+#_seed = seed(lot) # method needs to be stable
+
+# Ideally the seed would be a Pulse from the League of Entropy
+
+_seed = digest(rand(UInt8, 16), hasher(demespec))
+set_seed!(POLLING_STATION, proposal.uuid, _seed)
+commit!(POLLING_STATION, uuid(proposal), COLLECTOR)
 
 v = vote(proposal, _seed, Selection(2), alice)
-N = record!(POLLING_STATION, uuid(proposal), v)
+N = record!(POLLING_STATION, uuid(proposal), v) # This should have failed
 commit!(POLLING_STATION, uuid(proposal), COLLECTOR)
+
 
 @test verify(commit(POLLING_STATION, uuid(proposal)), crypto)
 

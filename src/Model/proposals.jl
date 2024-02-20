@@ -844,6 +844,7 @@ function validate(ballotbox::BallotBox, vote::Vote)
     return
 end
 
+
 """
     record!(ledger::BallotBox, vote::Vote)
 
@@ -851,6 +852,9 @@ Check the vote for validity and pushes it to the queue. Returns an index `N`
 at which the vote will be recorded in the ledger. See also [`push!`](@ref)
 """
 function record!(ballotbox::BallotBox, vote::Vote)
+
+    @assert !isnothing(ballotbox.commit) "The BallotBox is not yet initialized. Add a seed and make the first commit."
+    # Note that the seed equality is not verified because it is useful for tracking issues
 
     N = get_dublicate_index(ballotbox, vote)
     isnothing(N) || return N
