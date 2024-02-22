@@ -15,12 +15,12 @@ const REGISTRAR = Ref{Union{Registrar, Nothing}}(nothing)
 const BRAIDER = Ref{Union{Signer, Nothing}}(nothing)
 const COLLECTOR = Ref{Union{Signer, Nothing}}(nothing)
 const PROPOSER = Ref{Union{Signer, Nothing}}(nothing)
-const BRAID_CHAIN = Ref{Union{BraidChain, Nothing}}(nothing)
 
 # to prevent members registering while braiding happens and other way around.
 # islocked() == false => lock else error in the case for a member
 # wheras for braiding imediately lock is being waited for
 const MEMBER_LOCK = ReentrantLock()
+const BRAID_CHAIN = Ref{Union{BraidChain, Nothing}}(nothing)
 
 const POLLING_STATION = Ref{Union{PollingStation, Nothing}}(nothing)
 const TALLY_SCHEDULER = Scheduler(UUID, retry_interval = 5) 
@@ -119,15 +119,12 @@ function setup(demefunc::Function, groupspec::GroupSpec, generator::Generator)
     end
 
 
-    authorized_roles = [] # Perhaps I could use system roles instead
-
     N = findfirst(x->x==demespec.recorder, pseudonym_list)
     if !isnothing(N)
         RECORDER[] = Signer(demespec.crypto, generator, key_list[N])
         Model.record!(BRAID_CHAIN[], demespec)
         Model.commit!(BRAID_CHAIN[], RECORDER[]) 
-        push!(authorized_roles, :recorder)
-
+    
         BRAID_BROKER_PROCESS[] = @async while true
             broker_process_loop()
         end
@@ -139,26 +136,22 @@ function setup(demefunc::Function, groupspec::GroupSpec, generator::Generator)
         hmac_key = Model.bytes(Model.digest(Vector{UInt8}(string(key_list[N])), demespec.crypto)) # 
         REGISTRAR[] = Registrar(signer, hmac_key)
         Model.set_demehash!(REGISTRAR[], demespec) 
-        push!(authorized_roles, :registrar)
     end
 
     N = findfirst(x->x==demespec.braider, pseudonym_list)
     if !isnothing(N)
         BRAIDER[] = Signer(demespec.crypto, generator, key_list[N])
-        push!(authorized_roles, :braider)
     end
 
     N = findfirst(x->x==demespec.proposer, pseudonym_list)
     if !isnothing(N)
         PROPOSER[] = Signer(demespec.crypto, generator, key_list[N])
-        push!(authorized_roles, :proposer)
     end    
 
     N = findfirst(x->x==demespec.collector, pseudonym_list)
     if !isnothing(N)
         COLLECTOR[] = Signer(demespec.crypto, generator, key_list[N])
-        push!(authorized_roles, :collector)
-
+   
         ENTROPY_PROCESS[] = @async while true
             entropy_process_loop()
         end
@@ -168,12 +161,40 @@ function setup(demefunc::Function, groupspec::GroupSpec, generator::Generator)
         end
     end    
 
-    return authorized_roles # I may deprecate this in favour of a method.
+    return authorized_roles(demespec) # I may deprecate this in favour of a method.
+end
+
+
+function authorized_roles(demespec::DemeSpec)
+
+    roles = []
+
+    if !isnothing(RECORDER[]) && id(RECORDER[]) == demespec.recorder
+        push!(roles, :recorder)
+    end
+
+    if !isnothing(REGISTRAR[]) && id(REGISTRAR[]) == demespec.registrar
+        push!(roles, :registrar)
+    end
+
+    if !isnothing(BRAIDER[]) && id(BRAIDER[]) == demespec.braider
+        push!(roles, :braider)
+    end
+
+    if !isnothing(COLLECTOR[]) && id(COLLECTOR[]) == demespec.collector
+        push!(roles, :collector)
+    end
+
+    if !isnothing(PROPOSER[]) && id(PROPOSER[]) == demespec.proposer
+        push!(roles, :proposer)
+    end
+
+    return roles
 end
 
 
 # Need to decide on whether this would be more appropriate
-system_roles() = (; recorder = id(RECORDER[]), registrar = id(REGISTRAR[]), braider = id(BRAIDER[]), collector = id(COLLECTOR[]))
+#system_roles() = (; recorder = id(RECORDER[]), registrar = id(REGISTRAR[]), braider = id(BRAIDER[]), collector = id(COLLECTOR[]))
 tally_votes!(uuid::UUID) = Model.commit!(POLLING_STATION[], uuid, COLLECTOR[]; with_tally = true);
 
 set_demehash(spec::DemeSpec) = Model.set_demehash!(REGISTRAR[], spec)
