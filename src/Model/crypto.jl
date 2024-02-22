@@ -184,14 +184,6 @@ struct CryptoSpec
     end
 end
 
-#CryptoSpec(hash_spec::String, group_spec::String, generator::Vector{UInt8}) = CryptoSpec(HashSpec(hash_spec), group_spec, Generator(generator))
-#CryptoSpec(hash_spec::String, group_spec::String, generator::Generator) = CryptoSpec(HashSpec(hash_spec), group_spec, generator)
-
-#CryptoSpec(crypto::CryptoSpec, generator::Generator) = CryptoSpec(crypto.hasher, crypto.group, generator)
-#CryptoSpec(hash_spec::String, group_spec::Spec) = CryptoSpec(hash_spec, group_spec, generator(group_spec))
-#CryptoSpec(hash_spec::String, group_spec::Spec, generator::Vector{UInt8}) = CryptoSpec(hash_spec, group_spec, Generator(generator))
-
-
 Base.:(==)(x::CryptoSpec, y::CryptoSpec) = x.hasher == y.hasher && x.group == y.group && x.generator == y.generator
 
 """
@@ -257,7 +249,6 @@ pseudonym(p::CryptoGroups.ECGroup) = Pseudonym(CryptoGroups.octet(p; mode = :com
 
 generator(g::CryptoGroups.Group) = Generator(CryptoGroups.octet(g))
 
-#pseudonym(spec::CryptoSpec, generator::Generator, key::Integer) = Pseudonym(CryptoSignatures.public_key(_dsa_context(spec), generator.data, BigInt(key)))
 pseudonym(spec::CryptoSpec, generator::Generator, key::Integer) = pseudonym(_dsa_context(spec), generator, key)
 pseudonym(spec::CryptoSpec, key::Integer) = pseudonym(spec, generator(spec), key)
 
@@ -297,7 +288,7 @@ _dsa_context(spec::GroupSpec, hasher::HashSpec) = _dsa_context(spec, hasher.spec
 _dsa_context(spec::CryptoSpec; hasher = spec.hasher) = _dsa_context(spec.group, hasher)
 
 
-function keygen(spec::CryptoGroups.Spec, generator::Generator)
+function keygen(spec::GroupSpec, generator::Generator)
 
     order = CryptoGroups.order(spec)
 
@@ -319,7 +310,6 @@ function generate(::Type{Signer}, spec::CryptoSpec)
 
     ctx = _dsa_context(spec)
     private_key = CryptoSignatures.generate_key(ctx)
-    #public_key = CryptoSignatures.public_key(ctx, generator(spec).data, private_key)
     _pseudonym = pseudonym(ctx, generator(spec), private_key)
     
     return Signer(spec, _pseudonym, private_key)
@@ -473,7 +463,6 @@ In case the ledger is tampered with this acknowledgement acts as sufficient proo
 end
 
 #@batteries AckInclusion
-
 
 function Base.show(io::IO, ack::AckInclusion)
 

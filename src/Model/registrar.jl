@@ -168,7 +168,7 @@ using Infiltrator
 """
     token(ticketid::TicketID, hmac::HMAC)
 
-Compute a recruit token for a given ticketid. Calculates it as `token=HashSpec(HashSpec(0|key)|attempt|ticketid)` 
+Compute a recruit token for a given ticketid. Calculates it as `token=Hash(Hash(0|key)|attempt|ticketid)` 
 where attempt is a counter for which token is issued.
 
 Note: the token generation from key is made in order to support it's local computation on a remote server where QR code
