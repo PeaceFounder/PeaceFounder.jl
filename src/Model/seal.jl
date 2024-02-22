@@ -67,17 +67,17 @@ function canonicalize end
 
 # digest could have a generic method with canonicalize. 
 
-digest(vote::Vote, hasher::Hash) = digest(canonicalize(vote), hasher)
+digest(vote::Vote, hasher::HashSpec) = digest(canonicalize(vote), hasher)
 
-digest(proposal::Proposal, hasher::Hash) = digest(canonicalize(proposal), hasher)
+digest(proposal::Proposal, hasher::HashSpec) = digest(canonicalize(proposal), hasher)
 
-digest(record::CastRecord, hasher::Hash) = digest(receipt(record, hasher), hasher) # exception
+digest(record::CastRecord, hasher::HashSpec) = digest(receipt(record, hasher), hasher) # exception
 
-digest(receipt::CastReceipt, hasher::Hash) = digest(canonicalize(receipt), hasher)
+digest(receipt::CastReceipt, hasher::HashSpec) = digest(canonicalize(receipt), hasher)
 
-digest(spec::DemeSpec, hasher::Hash) = digest(canonicalize(spec), hasher)
+digest(spec::DemeSpec, hasher::HashSpec) = digest(canonicalize(spec), hasher)
 
-digest(pseudonym::Pseudonym, hasher::Hash) = digest(bytes(pseudonym), hasher)
+digest(pseudonym::Pseudonym, hasher::HashSpec) = digest(bytes(pseudonym), hasher)
 
 
 function body(proposal::Proposal)
@@ -224,11 +224,11 @@ end
 # verify(braidwork::BraidReceipt) = verify(braidwork, braidwork.producer.crypto)
 
 
-function digest(data::Transaction, hasher::Hash)
+function digest(data::Transaction, hasher::HashSpec)
     bytes = canonicalize(data)
     return digest(bytes, hasher)
 end
 
-function digest(x::Digest, y::Digest, hasher::Hash)
+function digest(x::Digest, y::Digest, hasher::HashSpec)
     return digest(UInt8[x.data..., y.data...], hasher)
 end

@@ -1,6 +1,6 @@
 module Parser
 
-using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Membership, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Hash, TicketStatus, Commit, AckInclusion, Generator, CryptoSpec, DemeSpec, Hash, parse_groupspec, lower_groupspec, BraidReceipt, Invite
+using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Membership, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, HashSpec, TicketStatus, Commit, AckInclusion, Generator, CryptoSpec, DemeSpec, HashSpec, parse_groupspec, lower_groupspec, BraidReceipt, Invite
 using HistoryTrees: InclusionProof, ConsistencyProof
 
 using Dates: DateTime
@@ -90,7 +90,7 @@ StructTypes.lower(crypto::CryptoSpec) = Dict(:hash => crypto.hasher, :group => l
 
 function StructTypes.construct(::Type{CryptoSpec}, x)
     
-    hasher = Hash(x["hash"])
+    hasher = HashSpec(x["hash"])
     group = parse_groupspec(x["group"])
     generator = Generator(hex2bytes(x["generator"]))
 
@@ -104,9 +104,9 @@ StructTypes.omitempties(::Type{DemeSpec}) = (:timestamp, :signature)
 #StructTypes.StructType(::Type{DemeSpec}) = StructTypes.Struct()
 #StructTypes.omitempties(::Type{DemeSpec}) = (:cert,)
 
-StructTypes.StructType(::Type{Hash}) = StructTypes.StringType()
-Base.string(hasher::Hash) = hasher.spec
-StructTypes.construct(::Type{Hash}, spec::AbstractString) = Hash(spec)
+StructTypes.StructType(::Type{HashSpec}) = StructTypes.StringType()
+Base.string(hasher::HashSpec) = hasher.spec
+StructTypes.construct(::Type{HashSpec}, spec::AbstractString) = HashSpec(spec)
 
 
 StructTypes.StructType(::Type{TicketStatus}) = StructTypes.Struct()
@@ -198,7 +198,7 @@ function StructTypes.construct(::Type{Invite}, invite_str::AbstractString)
     route = haskey(parameters, "sr") ? URI(parameters["sr"]) : URI()
     token = base64decode_url(parameters["tk"])
     xt = URI(parameters["xt"]) 
-    hasher = Hash(xt.scheme)
+    hasher = HashSpec(xt.scheme)
     demehash = Digest(base64decode_url(xt.path))
 
     return Invite(demehash, token, hasher, route)

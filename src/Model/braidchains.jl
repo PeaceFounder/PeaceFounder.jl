@@ -88,8 +88,8 @@ hasher(deme::DemeSpec) = hasher(deme.crypto)
 generator(spec::DemeSpec) = generator(crypto(spec))
 
 
-isbinding(spec::DemeSpec, hash::Digest, hasher::Hash) = digest(spec, hasher) == hash
-isbinding(spec::DemeSpec, hash::Vector{UInt8}, hasher::Hash) = isbinding(spec, Digest(hash), hasher)
+isbinding(spec::DemeSpec, hash::Digest, hasher::HashSpec) = digest(spec, hasher) == hash
+isbinding(spec::DemeSpec, hash::Vector{UInt8}, hasher::HashSpec) = isbinding(spec, Digest(hash), hasher)
 
 """
     struct ChainState
@@ -128,8 +128,8 @@ A generic method checking whether transaction is included in the braidchain.
 """
 isbinding(record::Transaction, ack::AckInclusion{ChainState}, crypto::CryptoSpec) = digest(record, crypto) == leaf(ack)
 
-isbinding(record::Transaction, ack::AckInclusion{ChainState}, hasher::Hash) = digest(record, hasher) == leaf(ack)
-isbinding(ack::AckInclusion{ChainState}, record::Transaction, hasher::Hash) = isbinding(record, ack, hasher)
+isbinding(record::Transaction, ack::AckInclusion{ChainState}, hasher::HashSpec) = digest(record, hasher) == leaf(ack)
+isbinding(ack::AckInclusion{ChainState}, record::Transaction, hasher::HashSpec) = isbinding(record, ack, hasher)
 
 
 isbinding(ack::AckInclusion{ChainState}, id::Pseudonym) = issuer(ack) == id

@@ -52,36 +52,36 @@ bytes(digest::Digest) = digest.data
 
 
 """
-    struct Hash
+    struct HashSpec
         spec::String
     end
 
 A specification for a hasher. See method [`digest`](@ref).
 """
-struct Hash # HashSpec?
+struct HashSpec # HashSpecSpec?
     spec::String
 end
 
 
-Hash(hasher::Hash) = hasher
+HashSpec(hasher::HashSpec) = hasher
 
 """
-    digest(bytes::Vector{UInt8}, hasher::Hash)::Digest
-    digest(x, spec) = digest(canonicalize(x)::Vector{UInt8}, hasher(spec)::Hash)
+    digest(bytes::Vector{UInt8}, hasher::HashSpec)::Digest
+    digest(x, spec) = digest(canonicalize(x)::Vector{UInt8}, hasher(spec)::HashSpec)
 
 Compute a hash digest. When input is not in bytes the [`canonicalize`](@ref) method is applied first.
 """
-function digest(data::Vector{UInt8}, hasher::Hash)
+function digest(data::Vector{UInt8}, hasher::HashSpec)
     return Digest(Nettle.digest(hasher.spec, data))
 end
 
-(hasher::Hash)(x) = digest(x, hasher)
-(hasher::Hash)(x, y) = digest(x, y, hasher)
+(hasher::HashSpec)(x) = digest(x, hasher)
+(hasher::HashSpec)(x, y) = digest(x, y, hasher)
 
 
 """
-    isbinding(x, y, spec::Hash)::Bool
-    isbinding(x, y, spec) = isbinding(x, y, hasher(spec)::Hash)
+    isbinding(x, y, spec::HashSpec)::Bool
+    isbinding(x, y, spec) = isbinding(x, y, hasher(spec)::HashSpec)
 
 Check binding of two objects `x` and `y`. Some general examples:
 
@@ -89,8 +89,8 @@ Check binding of two objects `x` and `y`. Some general examples:
 - Check that a record is included in the ledger.
 - Check that a given object is consistent with a ledger.
 """
-isbinding(x, y, hasher::Hash) = isbinding(y, x, hasher)::Bool # May not be clean enough
-isbinding(x, y, spec) = isbinding(x, y, hasher(spec)::Hash)::Bool
+isbinding(x, y, hasher::HashSpec) = isbinding(y, x, hasher)::Bool # May not be clean enough
+isbinding(x, y, spec) = isbinding(x, y, hasher(spec)::HashSpec)::Bool
 
 
 """
@@ -164,7 +164,7 @@ _groupspec(spec::String) = parse_groupspec(spec)
 
 """
     struct CryptoSpec
-        hasher::Hash
+        hasher::HashSpec
         group::GroupSpec
         generator::Generator
     end
@@ -172,20 +172,20 @@ _groupspec(spec::String) = parse_groupspec(spec)
 Specification of cryptographic parameters which are used for public key cryptography, message hashing and authetification codes. 
 """
 struct CryptoSpec
-    hasher::Hash
+    hasher::HashSpec
     group::GroupSpec
     generator::Generator
 
-    CryptoSpec(hash_spec, group_spec, generator) = new(Hash(hash_spec), _groupspec(group_spec), Generator(generator))
+    CryptoSpec(hash_spec, group_spec, generator) = new(HashSpec(hash_spec), _groupspec(group_spec), Generator(generator))
 
     function CryptoSpec(hash_spec, group_spec)
         spec = _groupspec(group_spec)
-        return new(Hash(hash_spec), spec, generator(spec))
+        return new(HashSpec(hash_spec), spec, generator(spec))
     end
 end
 
-#CryptoSpec(hash_spec::String, group_spec::String, generator::Vector{UInt8}) = CryptoSpec(Hash(hash_spec), group_spec, Generator(generator))
-#CryptoSpec(hash_spec::String, group_spec::String, generator::Generator) = CryptoSpec(Hash(hash_spec), group_spec, generator)
+#CryptoSpec(hash_spec::String, group_spec::String, generator::Vector{UInt8}) = CryptoSpec(HashSpec(hash_spec), group_spec, Generator(generator))
+#CryptoSpec(hash_spec::String, group_spec::String, generator::Generator) = CryptoSpec(HashSpec(hash_spec), group_spec, generator)
 
 #CryptoSpec(crypto::CryptoSpec, generator::Generator) = CryptoSpec(crypto.hasher, crypto.group, generator)
 #CryptoSpec(hash_spec::String, group_spec::Spec) = CryptoSpec(hash_spec, group_spec, generator(group_spec))
@@ -204,15 +204,15 @@ generator(crypto::CryptoSpec) = crypto.generator
 hasher(crypto::CryptoSpec) = crypto.hasher
 
 """
-    digest(message::Vector{UInt8}, hasher::Hash)::Digest
-    digest(document, spec) = digest(canonicalize(message)::Vector{UInt8}, hasher(spec)::Hash)
+    digest(message::Vector{UInt8}, hasher::HashSpec)::Digest
+    digest(document, spec) = digest(canonicalize(message)::Vector{UInt8}, hasher(spec)::HashSpec)
     
 Return a resulting digest applying hasher on the given message. When message is not octet string a `canonicalize` method is applied first.
 """
 digest(x, crypto::CryptoSpec) = digest(x, hasher(crypto))
 digest(x::Digest, y::Digest, crypto::CryptoSpec) = digest(x, y, hasher(crypto))
 
-digest(x::Integer, hasher::Hash) = digest(collect(reinterpret(UInt8, [x])), hasher)
+digest(x::Integer, hasher::HashSpec) = digest(collect(reinterpret(UInt8, [x])), hasher)
 
 
 function Base.show(io::IO, spec::CryptoSpec)
@@ -293,7 +293,7 @@ hasher(signer::Signer) = hasher(crypto(signer))
 
 _dsa_context(spec::MODP, hasher::Union{String, Nothing}) = CryptoSignatures.DSAContext(spec, hasher)
 _dsa_context(spec::Union{ECP, EC2N, Koblitz}, hasher::Union{String, Nothing}) = CryptoSignatures.ECDSAContext(spec, hasher)
-_dsa_context(spec::GroupSpec, hasher::Hash) = _dsa_context(spec, hasher.spec)
+_dsa_context(spec::GroupSpec, hasher::HashSpec) = _dsa_context(spec, hasher.spec)
 _dsa_context(spec::CryptoSpec; hasher = spec.hasher) = _dsa_context(spec.group, hasher)
 
 
@@ -508,7 +508,7 @@ commit(ack::AckInclusion) = ack.commit
 state(ack::AckInclusion) = state(ack.commit)
 
 
-isbinding(proof::InclusionProof, commit::Commit, hasher::Hash) = HistoryTrees.verify(proof, root(commit), index(commit); hash = hasher)
+isbinding(proof::InclusionProof, commit::Commit, hasher::HashSpec) = HistoryTrees.verify(proof, root(commit), index(commit); hash = hasher)
 
 #verify(ack::AckInclusion, crypto::CryptoSpec) = HistoryTrees.verify(ack.proof, root(ack.commit), index(ack.commit); hash = hasher(crypto)) && verify(commit(ack), crypto)
 verify(ack::AckInclusion, crypto::CryptoSpec) = isbinding(ack.proof, ack.commit, crypto) && verify(commit(ack), crypto)
@@ -545,7 +545,7 @@ issuer(ack::AckConsistency) = issuer(ack.commit)
 commit(ack::AckConsistency) = ack.commit
 state(ack::AckConsistency) = state(ack.commit)
 
-isbinding(proof::ConsistencyProof, commit::Commit, hasher::Hash) = HistoryTrees.verify(proof, root(commit), index(commit); hash = hasher)
+isbinding(proof::ConsistencyProof, commit::Commit, hasher::HashSpec) = HistoryTrees.verify(proof, root(commit), index(commit); hash = hasher)
 
 verify(ack::AckConsistency, crypto::CryptoSpec) = isbinding(ack.proof, ack.commit, crypto) && verify(commit(ack), crypto)
 
@@ -570,7 +570,7 @@ end
 
     struct HMAC
         key::Vector{UInt8}
-        hasher::Hash
+        hasher::HashSpec
     end
 
 Represent a hash message authetification code authorizer.
@@ -579,13 +579,13 @@ Represent a hash message authetification code authorizer.
 """
 struct HMAC
     key::Vector{UInt8}
-    hasher::Hash
+    hasher::HashSpec
 end
 
-HMAC(key::Vector{UInt8}, hasher::String) = HMAC(key, Hash(hasher))
+HMAC(key::Vector{UInt8}, hasher::String) = HMAC(key, HashSpec(hasher))
 
 """
-    hasher(spec)::Hash
+    hasher(spec)::HashSpec
 
 Access a hasher function from a given specification.
 """

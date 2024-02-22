@@ -1,6 +1,6 @@
 using Test
 import PeaceFounder: Model, Parser
-import .Model: TicketID, Digest, Pseudonym, Admission, Seal, DemeSpec, CryptoSpec, Membership, Signature, Generator, id, Hash, Invite
+import .Model: TicketID, Digest, Pseudonym, Admission, Seal, DemeSpec, CryptoSpec, Membership, Signature, Generator, id, HashSpec, Invite
 import .Parser: marshal, unmarshal
 import Dates: DateTime, now
 import URIs: URI
@@ -49,8 +49,8 @@ event = Membership(admission, Generator(UInt8[1, 2, 3, 4]), Pseudonym(UInt8[1, 2
 event = Pseudonym(UInt8[1, 2, 3, 4])
 @test isconsistent(event)
 
-invite = Invite(Digest(rand(UInt8, 32)), rand(UInt8, 8), Hash("sha256"), URI("http://peacefounder.org"))
+invite = Invite(Digest(rand(UInt8, 32)), rand(UInt8, 8), HashSpec("sha256"), URI("http://peacefounder.org"))
 @test isconsistent(invite)
 
-invite = Invite(Digest(rand(UInt8, 32)), rand(UInt8, 8), Hash("sha256"), URI())
+invite = Invite(Digest(rand(UInt8, 32)), rand(UInt8, 8), HashSpec("sha256"), URI())
 @test isconsistent(invite)

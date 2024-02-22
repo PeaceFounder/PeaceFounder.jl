@@ -168,13 +168,13 @@ using Infiltrator
 """
     token(ticketid::TicketID, hmac::HMAC)
 
-Compute a recruit token for a given ticketid. Calculates it as `token=Hash(Hash(0|key)|attempt|ticketid)` 
+Compute a recruit token for a given ticketid. Calculates it as `token=HashSpec(HashSpec(0|key)|attempt|ticketid)` 
 where attempt is a counter for which token is issued.
 
 Note: the token generation from key is made in order to support it's local computation on a remote server where QR code
 for registration is shown within organization website.
 """
-function token(ticketid::TicketID, attempt::UInt8, hash::Hash, key::Vector{UInt8}; nlen=16) 
+function token(ticketid::TicketID, attempt::UInt8, hash::HashSpec, key::Vector{UInt8}; nlen=16) 
 
 
     token_key = hash(UInt8[0, key...]) # 0 is prepended as hash(key(hmac)) is often used as keyid
@@ -185,7 +185,7 @@ end
 
 token(ticketid::TicketID, attempt::UInt8, hmac::HMAC; nlen=16) = token(ticketid, attempt, hasher(hmac), key(hmac); nlen)
 
-tokenid(token::Vector{UInt8}, hash::Hash) = digest(token, hash) |> bytes |> base64encode
+tokenid(token::Vector{UInt8}, hash::HashSpec) = digest(token, hash) |> bytes |> base64encode
 
 
 """
@@ -203,7 +203,7 @@ set_route!(registrar::Registrar, route::String) = set_route!(registrar, URI(rout
 struct Invite
     demehash::Digest
     token::Vector{UInt8} 
-    hasher::Hash # HashSpec
+    hasher::HashSpec # HashSpecSpec
     route::URI
 end
 

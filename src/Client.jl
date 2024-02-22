@@ -2,7 +2,7 @@ module Client
 # Methods to interact with HTTP server
 
 using ..Model
-using ..Model: Membership, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, Hash, AckConsistency, AckInclusion, CastAck, DemeSpec, Signer, TicketStatus, Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen, digest, tokenid
+using ..Model: Membership, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, HashSpec, AckConsistency, AckInclusion, CastAck, DemeSpec, Signer, TicketStatus, Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen, digest, tokenid
 using Base: UUID
 
 using ..Model: id, hasher, pseudonym, isbinding, generator, isadmitted, state, verify, crypto, index, root, commit, isconsistent, istallied, issuer, Invite
@@ -304,7 +304,7 @@ function Model.verify(blame::Blame, crypto)
 end
 
 
-function Model.isbinding(blame::Blame, proposal::Proposal, hasher::Hash)
+function Model.isbinding(blame::Blame, proposal::Proposal, hasher::HashSpec)
     
     blame.commit.state.proposal == Model.digest(proposal, hasher) || return false
     issuer(blame) == proposal.collector || return false

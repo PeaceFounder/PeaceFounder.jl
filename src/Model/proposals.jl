@@ -344,9 +344,9 @@ istallied(state::BallotBoxState) = !isnothing(state.tally)
 istallied(commit::Commit{BallotBoxState}) = istallied(state(commit))
 
 
-isbinding(state::BallotBoxState, proposal::Proposal, hasher::Hash) = state.proposal == digest(proposal, hasher)
+isbinding(state::BallotBoxState, proposal::Proposal, hasher::HashSpec) = state.proposal == digest(proposal, hasher)
 
-isbinding(commit::Commit{BallotBoxState}, proposal::Proposal, hasher::Hash) = issuer(commit) == proposal.collector && isbinding(state(commit), proposal, hasher)
+isbinding(commit::Commit{BallotBoxState}, proposal::Proposal, hasher::HashSpec) = issuer(commit) == proposal.collector && isbinding(state(commit), proposal, hasher)
 
 
 function isbinding(commit::Commit{BallotBoxState}, ack::AckConsistency{BallotBoxState})
@@ -441,29 +441,29 @@ function Base.show(io::IO, receipt::CastReceipt)
 end
 
 """
-    receipt(record::CastRecord, hasher::Hash)::CastReceipt
+    receipt(record::CastRecord, hasher::HashSpec)::CastReceipt
 
 Construct a CastReceipt from a CastRecord with a provided hasher function.
 """
-receipt(record::CastRecord, hasher::Hash) = CastReceipt(digest(record.vote, hasher), record.timestamp)
+receipt(record::CastRecord, hasher::HashSpec) = CastReceipt(digest(record.vote, hasher), record.timestamp)
 
 """
-    isbinding(receipt::CastReceipt, ack::AckInclusion, hasher::Hash)::Bool
+    isbinding(receipt::CastReceipt, ack::AckInclusion, hasher::HashSpec)::Bool
 
 Check that cast receipt is binding to received inclusion acknowledgment.
 """
-isbinding(receipt::CastReceipt, ack::AckInclusion, hasher::Hash) = digest(receipt, hasher) == leaf(ack)
+isbinding(receipt::CastReceipt, ack::AckInclusion, hasher::HashSpec) = digest(receipt, hasher) == leaf(ack)
 
-isbinding(receipt::CastReceipt, spine::Vector{Digest}, hasher::Hash) = digest(receipt, hasher) in spine
-isbinding(record::CastRecord, spine::Vector{Digest}, hasher::Hash) = isbinding(receipt(record, hasher), spine, hasher)
+isbinding(receipt::CastReceipt, spine::Vector{Digest}, hasher::HashSpec) = digest(receipt, hasher) in spine
+isbinding(record::CastRecord, spine::Vector{Digest}, hasher::HashSpec) = isbinding(receipt(record, hasher), spine, hasher)
 
 
 """
-    isbinding(receipt::CastReceipt, vote::Vote, hasher::Hash)::Bool
+    isbinding(receipt::CastReceipt, vote::Vote, hasher::HashSpec)::Bool
 
 Check that the receipt is bidning to a vote. 
 """
-isbinding(receipt::CastReceipt, vote::Vote, hasher::Hash) = receipt.vote == digest(vote, hasher)
+isbinding(receipt::CastReceipt, vote::Vote, hasher::HashSpec) = receipt.vote == digest(vote, hasher)
 
 
 """
@@ -497,17 +497,17 @@ function verify(ack::CastAck, crypto::CryptoSpec)
 end
 
 """
-    isbinding(ack::CastAck, proposal::Proposal, hasher::Hash)::Bool
+    isbinding(ack::CastAck, proposal::Proposal, hasher::HashSpec)::Bool
 
 Check that acknowledgment is legitimate meaning that it is issued by a collector listed in the proposal.
 """
-isbinding(ack::CastAck, proposal::Proposal, hasher::Hash) = isbinding(ack.ack, proposal, hasher)
+isbinding(ack::CastAck, proposal::Proposal, hasher::HashSpec) = isbinding(ack.ack, proposal, hasher)
 
-isbinding(ack::AckInclusion{BallotBoxState}, proposal::Proposal, hasher::Hash) = issuer(ack) == proposal.collector && state(ack).proposal == digest(proposal, hasher)
+isbinding(ack::AckInclusion{BallotBoxState}, proposal::Proposal, hasher::HashSpec) = issuer(ack) == proposal.collector && state(ack).proposal == digest(proposal, hasher)
 
-isbinding(ack::AckConsistency{BallotBoxState}, proposal::Proposal, hasher::Hash) = issuer(ack) == proposal.collector && state(ack).proposal == digest(proposal, hasher)
+isbinding(ack::AckConsistency{BallotBoxState}, proposal::Proposal, hasher::HashSpec) = issuer(ack) == proposal.collector && state(ack).proposal == digest(proposal, hasher)
 
-isbinding(ack::CastAck, vote::Vote, hasher::Hash) = isbinding(ack.receipt, vote, hasher)
+isbinding(ack::CastAck, vote::Vote, hasher::HashSpec) = isbinding(ack.receipt, vote, hasher)
 
 isbinding(ack::CastAck, commit::Commit{BallotBoxState}) = isbinding(ack.ack, commit)
 
