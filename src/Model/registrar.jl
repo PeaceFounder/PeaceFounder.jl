@@ -209,6 +209,8 @@ end
 
 Base.:(==)(x::Invite, y::Invite) = x.demehash == y.demehash && x.token == y.token && x.hasher == y.hasher && x.route == y.route
 
+Base.show(io::IO, invite::Invite) = print(io, string(invite))
+
 # This gives a nasty error for some reason when CryptoGroups are imported.
 #@batteries Invite
 

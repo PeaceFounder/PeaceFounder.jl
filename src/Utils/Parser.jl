@@ -154,18 +154,53 @@ StructTypes.StructType(::Type{BraidReceipt}) = StructTypes.Struct()
 StructTypes.omitempties(::Type{BraidReceipt}) = (:approval,)
 
 
-StructTypes.StructType(::Type{Invite}) = StructTypes.CustomStruct()
+### Special stroing scheme for the invite
 
-StructTypes.lower(invite::Invite) = Dict(:demehash => base64encode(bytes(invite.demehash)), :token => base64encode(invite.token), :hasher => invite.hasher, :route => string(invite.route))
+StructTypes.StructType(::Type{Invite}) = StructTypes.StringType()
 
-function StructTypes.construct(::Type{Invite}, data::Dict)
+function base64encode_url(bytes::Vector{UInt8})
+    str = base64encode(bytes)
+    newstr = replace(str, '+'=>'-', '/'=>'_')
+    return rstrip(newstr, '=')
+end
 
-    #demehash = StructTypes.constructfrom(Digest, data["demehash"])
-    demehash = Digest(base64decode(data["demehash"]))
-    token = base64decode(data["token"])
-    hasher = StructTypes.constructfrom(Hash, data["hasher"])
-    route = URI(data["route"])
+function base64decode_url(str::AbstractString)
+    newstr = replace(str, '-'=>'+', '_'=>'/')
+    return base64decode(newstr)
+end
+
+function Base.string(invite::Invite)
+
+    hash_str = bytes(invite.demehash) |> base64encode_url
+    token_str = invite.token |> base64encode_url
     
+    hash_spec = string(invite.hasher)
+    
+    if invite.route == URI()
+        return "deme:?xt=$hash_spec:$hash_str&tk=$token_str"
+    else
+        return "deme:?xt=$hash_spec:$hash_str&sr=$(invite.route)&tk=$token_str"
+    end
+end
+
+function StructTypes.construct(::Type{Invite}, invite_str::AbstractString)
+    
+    uri = URI(invite_str)
+    @assert uri.scheme == "deme"
+
+    parameters = Dict()
+
+    for pair in split(uri.query, '&')
+        (key, value) = split(pair, '=')
+        parameters[key] = value
+    end
+    
+    route = haskey(parameters, "sr") ? URI(parameters["sr"]) : URI()
+    token = base64decode_url(parameters["tk"])
+    xt = URI(parameters["xt"]) 
+    hasher = Hash(xt.scheme)
+    demehash = Digest(base64decode_url(xt.path))
+
     return Invite(demehash, token, hasher, route)
 end
 

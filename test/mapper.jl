@@ -34,7 +34,6 @@ DEMESPEC = Mapper.BRAID_CHAIN[].spec
 function enroll(signer, invite::Invite)
 
     # Authorization is done in the service layer now!
-    # auth_code = auth(id(signer), invite.token, hasher(invite))
 
     _tokenid = tokenid(invite.token, invite.hasher)
     ticket = Mapper.get_ticket(_tokenid) # This is done at the service layer
