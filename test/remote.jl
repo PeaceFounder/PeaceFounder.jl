@@ -8,26 +8,26 @@ const PORT = 3222
 crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
 
 GUARDIAN = Model.generate(Signer, crypto)
-PROPOSER = Model.generate(Signer, crypto)
 
-Mapper.initialize!(crypto)
-roles = Mapper.system_roles()
+authorized_roles = Mapper.setup(crypto.group, crypto.generator) do pbkeys
 
-demespec = DemeSpec(; 
-                    uuid = Base.UUID(rand(UInt128)),
-                    title = "A local democratic communituy",
-                    crypto = crypto,
-                    guardian = id(GUARDIAN),
-                    recorder = roles.recorder,
-                    registrar = roles.registrar,
-                    braider = roles.braider,
-                    proposer = id(PROPOSER),
-                    collector = roles.collector
-) |> approve(GUARDIAN) 
+    return DemeSpec(;
+             uuid = Base.UUID(rand(UInt128)),
+             title = "A local democratic communituy",
+             crypto = crypto,
+             guardian = id(GUARDIAN),
+             recorder = pbkeys[1],
+             registrar = pbkeys[2],
+             braider = pbkeys[3],
+             proposer = pbkeys[4],
+             collector = pbkeys[5]
+             ) |> approve(GUARDIAN) 
 
-Mapper.capture!(demespec)
+end
 
-#service = HTTP.serve!(Service.ROUTER, "0.0.0.0", 80)
+PROPOSER = Mapper.PROPOSER[]
+DEMESPEC = Mapper.BRAID_CHAIN[].spec
+
 
 service = Service.serve(async=true, port=PORT)
 Mapper.set_route("http://0.0.0.0:$PORT") # 
@@ -35,7 +35,7 @@ Mapper.set_route("http://0.0.0.0:$PORT") #
 try
     SERVER = Client.route("http://0.0.0.0:$PORT")
 
-    RECRUIT_HMAC = Model.HMAC(Mapper.get_recruit_key(), Model.hasher(demespec))
+    RECRUIT_HMAC = Model.HMAC(Mapper.get_recruit_key(), Model.hasher(DEMESPEC))
 
     alice_invite = Mapper.enlist_ticket(Model.TicketID("Alice")) 
     bob_invite = Mapper.enlist_ticket(Model.TicketID("Bob")) 
@@ -68,9 +68,9 @@ try
 
     ### Now simple voting can be done
 
-    Client.update_deme!(alice, demespec.uuid)
-    Client.update_deme!(bob, demespec.uuid)
-    Client.update_deme!(eve, demespec.uuid)
+    Client.update_deme!(alice, DEMESPEC.uuid)
+    Client.update_deme!(bob, DEMESPEC.uuid)
+    Client.update_deme!(eve, DEMESPEC.uuid)
 
 
     uuid = alice.accounts[1].deme.uuid

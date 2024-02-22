@@ -205,11 +205,24 @@ end
 function BraidChain(spec::DemeSpec) 
     
     chain = BraidChain(Set{Pseudonym}(), Transaction[], spec, generator(spec), HistoryTree(Digest, hasher(spec)), nothing)
-    push!(chain, spec)
+    # 
+    # push!(chain, spec) 
 
     return chain
 end
     
+
+function record!(chain::BraidChain, spec::DemeSpec)
+
+    @assert length(chain.ledger) == 0 "Reinitialization not yet implemented"
+
+    push!(chain, spec)
+    
+    N = length(chain)
+
+    return N
+end
+
 
 """
     reset_tree!(ledger::BraidChain)

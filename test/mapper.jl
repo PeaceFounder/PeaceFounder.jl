@@ -10,32 +10,26 @@ crypto = CryptoSpec("sha256", "EC: P_192")
 #crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
 
 GUARDIAN = generate(Signer, crypto)
-PROPOSER = generate(Signer, crypto)
 
+authorized_roles = Mapper.setup(crypto.group, crypto.generator) do pbkeys
 
-Mapper.initialize!(crypto)
+    return DemeSpec(;
+             uuid = Base.UUID(rand(UInt128)),
+             title = "A local democratic communituy",
+             crypto = crypto,
+             guardian = id(GUARDIAN),
+             recorder = pbkeys[1],
+             registrar = pbkeys[2],
+             braider = pbkeys[3],
+             proposer = pbkeys[4],
+             collector = pbkeys[5]
+             ) |> approve(GUARDIAN) 
 
-roles = Mapper.system_roles()
+end
 
-demespec = DemeSpec(;
-                    uuid = Base.UUID(121432),
-                    title = "A local democratic communituy",
-                    crypto = crypto,
-                    guardian = id(GUARDIAN),
-                    recorder = roles.recorder,
-                    registrar = roles.registrar,
-                    braider = roles.braider,
-                    proposer = id(PROPOSER),
-                    collector = roles.collector
-) |> approve(GUARDIAN) 
+PROPOSER = Mapper.PROPOSER[]
+DEMESPEC = Mapper.BRAID_CHAIN[].spec
 
-
-Mapper.capture!(demespec)
-
-RECRUIT_AUTHORIZATION_KEY = Mapper.get_recruit_key() 
-RECRUIT_HMAC = HMAC(RECRUIT_AUTHORIZATION_KEY, hasher(crypto))
-
-#function enroll(signer, ticketid, token)
 
 function enroll(signer, invite::Invite)
 
@@ -84,7 +78,7 @@ access_eve, ack = enroll(eve, invite_eve)
 input_generator = Mapper.get_generator()
 input_members = Mapper.get_members()
 
-braidwork = Model.braid(input_generator, input_members, demespec, demespec, Mapper.BRAIDER[]) 
+braidwork = Model.braid(input_generator, input_members, DEMESPEC, DEMESPEC, Mapper.BRAIDER[]) 
 
 Mapper.submit_chain_record!(braidwork)
 
@@ -93,14 +87,15 @@ Mapper.submit_chain_record!(braidwork)
 commit = Mapper.get_chain_commit()
 
 proposal = Proposal(
-    uuid = Base.UUID(23445325),
+    uuid = Base.UUID(rand(UInt128)),
     summary = "Should the city ban all personal vehicle usage and invest in alternative forms of transportation such as public transit, biking and walking infrastructure?",
     description = "",
     ballot = Ballot(["yes", "no"]),
     open = Dates.now(),
     closed = Dates.now() + Dates.Second(2),
-    collector = roles.collector,
-
+    # this supports a need to support also termination of proposal record to issue new one
+    # in situations where server key needs to be reset the proposal records could be reissued.
+    collector = id(Mapper.COLLECTOR[]), 
     state = state(commit)
 ) |> approve(PROPOSER)
 

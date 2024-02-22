@@ -1,34 +1,31 @@
 using Test
 import PeaceFounder: Client, Service, Mapper, Model, Schedulers, Parser
 import .Model: CryptoSpec, DemeSpec, Signer, id, approve, Selection
-#using .Service: ROUTER
 import Dates
 
 crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
-
 GUARDIAN = Model.generate(Signer, crypto)
-PROPOSER = Model.generate(Signer, crypto)
 
+authorized_roles = Mapper.setup(crypto.group, crypto.generator) do pbkeys
+
+    return DemeSpec(;
+             uuid = Base.UUID(rand(UInt128)),
+             title = "A local democratic communituy",
+             crypto = crypto,
+             guardian = id(GUARDIAN),
+             recorder = pbkeys[1],
+             registrar = pbkeys[2],
+             braider = pbkeys[3],
+             proposer = pbkeys[4],
+             collector = pbkeys[5]
+             ) |> approve(GUARDIAN) 
+
+end
+
+PROPOSER = Mapper.PROPOSER[]
+DEMESPEC = Mapper.BRAID_CHAIN[].spec
 SERVER = Client.route(Service.ROUTER)
 
-Mapper.initialize!(crypto)
-roles = Mapper.system_roles()
-
-demespec = DemeSpec(; 
-                    uuid = Base.UUID(121432),
-                    title = "A local democratic communituy",
-                    crypto = crypto,
-                    guardian = id(GUARDIAN),
-                    recorder = roles.recorder,
-                    registrar = roles.registrar,
-                    braider = roles.braider,
-                    proposer = id(PROPOSER),
-                    collector = roles.collector
-) |> approve(GUARDIAN) 
-
-Mapper.capture!(demespec)
-
-#RECRUIT_HMAC = Model.HMAC(Mapper.get_recruit_key(), Model.hasher(demespec))
 
 alice_invite = Mapper.enlist_ticket(Model.TicketID("Alice")) 
 bob_invite = Mapper.enlist_ticket(Model.TicketID("Bob")) 
@@ -54,7 +51,7 @@ Client.enroll!(eve, eve_invite; server = SERVER, key = 4)
 ### A simple proposal submission
 
 proposal = Model.Proposal(
-    uuid = Base.UUID(23445325),
+    uuid = Base.UUID(rand(UInt128)),
     summary = "Should the city ban all personal vehicle usage and invest in alternative forms of transportation such as public transit, biking and walking infrastructure?",
     description = "",
     ballot = Model.Ballot(["yes", "no"]),
@@ -68,9 +65,9 @@ ack = Client.enlist_proposal(SERVER, proposal)
 
 ### Now simple voting can be done
 
-Client.update_deme!(alice, demespec.uuid)
-Client.update_deme!(bob, demespec.uuid)
-Client.update_deme!(eve, demespec.uuid)
+Client.update_deme!(alice, DEMESPEC.uuid)
+Client.update_deme!(bob, DEMESPEC.uuid)
+Client.update_deme!(eve, DEMESPEC.uuid)
 
 
 uuid = alice.accounts[1].deme.uuid

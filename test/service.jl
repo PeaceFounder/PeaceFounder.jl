@@ -8,31 +8,29 @@ crypto = CryptoSpec("sha256", "EC: P_192")
 #crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
 
 GUARDIAN = Model.generate(Signer, crypto)
-PROPOSER = Model.generate(Signer, crypto)
+
+authorized_roles = Mapper.setup(crypto.group, crypto.generator) do pbkeys
+
+    return DemeSpec(;
+             uuid = Base.UUID(rand(UInt128)),
+             title = "A local democratic communituy",
+             crypto = crypto,
+             guardian = id(GUARDIAN),
+             recorder = pbkeys[1],
+             registrar = pbkeys[2],
+             braider = pbkeys[3],
+             proposer = pbkeys[4],
+             collector = pbkeys[5]
+             ) |> approve(GUARDIAN) 
+
+end
+
+PROPOSER = Mapper.PROPOSER[]
+DEMESPEC = Mapper.BRAID_CHAIN[].spec
 
 # I may need to implement a custom request method to support middleware in the Context
 # or build a handler instance here. For now though I can use middleware explicitly in the code
 SERVER = Client.route(Service.ROUTER) 
-
-
-Mapper.initialize!(crypto)
-roles = Mapper.system_roles()
-
-demespec = DemeSpec(; 
-                    uuid = Base.UUID(121432),
-                    title = "A local democratic communituy",
-                    crypto = crypto,
-                    guardian = id(GUARDIAN),
-                    recorder = roles.recorder,
-                    registrar = roles.registrar,
-                    braider = roles.braider,
-                    proposer = id(PROPOSER),
-                    collector = roles.collector
-) |> approve(GUARDIAN) 
-
-Mapper.capture!(demespec)
-
-RECRUIT_HMAC = Model.HMAC(Mapper.get_recruit_key(), Model.hasher(demespec))
 
 alice_ticketid = Model.TicketID("Alice")
 alice_invite = Mapper.enlist_ticket(alice_ticketid) 
@@ -48,14 +46,13 @@ alice = Client.enroll!(alice_invite; server = SERVER, key = 2)
 
 bob = Client.enroll!(bob_invite; server = SERVER, key = 3) 
 
-
 # Braiding in between registration. Within this time admission can be attained, wheras 
 # no new Membership certificates can be added to the BraidChain. 
 
 input_generator = Mapper.get_generator()
 input_members = Mapper.get_members()
 
-braidwork = Model.braid(input_generator, input_members, demespec, demespec, Mapper.BRAIDER[]) 
+braidwork = Model.braid(input_generator, input_members, DEMESPEC, DEMESPEC, Mapper.BRAIDER[]) 
 
 Mapper.submit_chain_record!(braidwork)
 
@@ -68,7 +65,7 @@ eve = Client.enroll!(eve_invite; server = SERVER, key = 4) # Works as expected!
 input_generator = Mapper.get_generator()
 input_members = Mapper.get_members()
 
-braidwork = Model.braid(input_generator, input_members, demespec, demespec, Mapper.BRAIDER[]) 
+braidwork = Model.braid(input_generator, input_members, DEMESPEC, DEMESPEC, Mapper.BRAIDER[]) 
 
 Mapper.submit_chain_record!(braidwork)
 
@@ -86,7 +83,7 @@ proposal = Model.Proposal(
 
 ack = Client.enlist_proposal(SERVER, proposal)
 
-@test Model.isbinding(proposal, ack, demespec)
+@test Model.isbinding(proposal, ack, DEMESPEC)
 @test Model.verify(ack, crypto)
 
 Client.update_proposal_cache!(alice)

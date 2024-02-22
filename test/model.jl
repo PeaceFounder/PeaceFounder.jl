@@ -4,25 +4,18 @@ import PeaceFounder.Model
 
 import .Model: CryptoSpec, pseudonym, BraidChain, commit!, Registrar, PollingStation, TicketID, add!, id, admit!, commit, verify, generator, Membership, approve, record!, ack_leaf, isbinding, roll, constituents, members, state, Proposal, vote, Ballot, Selection, uuid, record, spine, tally, seed, set_seed!, ack_cast, hasher, HMAC, enlist!, DemeSpec, generate, Signer, key, braid, Model, set_demehash!, Ticket, tokenid, select, digest
 
-
 crypto = CryptoSpec("sha256", "EC: P_192")
 #crypto = CryptoSpec("sha256", "EC: P-192")
 #crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
 
-#GUARDIAN = gen_signer(crypto)
 GUARDIAN = generate(Signer, crypto)
 PROPOSER = generate(Signer, crypto)
 COLLECTOR = generate(Signer, crypto)
 
 REGISTRAR = generate(Registrar, crypto)
-RECRUIT_HMAC = HMAC(key(REGISTRAR), hasher(crypto))
-#REGISTRAR.metadata[] = UInt8[1, 2, 3, 4] # Optional
-
-
 BRAIDER = generate(Signer, crypto)
 
 BRAID_CHAIN_RECORDER = generate(Signer, crypto)
-
 
 demespec = DemeSpec(;
                     uuid = Base.UUID(121432),
@@ -38,29 +31,17 @@ demespec = DemeSpec(;
 
 
 BRAID_CHAIN = BraidChain(demespec)
+record!(BRAID_CHAIN, demespec)
 
 commit!(BRAID_CHAIN, BRAID_CHAIN_RECORDER)
 set_demehash!(REGISTRAR, demespec)
 
 POLLING_STATION = PollingStation(crypto)
 
-#DEALER = Dealer(demespec)
-
-# need to deprecate
-#promises = charge_nonces!(DEALER, 100)
-#record!(BRAID_CHAIN, promises)
-
-# If there are no elements in the chain this errors. 
-# as well as asking for a root, leaf elements.
 
 function enroll(signer, invite)
 
     # The authorization is being put within a service layer which exposes the API
-    #auth_code = auth(id(signer), invite.token, hasher(invite))
-
-    #admission = admit!(REGISTRAR, id(signer), invite.ticketid) #, auth_code)
-
-    # Need to get the ticketid from invite.token
 
     _tokenid = tokenid(invite.token, invite.hasher)
     ticket = select(Ticket, _tokenid, REGISTRAR)
@@ -80,22 +61,6 @@ function enroll(signer, invite)
     
     return access, ack
 end
-
-# function enlist(ticketid)
-
-#     timestamp = Dates.now()
-#     ticket_auth_code = auth(ticketid, timestamp, RECRUIT_HMAC)
-
-#     # ---- evesdropers listening --------
-    
-#     metadata, salt, salt_auth_code = enlist!(REGISTRAR, ticketid, timestamp, ticket_auth_code) # ouptut is sent to main server    
-
-#     # ---- evesdropers listening --------
-    
-#     #@test isbinding(ticketid, salt, salt_auth_code, RECRUIT_HMAC)  # done on the server
-#     @test isbinding(metadata, ticketid, salt, salt_auth_code, RECRUIT_HMAC)  # done on the server
-#     return token(ticketid, salt, RECRUIT_HMAC)    
-# end
 
 
 enlist(ticketid) = enlist!(REGISTRAR, ticketid, Dates.now())
@@ -190,25 +155,9 @@ ack = ack_leaf(BRAID_CHAIN, N)
 @test id(ack) == id(BRAID_CHAIN_RECORDER)
 @test verify(ack, crypto)
 
-#timestamp = pulse_timestamp(BRAID_CHAIN, proposal.uuid)
-#nonceid = nonce_promise(BRAID_CHAIN, proposal.uuid)
-
-#schedule!(DEALER, proposal.uuid, timestamp, nonceid)
-
 add!(POLLING_STATION, proposal, members(BRAID_CHAIN, proposal))
 
-#@test isready(DEALER)
-
-#job = next_job(DEALER)
-
-#pass!(DEALER, job.uuid)
-#lot = draw(DEALER, job.uuid)
-#record!(BRAID_CHAIN, lot)
-
-#_seed = seed(lot) # method needs to be stable
-
 # Ideally the seed would be a Pulse from the League of Entropy
-
 _seed = digest(rand(UInt8, 16), hasher(demespec))
 set_seed!(POLLING_STATION, proposal.uuid, _seed)
 commit!(POLLING_STATION, uuid(proposal), COLLECTOR)
@@ -216,7 +165,6 @@ commit!(POLLING_STATION, uuid(proposal), COLLECTOR)
 v = vote(proposal, _seed, Selection(2), alice)
 N = record!(POLLING_STATION, uuid(proposal), v) # This should have failed
 commit!(POLLING_STATION, uuid(proposal), COLLECTOR)
-
 
 @test verify(commit(POLLING_STATION, uuid(proposal)), crypto)
 

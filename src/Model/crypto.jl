@@ -1,6 +1,10 @@
 using HistoryTrees: InclusionProof, ConsistencyProof
 import HistoryTrees: leaf, root
-using CryptoGroups: Spec, CryptoGroups, ECP, EC2N, Koblitz, MODP
+using CryptoGroups: CryptoGroups, ECP, EC2N, Koblitz, MODP
+
+import CryptoGroups
+const GroupSpec = CryptoGroups.Spec # TODO: upstream the naming
+
 import CryptoSignatures
 import Nettle
 
@@ -155,13 +159,13 @@ function parse_groupspec(group_string::String)
     end
 end
 
-_groupspec(spec::Spec) = spec
+_groupspec(spec::GroupSpec) = spec
 _groupspec(spec::String) = parse_groupspec(spec)
 
 """
     struct CryptoSpec
         hasher::Hash
-        group::Spec
+        group::GroupSpec
         generator::Generator
     end
 
@@ -169,7 +173,7 @@ Specification of cryptographic parameters which are used for public key cryptogr
 """
 struct CryptoSpec
     hasher::Hash
-    group::Spec
+    group::GroupSpec
     generator::Generator
 
     CryptoSpec(hash_spec, group_spec, generator) = new(Hash(hash_spec), _groupspec(group_spec), Generator(generator))
@@ -289,8 +293,21 @@ hasher(signer::Signer) = hasher(crypto(signer))
 
 _dsa_context(spec::MODP, hasher::Union{String, Nothing}) = CryptoSignatures.DSAContext(spec, hasher)
 _dsa_context(spec::Union{ECP, EC2N, Koblitz}, hasher::Union{String, Nothing}) = CryptoSignatures.ECDSAContext(spec, hasher)
-_dsa_context(spec::Spec, hasher::Hash) = _dsa_context(spec, hasher.spec)
+_dsa_context(spec::GroupSpec, hasher::Hash) = _dsa_context(spec, hasher.spec)
 _dsa_context(spec::CryptoSpec; hasher = spec.hasher) = _dsa_context(spec.group, hasher)
+
+
+function keygen(spec::CryptoGroups.Spec, generator::Generator)
+
+    order = CryptoGroups.order(spec)
+
+    private_key = CryptoSignatures.generate_key(order)
+
+    ctx = _dsa_context(spec, nothing)
+    public_key = pseudonym(ctx, generator, private_key) # 
+
+    return private_key, public_key
+end
 
 
 """

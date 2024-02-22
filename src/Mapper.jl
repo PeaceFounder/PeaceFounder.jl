@@ -1,40 +1,37 @@
 module Mapper
-# Initialization of global variables and coresponding methods to it
-# Service layer puts more abstrction. Probably unnecessary.
 
 import Sockets
 import Dates: Dates, DateTime
-import ..Schedulers: Schedulers, Scheduler, next_event
-
-using ..Model
-using ..Model: CryptoSpec, pseudonym, BraidChain, Registrar, PollingStation, TicketID, Membership, Proposal, Ballot, Selection, Transaction, Signer, BraidBroker, Pseudonym, Vote, id, DemeSpec, Digest, Admission, Ticket
 using Base: UUID
 using URIs: URI
 
-const RECORDER = Ref{Signer}()
-const REGISTRAR = Ref{Registrar}()
-const BRAIDER = Ref{Signer}()
-const COLLECTOR = Ref{Signer}()
+import ..Schedulers: Schedulers, Scheduler, next_event
+using ..Model
+using ..Model: CryptoSpec, pseudonym, BraidChain, Registrar, PollingStation, TicketID, Membership, Proposal, Ballot, Selection, Transaction, Signer, BraidBroker, Pseudonym, Vote, id, DemeSpec, Digest, Admission, Ticket, Generator, GroupSpec
 
-const BRAID_CHAIN = Ref{BraidChain}()
+
+const RECORDER = Ref{Union{Signer, Nothing}}(nothing)
+const REGISTRAR = Ref{Union{Registrar, Nothing}}(nothing)
+const BRAIDER = Ref{Union{Signer, Nothing}}(nothing)
+const COLLECTOR = Ref{Union{Signer, Nothing}}(nothing)
+const PROPOSER = Ref{Union{Signer, Nothing}}(nothing)
+const BRAID_CHAIN = Ref{Union{BraidChain, Nothing}}(nothing)
 
 # to prevent members registering while braiding happens and other way around.
 # islocked() == false => lock else error in the case for a member
 # wheras for braiding imediately lock is being waited for
 const MEMBER_LOCK = ReentrantLock()
 
-const POLLING_STATION = Ref{PollingStation}()
+const POLLING_STATION = Ref{Union{PollingStation, Nothing}}(nothing)
 const TALLY_SCHEDULER = Scheduler(UUID, retry_interval = 5) 
 const TALLY_PROCESS = Ref{Task}()
 
-#const ENTROPY = Ref{Dealer}()
 const ENTROPY_SCHEDULER = Scheduler(retry_interval = 1)
 const ENTROPY_PROCESS = Ref{Task}()
 
 const BRAID_BROKER = Ref{BraidBroker}
 const BRAID_BROKER_SCHEDULER = Scheduler(retry_interval = 5)
 const BRAID_BROKER_PROCESS = Ref{Task}()
-
 
 
 function entropy_process_loop()
@@ -78,9 +75,6 @@ function broker_process_loop(; force = false)
     return
 end
 
-
-tally_votes!(uuid::UUID) = Model.commit!(POLLING_STATION[], uuid, COLLECTOR[]; with_tally = true);
-
 function tally_process_loop()
     
     uuid = wait(TALLY_SCHEDULER)
@@ -90,47 +84,101 @@ function tally_process_loop()
 end
 
 
-function initialize!(spec::CryptoSpec)
+function setup(demefunc::Function, groupspec::GroupSpec, generator::Generator)
 
-    RECORDER[] = Model.generate(Signer, spec)
-    REGISTRAR[] = Model.generate(Registrar, spec)
-    BRAIDER[] = Model.generate(Signer, spec)
-    COLLECTOR[] = Model.generate(Signer, spec)
+    BRAID_CHAIN[] = nothing # The braidchain needs to be loaded within a setup
+    POLLING_STATION[] = nothing
+    RECORDER[] = nothing
+    REGISTRAR[] = nothing
+    BRAIDER[] = nothing
+    PROPOSER[] = nothing
+    COLLECTOR[] = nothing
 
-    return
+    key_list = Integer[]
+    pseudonym_list = Pseudonym[]
+
+    for i in 1:5
+        (key, pseudonym) = Model.keygen(groupspec, generator)
+        push!(key_list, key)
+        push!(pseudonym_list, pseudonym)
+    end
+
+    demespec = demefunc(pseudonym_list)
+
+    @assert groupspec == demespec.crypto.group "GroupSpec does not match argument"
+    @assert verify(demespec, demespec.crypto) "DemeSpec is not corectly signed"
+
+    # This covers a situation where braidchain is initialized externally
+    # more work would need to be put to actually support that though
+    if isnothing(BRAID_CHAIN[])
+        BRAID_CHAIN[] = BraidChain(demespec)
+    end
+
+    if isnothing(POLLING_STATION[])
+        POLLING_STATION[] = PollingStation(demespec.crypto)
+    end
+
+
+    authorized_roles = [] # Perhaps I could use system roles instead
+
+    N = findfirst(x->x==demespec.recorder, pseudonym_list)
+    if !isnothing(N)
+        RECORDER[] = Signer(demespec.crypto, generator, key_list[N])
+        Model.record!(BRAID_CHAIN[], demespec)
+        Model.commit!(BRAID_CHAIN[], RECORDER[]) 
+        push!(authorized_roles, :recorder)
+
+        BRAID_BROKER_PROCESS[] = @async while true
+            broker_process_loop()
+        end
+    end
+    
+    N = findfirst(x->x==demespec.registrar, pseudonym_list)
+    if !isnothing(N)
+        signer = Signer(demespec.crypto, generator, key_list[N])
+        hmac_key = Model.bytes(Model.digest(Vector{UInt8}(string(key_list[N])), demespec.crypto)) # 
+        REGISTRAR[] = Registrar(signer, hmac_key)
+        Model.set_demehash!(REGISTRAR[], demespec) 
+        push!(authorized_roles, :registrar)
+    end
+
+    N = findfirst(x->x==demespec.braider, pseudonym_list)
+    if !isnothing(N)
+        BRAIDER[] = Signer(demespec.crypto, generator, key_list[N])
+        push!(authorized_roles, :braider)
+    end
+
+    N = findfirst(x->x==demespec.proposer, pseudonym_list)
+    if !isnothing(N)
+        PROPOSER[] = Signer(demespec.crypto, generator, key_list[N])
+        push!(authorized_roles, :proposer)
+    end    
+
+    N = findfirst(x->x==demespec.collector, pseudonym_list)
+    if !isnothing(N)
+        COLLECTOR[] = Signer(demespec.crypto, generator, key_list[N])
+        push!(authorized_roles, :collector)
+
+        ENTROPY_PROCESS[] = @async while true
+            entropy_process_loop()
+        end
+
+        TALLY_PROCESS[] = @async while true
+            tally_process_loop()
+        end
+    end    
+
+    return authorized_roles # I may deprecate this in favour of a method.
 end
 
-system_roles() = (; recorder = id(RECORDER[]), registrar = id(REGISTRAR[]), braider = id(BRAIDER[]), collector = id(COLLECTOR[]))
 
+# Need to decide on whether this would be more appropriate
+system_roles() = (; recorder = id(RECORDER[]), registrar = id(REGISTRAR[]), braider = id(BRAIDER[]), collector = id(COLLECTOR[]))
+tally_votes!(uuid::UUID) = Model.commit!(POLLING_STATION[], uuid, COLLECTOR[]; with_tally = true);
 
 set_demehash(spec::DemeSpec) = Model.set_demehash!(REGISTRAR[], spec)
 set_route(route::Union{URI, String}) = Model.set_route!(REGISTRAR[], route)
 get_route() = REGISTRAR[].route
-
-function capture!(spec::DemeSpec)
-
-    BRAID_CHAIN[] = BraidChain(spec)
-    set_demehash(spec) # for registrar
-
-    POLLING_STATION[] = PollingStation(Model.crypto(spec))
-
-    Model.commit!(BRAID_CHAIN[], RECORDER[]) # Errors if the braidchain server is not accepted. An option override=true could be provided 
-
-    ENTROPY_PROCESS[] = @async while true
-        entropy_process_loop()
-    end
-
-    BRAID_BROKER_PROCESS[] = @async while true
-        broker_process_loop()
-    end
-
-    TALLY_PROCESS[] = @async while true
-        tally_process_loop()
-    end
-
-    return
-end
-
 
 get_recruit_key() = Model.key(REGISTRAR[])
 
