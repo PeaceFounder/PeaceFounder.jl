@@ -33,6 +33,7 @@ SIGNER = Model.generate(Model.Signer, crypto)
 event = DemeSpec(;
                     uuid = Base.UUID(121432),
                     title = "A local democratic communituy",
+                    email = "guardian@peacefounder.org",
                     crypto = crypto,
                     guardian = id(SIGNER),
                     recorder = id(SIGNER),

@@ -20,6 +20,7 @@ BRAID_CHAIN_RECORDER = generate(Signer, crypto)
 demespec = DemeSpec(;
                     uuid = Base.UUID(121432),
                     title = "A local democratic communituy",
+                    email = "guardian@peacefounder.org",
                     crypto = crypto,
                     guardian = id(GUARDIAN),
                     recorder = id(BRAID_CHAIN_RECORDER),

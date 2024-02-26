@@ -40,8 +40,8 @@ Represents a deme configuration parameters issued by the guardian.
 @kwdef struct DemeSpec <: Transaction
     uuid::UUID
     title::String
+    email::String
     crypto::CryptoSpec
-
     guardian::Pseudonym
     recorder::Pseudonym
     registrar::Pseudonym
@@ -62,14 +62,15 @@ Represents a deme configuration parameters issued by the guardian.
 end
 
 # Need to improve this
-Base.:(==)(x::DemeSpec, y::DemeSpec) = x.uuid == y.uuid && x.title == y.title && x.guardian == y.guardian && x.crypto == y.crypto 
+Base.:(==)(x::DemeSpec, y::DemeSpec) = x.uuid == y.uuid && x.title == y.title && x.email == y.email && x.guardian == y.guardian && x.crypto == y.crypto 
 
-DemeSpec(title::String, guardian::Pseudonym, crypto::CryptoSpec) = DemeSpec(UUID(rand(1:10000)), title, guardian, crypto, nothing)
+DemeSpec(title::String, email::String, guardian::Pseudonym, crypto::CryptoSpec) = DemeSpec(UUID(rand(1:10000)), title, email, guardian, crypto, nothing)
 
 function Base.show(io::IO, deme::DemeSpec)
 
     println(io, "DemeSpec:")
     println(io, "  title : $(deme.title)")
+    println(io, "  email : $(deme.email)")
     println(io, "  uuid : $(deme.uuid)")
     println(io, "  guardian : $(string(deme.guardian))")
     println(io, "  recorder : $(string(deme.recorder))")

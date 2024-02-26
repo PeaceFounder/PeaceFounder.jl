@@ -12,6 +12,7 @@ authorized_roles = Mapper.setup(crypto.group, crypto.generator) do pbkeys
     return DemeSpec(;
              uuid = Base.UUID(rand(UInt128)),
              title = "A local democratic communituy",
+             email = "guardian@peacefounder.org",
              crypto = crypto,
              guardian = id(GUARDIAN),
              recorder = pbkeys[1],
