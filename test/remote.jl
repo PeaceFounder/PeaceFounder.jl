@@ -5,8 +5,8 @@ import Dates
 
 const PORT = 3222
 
-crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
-
+#crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
+crypto = CryptoSpec("sha256", "EC: P_192")
 GUARDIAN = Model.generate(Signer, crypto)
 
 authorized_roles = Mapper.setup(crypto.group, crypto.generator) do pbkeys
@@ -49,6 +49,14 @@ try
 
     eve = Client.DemeClient()
     Client.enroll!(eve, eve_invite; key = 4)
+
+    ### Braiding
+    
+    input_generator = Mapper.get_generator()
+    input_members = Mapper.get_members()
+
+    braidwork = Model.braid(input_generator, input_members, DEMESPEC, DEMESPEC, Mapper.BRAIDER[]) 
+    Mapper.submit_chain_record!(braidwork)
 
     ### A simple proposal submission
 

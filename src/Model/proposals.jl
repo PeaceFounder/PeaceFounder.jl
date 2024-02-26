@@ -1,5 +1,6 @@
 using Base: UUID
 using Dates: DateTime
+using ..StaticSets: StaticSet, findindex
 
 """
     struct Ballot
@@ -204,6 +205,8 @@ function record!(chain::BraidChain, p::Proposal)
     @assert pseudonym(p.approval) == chain.spec.proposer
     @assert verify(p, crypto(chain.spec))
     
+    @assert chain.ledger[state(p).index] isa BraidReceipt "Proposals can only be anchored on braids." 
+
     push!(chain, p)
 
     N = length(chain)
@@ -212,7 +215,9 @@ function record!(chain::BraidChain, p::Proposal)
 end
 
 # It could also throw an error 
-members(chain::BraidChain, proposal::Proposal) = members(chain, proposal.anchor)
+#members(chain::BraidChain, proposal::Proposal) = members(chain, proposal.anchor)
+voters(chain::BraidChain, proposal::Proposal) = voters(chain, proposal.anchor)
+
 
 select(::Type{Proposal}, uuid::UUID, chain::BraidChain) = select(Proposal, x -> x.uuid == uuid, chain)
 
@@ -545,7 +550,7 @@ Represents a ballot box for a proposal. Contains `proposal`, a set of eligiable 
 """
 mutable struct BallotBox
     proposal::Proposal
-    voters::Set{Pseudonym} # better than members
+    voters::StaticSet{Pseudonym} # Ordering is necessary for supporting alias encoding and thus ordinary Set could not be used
     collector::Pseudonym
     seed::Union{Digest, Nothing}
     crypto::CryptoSpec # on the other hand the inclusion of a vote should be binding enough as it includes proposal hash.
@@ -556,7 +561,7 @@ mutable struct BallotBox
 end
 
 
-BallotBox(proposal::Proposal, voters::Set{Pseudonym}, collector::Pseudonym, crypto::CryptoSpec) = BallotBox(proposal, voters, collector, nothing, crypto, Vote[], CastRecord[], HistoryTree(Digest, hasher(crypto)), nothing)
+BallotBox(proposal::Proposal, voters::Vector{Pseudonym}, collector::Pseudonym, crypto::CryptoSpec) = BallotBox(proposal, StaticSet(voters), collector, nothing, crypto, Vote[], CastRecord[], HistoryTree(Digest, hasher(crypto)), nothing)
 
 
 function Base.show(io::IO, ballotbox::BallotBox)
@@ -956,13 +961,13 @@ end
 Creates a new ballotbox for given proposal with provided member pseudonyms at a relative generator anchored in the proposal. 
 A collector is optional and provided only when it differs from one specified in the proposal. 
 """
-function add!(station::PollingStation, proposal::Proposal, voters::Set{Pseudonym}, collector::Pseudonym)
+function add!(station::PollingStation, proposal::Proposal, voters::Vector{Pseudonym}, collector::Pseudonym)
     bbox = BallotBox(proposal, voters, collector, station.crypto)
     push!(station.halls, bbox)
     return
 end
 
-add!(station::PollingStation, proposal::Proposal, voters::Set{Pseudonym}) = add!(station, proposal, voters, proposal.collector)
+add!(station::PollingStation, proposal::Proposal, voters::Vector{Pseudonym}) = add!(station, proposal, voters, proposal.collector)
 
 """
     ballotbox(station::PollingStation, uuid::UUID)::BallotBox

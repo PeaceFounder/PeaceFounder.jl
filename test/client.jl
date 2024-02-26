@@ -3,7 +3,8 @@ import PeaceFounder: Client, Service, Mapper, Model, Schedulers, Parser
 import .Model: CryptoSpec, DemeSpec, Signer, id, approve, Selection
 import Dates
 
-crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
+#crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
+crypto = CryptoSpec("sha256", "EC: P_192")
 GUARDIAN = Model.generate(Signer, crypto)
 
 authorized_roles = Mapper.setup(crypto.group, crypto.generator) do pbkeys
@@ -45,6 +46,13 @@ eve = Client.DemeClient()
 Client.enroll!(eve, eve_invite; server = SERVER, key = 4)
 
 
+# Braiding 
+input_generator = Mapper.get_generator()
+input_members = Mapper.get_members()
+
+braidwork = Model.braid(input_generator, input_members, DEMESPEC, DEMESPEC, Mapper.BRAIDER[]) 
+Mapper.submit_chain_record!(braidwork)
+
 # As the ticket is already expired there is no valid invite available and this should throw an error
 @test_throws ErrorException Mapper.enlist_ticket(Model.TicketID("Alice"))
 
@@ -58,7 +66,6 @@ proposal = Model.Proposal(
     open = Dates.now() + Dates.Millisecond(100),
     closed = Dates.now() + Dates.Second(5)
 ) |> Client.configure(SERVER) |> approve(PROPOSER)
-
 
 
 ack = Client.enlist_proposal(SERVER, proposal)

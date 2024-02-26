@@ -276,7 +276,8 @@ function submit_chain_record!(proposal::Proposal)
     N = Model.record!(BRAID_CHAIN[], proposal)
     Model.commit!(BRAID_CHAIN[], RECORDER[])
 
-    anchored_members = Model.members(BRAID_CHAIN[], proposal)
+    #anchored_members = Model.members(BRAID_CHAIN[], proposal)
+    anchored_members = Model.voters(BRAID_CHAIN[], proposal)
     Model.add!(POLLING_STATION[], proposal, anchored_members)
 
     Schedulers.schedule!(ENTROPY_SCHEDULER, proposal.open, proposal.uuid)

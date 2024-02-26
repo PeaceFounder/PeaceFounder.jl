@@ -1,3 +1,7 @@
+module StaticSetTest
+include("staticset.jl")
+end
+
 module ModelTest
 include("model.jl")
 end

@@ -1,4 +1,3 @@
-
 import ShuffleProofs
 import ShuffleProofs: Braid, Simulator, BraidProof, ProtocolSpec
 import CryptoGroups
@@ -130,7 +129,8 @@ input_generator(braidwork::BraidReceipt) = generator(ShuffleProofs.input_generat
 
 Return input member pseudonyms of the braid at provided input generator. See [`input_generator`](@ref)
 """
-input_members(braidwork::BraidReceipt) = Set(Pseudonym[pseudonym(i) for i in ShuffleProofs.input_members(braidwork.braid.proposition)])
+#input_members(braidwork::BraidReceipt) = Set(Pseudonym[pseudonym(i) for i in ShuffleProofs.input_members(braidwork.braid.proposition)])
+input_members(braidwork::BraidReceipt) = Pseudonym[pseudonym(i) for i in ShuffleProofs.input_members(braidwork.braid.proposition)]
 
 """
     output_generator(braid::BraidReceipt)
@@ -144,7 +144,8 @@ output_generator(braidwork::BraidReceipt) = generator(ShuffleProofs.output_gener
 
 Return output member pseudonyms of the braid at a resulting output generator. See [`output_generator`](@ref)
 """
-output_members(braidwork::BraidReceipt) = Set(Pseudonym[pseudonym(i) for i in ShuffleProofs.output_members(braidwork.braid.proposition)])
+#output_members(braidwork::BraidReceipt) = Set(Pseudonym[pseudonym(i) for i in ShuffleProofs.output_members(braidwork.braid.proposition)])
+output_members(braidwork::BraidReceipt) = Pseudonym[pseudonym(i) for i in ShuffleProofs.output_members(braidwork.braid.proposition)]
 
 
 function Base.show(io::IO, braid::BraidReceipt)
@@ -164,7 +165,7 @@ function Base.push!(chain::BraidChain, braidwork::BraidReceipt)
     push!(chain.tree, digest(braidwork, hasher(chain.spec)))
 
     chain.generator = output_generator(braidwork)
-    chain.members = output_members(braidwork)
+    chain.members = Set(output_members(braidwork))
 
     return
 end
@@ -173,7 +174,7 @@ end
 function record!(chain::BraidChain, braidwork::BraidReceipt)
 
     @assert generator(chain) == input_generator(braidwork)
-    @assert members(chain) == input_members(braidwork)
+    @assert members(chain) == Set(input_members(braidwork))
 
     @assert verify(braidwork, crypto(chain.spec)) "Braid is invalid"
 
@@ -181,3 +182,5 @@ function record!(chain::BraidChain, braidwork::BraidReceipt)
 
     return length(chain)
 end
+
+

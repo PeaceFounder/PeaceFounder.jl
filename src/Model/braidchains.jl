@@ -418,6 +418,12 @@ Return a current braidchain ledger state metadata.
 """
 state(chain::BraidChain) = ChainState(length(chain), root(chain), generator(chain), length(members(chain)))
 
+state(chain::BraidChain, n::Int) = error("Not Implemented")
+
+
+Base.findlast(::Type{T}, ledger::Vector{Transaction}) where T <: Transaction = findlast(x -> x isa T, ledger)
+Base.findlast(::Type{T}, chain::BraidChain) where T <: Transaction = findlast(T, chain.ledger)
+
 
 """
     commit!(ledger::BraidChain, signer::Signer)
@@ -436,6 +442,8 @@ end
 
 members(chain::BraidChain, state::ChainState) = members(chain, state.index)
 
+voters(chain::BraidChain, index::Int) = output_members(chain.ledger[index]::BraidReceipt)
+voters(chain::BraidChain, state::ChainState) = voters(chain, state.index)
 
 """
     struct TicketID
