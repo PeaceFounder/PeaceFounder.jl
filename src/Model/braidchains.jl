@@ -42,14 +42,13 @@ Represents a deme configuration parameters issued by the guardian.
     title::String
     email::String
     crypto::CryptoSpec
-    guardian::Pseudonym
     recorder::Pseudonym
     registrar::Pseudonym
     braider::Pseudonym
     proposer::Pseudonym 
     collector::Pseudonym
 
-    timestamp::Union{DateTime, Nothing} = nothing
+    #timestamp::Union{DateTime, Nothing} = nothing
 
     # If an adversary can pinpoint the address from which a message was sent and its effect on the system, 
     # then they already know the contents of the message. Therefore, a TLS connection only marginally 
@@ -58,13 +57,14 @@ Represents a deme configuration parameters issued by the guardian.
 
     # cert::Nothing # An optional TLS certificate used for communication
 
-    signature::Union{Signature, Nothing} = nothing
+    seal::Union{Seal, Nothing} = nothing
+    #signature::Union{Signature, Nothing} = nothing
 end
 
 # Need to improve this
-Base.:(==)(x::DemeSpec, y::DemeSpec) = x.uuid == y.uuid && x.title == y.title && x.email == y.email && x.guardian == y.guardian && x.crypto == y.crypto 
+Base.:(==)(x::DemeSpec, y::DemeSpec) = x.uuid == y.uuid && x.title == y.title && x.email == y.email && x.crypto == y.crypto 
 
-DemeSpec(title::String, email::String, guardian::Pseudonym, crypto::CryptoSpec) = DemeSpec(UUID(rand(1:10000)), title, email, guardian, crypto, nothing)
+#DemeSpec(title::String, email::String, crypto::CryptoSpec) = DemeSpec(UUID(rand(1:10000)), title, email, crypto, nothing)
 
 function Base.show(io::IO, deme::DemeSpec)
 

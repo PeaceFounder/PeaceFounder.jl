@@ -97,21 +97,12 @@ end
 # The body method is actually pretty interesting 
 body(admission::Admission) = @set admission.approval = nothing
 
-
-function body(spec::DemeSpec)
-
-    _spec = @set spec.signature = nothing
-    _spec = @set _spec.timestamp = nothing
-
-    return _spec
-end
-
+body(spec::DemeSpec) = @set spec.seal = nothing
 
 function approve(spec::DemeSpec, signer::Signer)
 
-    spec = @set spec.signature = nothing
-    spec = @set spec.timestamp = Dates.now()
-    spec = @set spec.signature = sign(canonicalize(spec), signer)
+    spec = @set spec.seal = nothing
+    spec = @set spec.seal = seal(canonicalize(spec), signer)
 
     return spec
 end
@@ -119,7 +110,8 @@ end
 approve(signer::Signer) = x -> approve(x, signer) # late evaluation
 
 
-verify(spec::DemeSpec, crypto::CryptoSpec) = verify(canonicalize(@set spec.signature = nothing), spec.guardian, spec.signature, crypto)
+#verify(spec::DemeSpec, crypto::CryptoSpec) = verify(canonicalize(@set spec.seal = nothing), spec.guardian, spec.signature, crypto)
+verify(spec::DemeSpec, crypto::CryptoSpec) = verify(canonicalize(@set spec.seal = nothing), spec.seal, crypto)
 
 
 

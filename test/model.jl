@@ -18,17 +18,16 @@ BRAIDER = generate(Signer, crypto)
 BRAID_CHAIN_RECORDER = generate(Signer, crypto)
 
 demespec = DemeSpec(;
-                    uuid = Base.UUID(121432),
+                    uuid = Base.UUID(rand(UInt128)),
                     title = "A local democratic communituy",
                     email = "guardian@peacefounder.org",
                     crypto = crypto,
-                    guardian = id(GUARDIAN),
                     recorder = id(BRAID_CHAIN_RECORDER),
                     registrar = id(REGISTRAR),
                     braider = id(BRAIDER),
                     proposer = id(PROPOSER),
                     collector = id(COLLECTOR)
-) |> approve(PROPOSER) 
+) |> approve(GUARDIAN) 
 
 
 BRAID_CHAIN = BraidChain(demespec)

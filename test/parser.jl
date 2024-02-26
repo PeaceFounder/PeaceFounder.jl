@@ -35,7 +35,6 @@ event = DemeSpec(;
                     title = "A local democratic communituy",
                     email = "guardian@peacefounder.org",
                     crypto = crypto,
-                    guardian = id(SIGNER),
                     recorder = id(SIGNER),
                     registrar = id(SIGNER),
                     braider = id(SIGNER),

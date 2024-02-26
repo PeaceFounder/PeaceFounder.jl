@@ -14,7 +14,6 @@ authorized_roles = Mapper.setup(crypto.group, crypto.generator) do pbkeys
              title = "A local democratic communituy",
              email = "guardian@peacefounder.org",
              crypto = crypto,
-             guardian = id(GUARDIAN),
              recorder = pbkeys[1],
              registrar = pbkeys[2],
              braider = pbkeys[3],
