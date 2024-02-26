@@ -19,10 +19,10 @@ event = (UInt8[2, 3, 4, 5], UInt8[2, 3, 4, 5], Digest(UInt8[1, 2, 3, 4, 5]))
 event = (Pseudonym(UInt8[1, 2, 3, 4]), Digest(UInt8[1, 2, 3, 4, 5]))
 @test isconsistent(event)
 
-admission = Admission(TicketID("Alice"), Pseudonym(UInt8[1, 2, 3, 4]), now(), Seal(Pseudonym(UInt8[1, 2, 3, 4]), Signature(123, 4345)))
+admission = Admission(TicketID("Alice"), Pseudonym(UInt8[1, 2, 3, 4]), now(), Seal(Pseudonym(UInt8[1, 2, 3, 4]), now(), Signature(123, 4345)))
 @test isconsistent(admission)
 
-event = Seal(Pseudonym(UInt8[1, 2, 3, 4]), 2, 4)
+event = Seal(Pseudonym(UInt8[1, 2, 3, 4]), now(), Signature(123, 4345))
 @test isconsistent(event)
 
 @test isconsistent(Model.CryptoSpec("sha256", "EC: P_192"))

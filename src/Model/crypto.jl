@@ -1,12 +1,15 @@
 using HistoryTrees: InclusionProof, ConsistencyProof
 import HistoryTrees: leaf, root
 using CryptoGroups: CryptoGroups, ECP, EC2N, Koblitz, MODP
+using Dates: DateTime
 
 import CryptoGroups
 const GroupSpec = CryptoGroups.Spec # TODO: upstream the naming
 
 import CryptoSignatures
 import Nettle
+
+
 
 import CryptoSignatures.DSA as Signature
 
@@ -364,14 +367,25 @@ A wrapper type for a signature which adds a public key of signature issuer. See 
 """
 struct Seal 
     pbkey::Pseudonym
+    timestamp::DateTime
     sig::Signature
 end
 
-Seal(id::Pseudonym, r, s) = Seal(id, Signature(r, s))
+#Seal(id::Pseudonym, r, s) = Seal(id, Signature(r, s))
 
 Base.:(==)(x::Seal, y::Seal) = x.pbkey == y.pbkey && x.sig == y.sig
 
 pseudonym(seal::Seal) = seal.pbkey
+
+
+function epoch(timestamp::DateTime)
+
+    period = timestamp - DateTime(1970, 1, 1)
+    msec = Dates.value(period)
+
+    return reinterpret(UInt8, [msec])
+end
+
 
 """
     seal(message::Vector{UInt8}[, generator::Generator], signer::Signer)::Seal
@@ -379,12 +393,28 @@ pseudonym(seal::Seal) = seal.pbkey
 Sign a bytestring `message` with signer's private key and specification and return a signature as a `Seal`. When generator is provided it is used as 
 a base for the signature. See also [`sign`](@ref).
 """
-seal(message::Vector{UInt8}, signer::Signer) = Seal(signer.pbkey, sign(message, signer))
-seal(message::Vector{UInt8}, generator::Generator, signer::Signer) = Seal(pseudonym(signer, generator), sign(message, generator, signer))
+function seal(message::Vector{UInt8}, signer::Signer; timestamp::Union{DateTime, Nothing} = nothing) 
+
+    if isnothing(timestamp) 
+        timestamp = Dates.now()
+    end
+
+    return Seal(signer.pbkey, timestamp, sign([epoch(timestamp)..., message...], signer))
+end
 
 
-verify(message::Vector{UInt8}, seal::Seal, crypto::CryptoSpec) = verify(message, seal.pbkey, seal.sig, crypto)
-verify(message::Vector{UInt8}, seal::Seal, generator::Generator, crypto::CryptoSpec) = verify(message, seal.pbkey, seal.sig, generator, crypto)
+function seal(message::Vector{UInt8}, generator::Generator, signer::Signer; timestamp::Union{DateTime, Nothing} = nothing)
+
+    if isnothing(timestamp) 
+        timestamp = Dates.now()
+    end
+    
+    return Seal(pseudonym(signer, generator), timestamp, sign([epoch(timestamp)..., message...], generator, signer))
+end
+
+# Let's see what fails
+verify(message::Vector{UInt8}, seal::Seal, crypto::CryptoSpec) = verify([epoch(seal.timestamp)..., message...], seal.pbkey, seal.sig, crypto)
+verify(message::Vector{UInt8}, seal::Seal, generator::Generator, crypto::CryptoSpec) = verify([epoch(seal.timestamp)..., message...], seal.pbkey, seal.sig, generator, crypto)
 
 """
     Commit{T}

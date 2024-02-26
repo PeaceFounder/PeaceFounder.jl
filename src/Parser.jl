@@ -73,15 +73,16 @@ unmarshal(bytes, T::DataType) = JSON3.read(bytes, T)
 StructTypes.StructType(::Type{Seal}) = StructTypes.CustomStruct()
 #StructTypes.lower(seal::Seal) = Dict(:id => seal.pbkey, :r => seal.sig.r, :s => seal.sig.s)
 
-StructTypes.lower(seal::Seal) = (;id = seal.pbkey, r = seal.sig.r, s = seal.sig.s)
-StructTypes.lowertype(::Type{Seal}) = NamedTuple{(:id, :r, :s), Tuple{String, BigInt, BigInt}}
+StructTypes.lower(seal::Seal) = (;id = seal.pbkey, t = seal.timestamp, r = seal.sig.r, s = seal.sig.s)
+StructTypes.lowertype(::Type{Seal}) = NamedTuple{(:id, :t,  :r, :s), Tuple{String, String, BigInt, BigInt}}
 
 function StructTypes.construct(::Type{Seal}, x)
     
     id = constructfrom(Pseudonym, x.id)
+    t = constructfrom(DateTime, x.t)
     sig = Signature(x.r, x.s)
 
-    return Seal(id, sig)
+    return Seal(id, t, sig)
 end
 
 
