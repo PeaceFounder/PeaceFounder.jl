@@ -482,16 +482,16 @@ Represents an admission certificate for a pseudonym `id`.
 struct Admission
     ticketid::TicketID # document on which basis registrar have decided to approve the member
     id::Pseudonym
-    timestamp::DateTime # Timestamp could be used as a deadline
+    #timestamp::DateTime # Timestamp could be used as a deadline
     approval::Union{Seal, Nothing}
     # demespec::Digest # To prevent malicios guardian to downgrade cryptographic parameters, set a selective route compromising anonimity. Uppon receiving admission member would test that demespec is the one as sent in the invite.  
 end
 
 
 
-Admission(ticketid::TicketID, id::Pseudonym, timestamp::DateTime) = Admission(ticketid, id, timestamp, nothing)
+Admission(ticketid::TicketID, id::Pseudonym) = Admission(ticketid, id, nothing)
 
-Base.:(==)(x::Admission, y::Admission) = x.ticketid == y.ticketid && x.id == y.id && x.timestamp == y.timestamp && x.approval == y.approval
+Base.:(==)(x::Admission, y::Admission) = x.ticketid == y.ticketid && x.id == y.id && x.approval == y.approval
 
 """
     isbinding(admission::Admission, spec::DemeSpec)

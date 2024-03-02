@@ -260,7 +260,8 @@ function admit!(registrar::Registrar, id::Pseudonym, ticketid::TicketID) # ticke
 
     if isnothing(ticket.admission)
 
-        admission_draft = Admission(ticket.ticketid, id, ticket.timestamp)
+        #admission_draft = Admission(ticket.ticketid, id, ticket.timestamp)
+        admission_draft = Admission(ticket.ticketid, id)
         ticket.admission = approve(admission_draft, registrar.signer)
         
     end
