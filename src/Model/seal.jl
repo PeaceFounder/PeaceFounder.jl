@@ -149,13 +149,13 @@ body(vote::Vote) = @set vote.seal = nothing
 
 
 # Should not use this approach
-function seal(vote::Vote, generator::Generator, signer::Signer)
+function seal(vote::Vote, generator::Generator, signer::Signer; timestamp::Union{DateTime} = nothing)
 
     #@assert vote.seq == seq(signer, vote.proposal) + 1
 
     bytes = canonicalize(body(vote))
     
-    return seal(bytes, generator, signer)
+    return seal(bytes, generator, signer; timestamp)
 end
 
 

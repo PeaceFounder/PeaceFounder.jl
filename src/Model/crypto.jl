@@ -230,6 +230,22 @@ A datatype which stores public key in canonical standart octet form.
     pk::Vector{UInt8}
 end
 
+# This is needed internally for easy grouping of the votes
+function Base.isless(a::Pseudonym, b::Pseudonym)
+    
+    len_a = length(a.pk)
+    len_b = length(b.pk)
+    minlen = min(len_a, len_b)
+
+    for i in 1:minlen
+        if a.pk[i] != b.pk[i]
+            return a.pk[i] < b.pk[i]
+        end
+    end
+
+    return len_a < len_b
+end
+
 #@batteries Pseudonym # treats as immutable; 
 
 bytes(x::Pseudonym) = x.pk

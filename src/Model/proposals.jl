@@ -279,7 +279,7 @@ function vote(proposal::Proposal, seed::Digest, selection::Selection, signer::Si
 
     vote = Vote(proposal_digest, seed, selection, seq)
 
-    approval = seal(vote, generator(proposal), signer::Signer)
+    approval = seal(vote, generator(proposal), signer::Signer; timestamp = proposal.open)
     
     return @set vote.seal = approval
 end
@@ -615,7 +615,7 @@ uuid(ballotbox::BallotBox) = uuid(ballotbox.proposal)
 
 Return a list of member pseudonyms with which members authetificate their votes.
 """
-members(ballotbox) = ballotbox.voters
+voters(ballotbox::BallotBox) = ballotbox.voters
 
 """
     ledger(ballotbox::BallotBox)::Vector{CastRecord}
@@ -691,7 +691,52 @@ commit(ballotbox::BallotBox) = !isnothing(ballotbox.commit) ? ballotbox.commit :
 
 
 selections(votes::Vector{CastRecord}) = (i.vote.selection for i in votes) # Note that dublicates are removed at this stage
-tallyview(votes::Vector{CastRecord}) = BitVector(true for i in votes) 
+
+#tallyview(votes::Vector{CastRecord}) = BitVector(true for i in votes) 
+
+
+function tallyview(votes::Vector{CastRecord}, ballot::Ballot)
+    
+
+    function lt(x::CastRecord, y::CastRecord)
+
+        if x.vote.seal.pbkey != y.vote.seal.pbkey
+            return x.vote.seal.pbkey < y.vote.seal.pbkey
+        elseif x.vote.seq != y.vote.seq
+            return x.vote.seq < y.vote.seq
+        else
+            # first recorded vote is counted if one already with the same sequence number exists
+            # this prevents a silent attack where adversary who has gained access to crednetials
+            # could cast a vote in place of absent voter.
+            x.timestamp > y.timestamp 
+        end
+    end
+
+
+    valid_votes = BitVector(false for i in 1:length(votes))    
+
+    sorted_votes = collect(enumerate(votes))
+    sort!(sorted_votes; lt = (x, y) -> lt(x[2], y[2]), rev=true)
+
+    pbkeyi = nothing
+
+    for (i, record) in sorted_votes
+     
+        if pbkeyi == record.vote.seal.pbkey
+            continue
+        end
+   
+        if isconsistent(record.vote.selection, ballot)
+            valid_votes[i] = true
+            pbkeyi = record.vote.seal.pbkey 
+        end
+
+    end
+
+    return valid_votes
+end
+
+
 
 """
     tally(ledger::BallotBox)
@@ -699,7 +744,7 @@ tallyview(votes::Vector{CastRecord}) = BitVector(true for i in votes)
 Compute a tally for a ballotbox ledger. 
 """
 tally(ballotbox::BallotBox) = tally(ballotbox.proposal.ballot, selections(ledger(ballotbox)))
-tallyview(ballotbox::BallotBox) = tallyview(ballotbox.ledger)
+tallyview(ballotbox::BallotBox) = tallyview(ballotbox.ledger, ballotbox.proposal.ballot)
 
 
 istallied(ballotbox::BallotBox) = istallied(ballotbox.commit)
@@ -839,10 +884,12 @@ Check that vote can be included in the ballotbox. Is well formed, signed by a me
 and cryptographic signature is valid. Raises error if either of checks fail.
 """
 function validate(ballotbox::BallotBox, vote::Vote)
-
-    @assert isconsistent(vote.selection, ballotbox.proposal.ballot)
+    
+    # Poorly formed votes are interesting
+    # @assert isconsistent(vote.selection, ballotbox.proposal.ballot)
     @assert isbinding(vote, ballotbox.proposal, ballotbox.crypto) # isbinding(proposal(ballotbox), vote, crypto) 
-    @assert pseudonym(vote) in members(ballotbox)
+    #@assert pseudonym(vote) in members(ballotbox)
+    @assert pseudonym(vote) in voters(ballotbox)
 
     @assert verify(vote, generator(ballotbox), ballotbox.crypto)
 
