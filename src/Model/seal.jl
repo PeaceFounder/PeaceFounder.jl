@@ -145,7 +145,7 @@ end
 verify(state::BallotBoxState, seal::Seal, crypto::CryptoSpec) = verify(canonicalize(state), seal, crypto)
 
 
-body(vote::Vote) = @set vote.approval = nothing
+body(vote::Vote) = @set vote.seal = nothing
 
 
 # Should not use this approach
@@ -163,7 +163,7 @@ function verify(vote::Vote, generator::Generator, crypto::CryptoSpec)
     
     bytes = canonicalize(body(vote))
 
-    return verify(bytes, vote.approval, generator, crypto)
+    return verify(bytes, vote.seal, generator, crypto)
 end
 
 

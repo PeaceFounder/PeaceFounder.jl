@@ -242,12 +242,12 @@ struct Vote
     seed::Digest
     selection::Selection
     seq::Int
-    approval::Union{Seal, Nothing} # It is unclear whether public key needs to be part of a signature
+    seal::Union{Seal, Nothing} # It is unclear whether public key needs to be part of a signature
 end
 
 Vote(proposal::Digest, seed::Digest, selection::Selection, seq::Int) = Vote(proposal, seed, selection, seq, nothing)
 
-Base.:(==)(x::Vote, y::Vote) = x.proposal == y.proposal && x.selection == y.selection && x.seq == y.seq && x.approval == y.approval
+Base.:(==)(x::Vote, y::Vote) = x.proposal == y.proposal && x.selection == y.selection && x.seq == y.seq && x.seal == y.seal
 
 
 function Base.show(io::IO, vote::Vote)
@@ -281,7 +281,7 @@ function vote(proposal::Proposal, seed::Digest, selection::Selection, signer::Si
 
     approval = seal(vote, generator(proposal), signer::Signer)
     
-    return @set vote.approval = approval
+    return @set vote.seal = approval
 end
 
 """
@@ -298,7 +298,7 @@ isbinding(record, spine::Vector{Digest}, crypto::CryptoSpec) = isbinding(record,
 
 Return a pseudonym with which vote is sealed.
 """
-pseudonym(vote::Vote) = isnothing(vote.approval) ? nothing : pseudonym(vote.approval)
+pseudonym(vote::Vote) = isnothing(vote.seal) ? nothing : pseudonym(vote.seal)
 
 """
     struct BallotBoxState
