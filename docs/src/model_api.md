@@ -3,7 +3,6 @@
 ## Primitives
 
 
-
 ```@autodocs
 Modules = [PeaceFounder.Model]
 Order = [:type, :function]
@@ -21,7 +20,6 @@ PeaceFounder.Model.id
 ```@docs
 PeaceFounder.Model.verify
 ```
-
 
 
 ## Admission

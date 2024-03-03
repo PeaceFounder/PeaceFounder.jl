@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+<svg width="88.567mm" height="88.567mm" version="1.1" viewBox="0 0 88.567 88.567" xmlns="http://www.w3.org/2000/svg">
+ <g transform="translate(-216.22 -106.73)">
+  <g transform="matrix(.13559 0 0 .13559 595.63 -1889.9)">
+   <rect x="-2798.3" y="14726" width="653.21" height="653.21" rx="0" ry="91.116" fill="#c2bfc1"/>
+   <circle cx="-2471.7" cy="15052" r="285.14" fill="#313131"/>
+   <g transform="matrix(0 -1.6306 1.6306 0 -2678.9 15146)" fill="#e3dbde" stroke="#313131" stroke-width="9.199">
+    <g transform="rotate(45 412.31 -40.857)" fill="#e3dbde" stroke="#313131" stroke-miterlimit="10" stroke-width="9.199">
+     <path d="m311.21 313.79h50c27.613 0 50-22.387 50-50h-100v50"/>
+     <path d="m261.21 363.79h50c27.613 0 50-22.387 50-50h-100v50"/>
+     <path d="m211.21 413.79h50c27.613 0 50-22.387 50-50h-100v50"/>
+     <path d="m161.21 413.79h50v-100c-27.613 0-50 22.387-50 50v50"/>
+     <path d="m211.21 363.79h50v-100c-27.613 0-50 22.387-50 50v50"/>
+     <path d="m261.21 313.79h50v-50h-50v50"/>
+    </g>
+   </g>
+  </g>
+ </g>
+</svg>

@@ -21,6 +21,7 @@ copy_if_changed((@__DIR__) * "/../README.md", (@__DIR__) * "/src/index.md")
 
 makedocs(
     sitename = "PeaceFounder.jl",
+    #repo = "github.com/PeaceFounder/PeaceFounder.jl.git",
     format = Documenter.HTML(),
     modules = [PeaceFounder.Model, PeaceFounder.Client],
     pages = [
@@ -41,6 +42,7 @@ makedocs(
 # Documenter can also automatically deploy documentation to gh-pages.
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
 # for more information.
-deploydocs(
-    repo = "github.com/PeaceFounder/PeaceFounder.jl.git"
-)
+
+if !isinteractive()
+    deploydocs(repo = "github.com/PeaceFounder/PeaceFounder.jl.git")
+end
