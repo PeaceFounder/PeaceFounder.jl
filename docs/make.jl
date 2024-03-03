@@ -43,6 +43,4 @@ makedocs(
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
 # for more information.
 
-#if !isinteractive()
 deploydocs(repo = "github.com/PeaceFounder/PeaceFounder.jl.git")
-#end
