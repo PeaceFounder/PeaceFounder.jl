@@ -1,6 +1,7 @@
+dirname(@__DIR__) in LOAD_PATH || Base.push!(LOAD_PATH, dirname(@__DIR__))
+
 using Documenter
 using PeaceFounder
-
 
 function copy_if_changed(source, destination)
     

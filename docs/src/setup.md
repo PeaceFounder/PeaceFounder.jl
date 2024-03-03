@@ -4,7 +4,7 @@ In the PeaceFounder, communities are referred to as demes. To start a deme, we f
 
 ## System Setup
 
-![](../assets/peacefounder-setup.webp)
+![](assets/peacefounder-setup.webp)
 
 The first step to begin using the PeaceFounder e-voting system is to host it, which is a straightforward process on Linux servers. Begin by downloading the snap package with the command below, and remember to change the architecture to `arm64` if necessary:
 
@@ -36,7 +36,7 @@ It's important to note that configuring the system doesn't require a TLS certifi
 
 ## Member Registration
 
-![](../assets/peacefounder-registration.webp)
+![](assets/peacefounder-registration.webp)
 
 The process of member registration is conducted via email, through which a unique token is dispatched to the user. Unlike JWT tokens, which are typically incorporated into the header of a TLS connection, the token in this system serves a different purpose. It is utilised as a key in the format `HMAC(body|timestamp, token)` to authenticate requests. To enable the server to identify the origin of the request, a `tokenid=Hash(token)` is included in the header (currently, ticketid is used but will be made obsolete shortly).
 
@@ -51,7 +51,7 @@ To guarantee the auditability of the electoral roll, the process involves member
 
 ## Voting
 
-![](../assets/peacefounder-voting.webp)
+![](assets/peacefounder-voting.webp)
 
 The registration of members is followed by the generation of a braid. To boost anonymity, several braids can chained together in sequence. This technique raises the anonymity threshold - the least number of entities required to be breached to associate a member's certificate with their voting pseudonym. Currently, the system supports only self-braiding, setting the maximum anonymity threshold at one. Future updates aim to enable braiding between different demes, which could be either fictional entities created for specific votes or real communities worldwide. The integrity of the final braid receipt is verified using Zero-Knowledge Proofs (ZKPs) and recorded in the braidchain.
 
@@ -61,7 +61,7 @@ As voting progresses, each vote is logged in the ballot box ledger, displaying t
 
 ## BraidChain Ledger
 
-![](../assets/peacefounder-braidchain.webp)
+![](assets/peacefounder-braidchain.webp)
 
 The BraidChain and BallotBox ledgers together create publicly available proof of election integrity. The BallotBox ledger is straightforward, containing votes signed with the voter's pseudonym without altering the state of the ballot box. In contrast, the BraidChain ledger is more complex, and every record changes the system state. Auditors can run audit commands on records stored in the disk (in development) that require no deep understanding of the underlying data structure. However, in cases where issues arise, having a reference point to communicate about these issues effectively is beneficial.
 
