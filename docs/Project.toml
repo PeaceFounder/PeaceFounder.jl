@@ -4,3 +4,4 @@ PeaceFounder = "916f7771-afe2-4319-943d-0e770c333432"
 
 [compat]
 julia = "1.9"
+Documenter = "0.27"
