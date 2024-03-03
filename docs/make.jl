@@ -22,7 +22,7 @@ copy_if_changed((@__DIR__) * "/../README.md", (@__DIR__) * "/src/index.md")
 
 makedocs(
     sitename = "PeaceFounder.jl",
-    #repo = "github.com/PeaceFounder/PeaceFounder.jl.git",
+    repo = Documenter.Remotes.GitHub("PeaceFounder", "PeaceFounder.jl"),
     format = Documenter.HTML(),
     modules = [PeaceFounder.Model, PeaceFounder.Client],
     pages = [
