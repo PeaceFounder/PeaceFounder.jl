@@ -14,7 +14,8 @@ using SwaggerMarkdown
 module OxygenInstance using Oxygen; @oxidise end
 import .OxygenInstance: @get, @put, @post, mergeschema, serve, Request, Response
 
-const ROUTER = OxygenInstance.CONTEXT[].router
+#const ROUTER = OxygenInstance.CONTEXT[].router
+const ROUTER = OxygenInstance.CONTEXT[].service.router
 
 export serve
 # POST /braidchain/members : Membership -> AckInclusion

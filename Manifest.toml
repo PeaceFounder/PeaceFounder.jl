@@ -303,11 +303,9 @@ version = "1.6.3"
 
 [[deps.Oxygen]]
 deps = ["DataStructures", "Dates", "HTTP", "JSON3", "MIMEs", "Reexport", "RelocatableFolders", "Requires", "Sockets", "Statistics"]
-git-tree-sha1 = "8927f8e3da1955c6b9605839879134050a2ca83a"
-repo-rev = "master"
-repo-url = "https://github.com/PeaceFounder/Oxygen.jl"
+git-tree-sha1 = "5c069e6a5b01f48d2dea0849218388803725ef8d"
 uuid = "df9a0d86-3283-4920-82dc-4555fc0d1d8b"
-version = "1.4.9"
+version = "1.5.0"
 
 [[deps.Parsers]]
 deps = ["Dates", "PrecompileTools", "UUIDs"]
