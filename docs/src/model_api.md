@@ -27,7 +27,7 @@ PeaceFounder.Model.verify
 ```@autodocs
 Modules = [PeaceFounder.Model]
 Order = [:type, :function]
-Pages = ["Model/admissions.jl"]
+Pages = ["Model/registrar.jl"]
 ```
 
 ## BraidChain

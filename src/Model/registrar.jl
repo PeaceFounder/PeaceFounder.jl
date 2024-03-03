@@ -69,7 +69,7 @@ Represents a state for token registrar service. To initialize the service it's n
 
 Metadata is used as means to securelly deliver to the client most recent server specification. 
 
-**Interface:** [`select`](@ref), [`hmac`](@ref), [`hasher`](@ref), [`key`](@ref), [`id`](@ref), [`tickets`](@ref), [`in`](@ref), [`set_metadata!`](@ref), [`enlist!`](@ref), [`admit!`](@ref), [`isadmitted`](@ref), [`ticket_status`](@ref)
+**Interface:** [`select`](@ref), [`hmac`](@ref), [`hasher`](@ref), [`key`](@ref), [`id`](@ref), [`tickets`](@ref), [`in`](@ref), [`enlist!`](@ref), [`admit!`](@ref), [`isadmitted`](@ref), [`ticket_status`](@ref)
 """
 mutable struct Registrar
     demehash::Digest 
@@ -220,6 +220,13 @@ isbinding(spec::DemeSpec, invite::Invite) = Model.digest(spec, invite.hasher) ==
 
 hasher(invite::Invite) = invite.hasher
 
+
+"""
+    enlist!(registrar::Registrar, ticketid::TicketID, timestamp::DateTime; route::URI=registrar.route)::Invite
+
+Registers a new ticket with given `TicketID` and returns an invite. If ticket is already registered the same invite is returned.
+Throws an error when ticket is already registered.
+"""
 function enlist!(registrar::Registrar, ticketid::TicketID, timestamp::DateTime; route::URI=registrar.route)
 
     # Assertion for request is needed to be done at Service layer
@@ -246,11 +253,10 @@ end
 
 
 """
-    admit!(registrar::Registrar, id::Pseudonym, ticketid::TicketID, auth_code::Digest)::Admission
+    admit!(registrar::Registrar, id::Pseudonym, ticketid::TicketID)::Admission
 
-Attempt to admit an identity pseudonym `id` for ticket `ticketid` with provided authorization code. This function retrieves a ticket with given `ticketid` and uses it's recorded `token` to check whether the request is binding. In the case of success an admnission certificate is formed with provided indenty pseudonym `id` and is signed by the recruter's private key. Otherwise when either of checks fail an error is raised. In the case ticket is already addmitted, returns previously stored admission. 
+Attempt to admit an identity pseudonym `id` for ticket `ticketid`. Authorization is expected to happen at the service layer using provided token in the invite. If a ticket is already registered return admission if it matches the provided `id`. Otherwise throe an error.
 """
-#function admit!(registrar::Registrar, id::Pseudonym, ticketid::TicketID, auth_code::Digest)
 function admit!(registrar::Registrar, id::Pseudonym, ticketid::TicketID) # ticketid is the authorization
     
     N = findfirst(x -> x.ticketid == ticketid, registrar.tickets)
@@ -260,12 +266,15 @@ function admit!(registrar::Registrar, id::Pseudonym, ticketid::TicketID) # ticke
 
     if isnothing(ticket.admission)
 
-        #admission_draft = Admission(ticket.ticketid, id, ticket.timestamp)
         admission_draft = Admission(ticket.ticketid, id)
         ticket.admission = approve(admission_draft, registrar.signer)
         
-    end
+    else
 
+        @assert ticket.admission.id == id "TicketID is already registered with a different identity pseudonym"
+
+    end
+    
     return ticket.admission
 end
 

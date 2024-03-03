@@ -129,7 +129,6 @@ input_generator(braidwork::BraidReceipt) = generator(ShuffleProofs.input_generat
 
 Return input member pseudonyms of the braid at provided input generator. See [`input_generator`](@ref)
 """
-#input_members(braidwork::BraidReceipt) = Set(Pseudonym[pseudonym(i) for i in ShuffleProofs.input_members(braidwork.braid.proposition)])
 input_members(braidwork::BraidReceipt) = Pseudonym[pseudonym(i) for i in ShuffleProofs.input_members(braidwork.braid.proposition)]
 
 """
@@ -144,7 +143,6 @@ output_generator(braidwork::BraidReceipt) = generator(ShuffleProofs.output_gener
 
 Return output member pseudonyms of the braid at a resulting output generator. See [`output_generator`](@ref)
 """
-#output_members(braidwork::BraidReceipt) = Set(Pseudonym[pseudonym(i) for i in ShuffleProofs.output_members(braidwork.braid.proposition)])
 output_members(braidwork::BraidReceipt) = Pseudonym[pseudonym(i) for i in ShuffleProofs.output_members(braidwork.braid.proposition)]
 
 

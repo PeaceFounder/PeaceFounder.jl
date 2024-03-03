@@ -477,7 +477,7 @@ TicketID(x::String) = TicketID(copy(Vector{UInt8}(x)))
 
 Represents an admission certificate for a pseudonym `id`. 
 
-**Interface:** [`approve`](@ref), [`issuer`](@ref), [`id`](@ref), [`ticket`](@ref), [`isadmitted`](@ref)
+**Interface:** [`approve`](@ref), [`issuer`](@ref), [`id`](@ref), [`ticket`](@ref), [`isadmitted`]
 """
 struct Admission
     ticketid::TicketID # document on which basis registrar have decided to approve the member
