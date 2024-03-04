@@ -18,63 +18,58 @@ import .OxygenInstance: @get, @put, @post, mergeschema, serve, Request, Response
 const ROUTER = OxygenInstance.CONTEXT[].service.router
 
 export serve
-# POST /braidchain/members : Membership -> AckInclusion
-# GET /braidchain/members : Vector{Tuple{Int, Membership}}
-# GET /braidchain/members?id={Pseudonym} : Tuple{Int, Membership}
-# GET /braidchain/members?pseudonym={Pseudonym} : Tuple{Int, Membership}
+
+# TODO: Put return types in swagger docs
+
+# GET /deme # returns a current manifest file
+# GET /deme/{hash}
+
+# POST /tickets : Tuple{TicketID, DateTime, auth_code::Digest} -> Tuple{salt::Vector{UInt8}, auth_code::Digest} # resets token when repeated
+# DELETE /tickets/{TicketID}
+# PUT /tickets/{TicketID} : Tuple{Pseudonym, auth_code::Digest} -> Admission
+# GET /tickets/{TicketID} : TicketStatus
+
+# POST /braidchain/members : Member -> AckInclusion{ChainState}
+# GET /braidchain/members : Vector{Tuple{Int, Member}}
+# GET /braidchain/members?id={Pseudonym} : Tuple{Int, Member}
+# GET /braidchain/members?pseudonym={Pseudonym} : Tuple{Int, Member}
 
 # POST /braidchain/proposals : Proposal -> AckInclusion
 # GET /braidcahin/proposals/{UUID} : Tuple{Int, Proposal}
 # GET /braidchain/proposals : Vector{Tuple{Int, Proposal}}
 
 # GET /braidchain/{Int}/record : Transaction
-# GET /braidchain/{Int}/leaf : AckInclusion
-# GET /braidchain/{Int}/root : AckConsistency
-# GET /braidchain/commit : Commit
+# GET /braidchain/{Int}/leaf : AckInclusion{ChainState}
+# GET /braidchain/{Int}/root : AckConsistency{ChainState}
+# GET /braidchain/commit : Commit{ChainState}
 # GET /braidchain/tar : BraidChainArchive
 
-# POST /pollingstation/{UUID}/votes : Vote -> AckInclusion
+# POST /pollingstation/{UUID}/votes : Vote -> CastAck
 # GET /pollingstation/{UUID}/spine : Vector{Digest}
 # GET /pollingstation/{UUID}/commit : Commit{BallotBoxState}
 # GET /pollingstation/{UUID}/proposal : Tuple{Int, Proposal}
-# GET /pollingstation/{UUID}/votes/{Int}/record : Vote
-# GET /pollingstation/{UUID}/votes/{Int}/leaf : AckInclusion
-# GET /pollingstation/{UUID}/votes/{Int}/root : AckConsistency
+# GET /pollingstation/{UUID}/votes/{Int}/record : CastRecord
+# GET /pollingstation/{UUID}/votes/{Int}/receipt : CastReceipt
+# GET /pollingstation/{UUID}/votes/{Int}/leaf : AckInclusion{BallotBoxState}
+# GET /pollingstation/{UUID}/votes/{Int}/root : AckConsistency{BallotBoxState}
 # GET /pollingstation/{UUID}/tar : BallotBoxArchive
 # GET /pollingstation/collectors # necessary to make a proposal
 
 
+# A sketch for external braider implementation 
 
-# I need to define @swagger 
-
-
-# const DOCS = []
-
-# macro swagger_str(doc)
-#     m = @__MODULE__
-#     return esc(quote push!($m.DOCS, $doc) end)
-# end
-
-# macro swagger(doc)
-#     return esc(quote push!($DOCS, $doc) end)
-# end
-
+# GET /braider : BraiderStatus
+# GET /braider/jobs : Vector{JobID}
+# GET /braider/jobs/{JobID} : JobStatus
+# GET /braider/jobs/{JobID}/braid : Braid
+# POST /braider/jobs : BraidJobSpec -> JobID
+# PUT /braider/jobs/{JobID} : Tuple{Vector{Pseudonym}, Generator} -> JobStatus
 
 
 @get "/deme" function(req::Request)
     return Response(200, marshal(Mapper.get_deme()))
 end
 
-# This could be done with a simple encryption of the request
-# @post "/tickets" function(req::Request) 
-    
-#     ticketid, timestamp, auth_code = unmarshal(req.body, Tuple{TicketID, DateTime, Digest})
-#     response = Mapper.enlist_ticket(ticketid, timestamp, auth_code)
-
-#     return Response(200, marshal(response))
-# end
-
-using Infiltrator
 
 @swagger """
 /tickets:
