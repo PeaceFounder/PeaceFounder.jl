@@ -1,6 +1,32 @@
-# REST API
+# HTTP API
 
-This is an approximate rest API for the PeaceFounder. In future, this will be properly generated and documented from the code. 
+
+```@raw html
+
+<style>
+  .swagger-ui .information-container {
+    display: none !important;
+  }
+
+  .swagger-ui #operations-tag-default {
+    display: none !important;
+  }
+
+</style>
+
+
+<div id="swagger-ui"></div>
+<script>
+  window.onload = () => {
+      window.ui = SwaggerUIBundle({
+          url: window.location.origin + "/assets/schema.json", 
+          dom_id: '#swagger-ui',
+      });
+  };
+</script>
+```
+
+
 
 ```
 GET /deme # returns a current manifest file

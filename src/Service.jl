@@ -44,6 +44,23 @@ export serve
 # GET /pollingstation/collectors # necessary to make a proposal
 
 
+
+# I need to define @swagger 
+
+
+# const DOCS = []
+
+# macro swagger_str(doc)
+#     m = @__MODULE__
+#     return esc(quote push!($m.DOCS, $doc) end)
+# end
+
+# macro swagger(doc)
+#     return esc(quote push!($DOCS, $doc) end)
+# end
+
+
+
 @get "/deme" function(req::Request)
     return Response(200, marshal(Mapper.get_deme()))
 end
@@ -243,12 +260,12 @@ end
 
 
 # title and version are required
-# info = Dict("title" => "PeaceFounder API", "version" => "0.4.0")
-# openApi = OpenAPI("3.0", info)
-# swagger_document = build(openApi)
+info = Dict("title" => "PeaceFounder API", "version" => "0.4.0")
+openApi = OpenAPI("3.0", info)
+swagger_document = build(openApi)
   
 # # merge the SwaggerMarkdown schema with the internal schema
-# OxygenInstance.mergeschema(swagger_document)
+OxygenInstance.mergeschema(swagger_document)
 
 
 end
