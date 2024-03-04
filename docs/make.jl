@@ -33,8 +33,10 @@ makedocs(
     sitename = "PeaceFounder.jl",
     repo = Documenter.Remotes.GitHub("PeaceFounder", "PeaceFounder.jl"),
     format = Documenter.HTML(
-        assets = [asset("https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.8/swagger-ui-bundle.js", class=:js, load_early=true),
-                  asset("https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.8/swagger-ui.css", class=:css)]
+        assets = [
+            asset("https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.8/swagger-ui-bundle.js", class=:js, load_early=true),
+            asset("https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.8/swagger-ui.css", class=:css, load_early=true) # for dark theme to work
+        ]
 
     ),
     modules = [PeaceFounder.Model, PeaceFounder.Client],
