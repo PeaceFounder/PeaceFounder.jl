@@ -17,9 +17,18 @@
 
 <div id="swagger-ui"></div>
 <script>
+
   window.onload = () => {
+
+    var pathArray = window.location.pathname.split('/');
+    pathArray.pop();
+    pathArray.pop();
+    pathArray.push('assets', 'schema.json');
+    var relativePath = pathArray.join('/');
+    
+    console.log(relativePath);
       window.ui = SwaggerUIBundle({
-          url: window.location.origin + "/assets/schema.json", 
+          url: relativePath,
           dom_id: '#swagger-ui',
       });
   };
