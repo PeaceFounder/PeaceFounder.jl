@@ -35,7 +35,7 @@ function Ticket(ticketid::TicketID, timestamp::DateTime, hmac::HMAC; nlen=16)
 end
 
 
-function reset!(ticket::Ticket, timestamp::DateTime, hmac::HMAC; nlen=16) # nlen needs to be coupled with registrar at the Mapper level
+function reset!(ticket::Ticket, timestamp::DateTime, hmac::HMAC; nlen=length(ticket.token)) # nlen needs to be coupled with registrar at the Mapper level
 
     if timestamp < ticket.timestamp
         @warn "Ignoring old token reset request."
@@ -227,7 +227,7 @@ hasher(invite::Invite) = invite.hasher
 Registers a new ticket with given `TicketID` and returns an invite. If ticket is already registered the same invite is returned.
 Throws an error when ticket is already registered.
 """
-function enlist!(registrar::Registrar, ticketid::TicketID, timestamp::DateTime; route::URI=registrar.route)
+function enlist!(registrar::Registrar, ticketid::TicketID, timestamp::DateTime; route::URI=registrar.route, reset::Bool=false)
 
     # Assertion for request is needed to be done at Service layer
     # @assert (Dates.now() - timestamp) < Second(3600) "Request too old"
@@ -239,6 +239,11 @@ function enlist!(registrar::Registrar, ticketid::TicketID, timestamp::DateTime; 
             if isadmitted(ticket)
                 error("Ticket with $ticketid is already admitted.")
             else
+                
+                if reset
+                    reset!(ticket, timestamp, registrar.hmac)
+                end
+
                 return Invite(demehash, ticket.token, hasher(registrar.hmac), route)
             end
         end

@@ -67,7 +67,7 @@ export serve
 
 
 @get "/deme" function(req::Request)
-    return Response(200, marshal(Mapper.get_deme()))
+    return Response(200, marshal(Mapper.get_demespec()))
 end
 
 

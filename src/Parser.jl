@@ -184,7 +184,7 @@ function Base.string(invite::Invite)
     end
 end
 
-function StructTypes.construct(::Type{Invite}, invite_str::AbstractString)
+function StructTypes.construct(::Type{Invite}, invite_str::AbstractString) 
     
     uri = URI(invite_str)
     @assert uri.scheme == "deme"
@@ -205,6 +205,8 @@ function StructTypes.construct(::Type{Invite}, invite_str::AbstractString)
     return Invite(demehash, token, hasher, route)
 end
 
+marshal(invite::Invite) = Vector{UInt8}(string(invite))
+unmarshal(bytes, ::Type{Invite}) = construct(Invite, String(bytes))
 
 export marshal, unmarshal
 

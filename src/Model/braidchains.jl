@@ -48,17 +48,13 @@ Represents a deme configuration parameters issued by the guardian.
     proposer::Pseudonym 
     collector::Pseudonym
 
-    #timestamp::Union{DateTime, Nothing} = nothing
-
     # If an adversary can pinpoint the address from which a message was sent and its effect on the system, 
     # then they already know the contents of the message. Therefore, a TLS connection only marginally 
     # helps ensure the confidentiality of the cast vote. Phising and Tampering is dealt with signatures on tree roots and
     # data theft is nonissue as everything is public. 
-
     # cert::Nothing # An optional TLS certificate used for communication
 
     seal::Union{Seal, Nothing} = nothing
-    #signature::Union{Signature, Nothing} = nothing
 end
 
 # Need to improve this
@@ -66,13 +62,15 @@ Base.:(==)(x::DemeSpec, y::DemeSpec) = x.uuid == y.uuid && x.title == y.title &&
 
 #DemeSpec(title::String, email::String, crypto::CryptoSpec) = DemeSpec(UUID(rand(1:10000)), title, email, crypto, nothing)
 
+issuer(spec::DemeSpec) = pseudonym(spec.seal)
+
 function Base.show(io::IO, deme::DemeSpec)
 
     println(io, "DemeSpec:")
     println(io, "  title : $(deme.title)")
     println(io, "  email : $(deme.email)")
     println(io, "  uuid : $(deme.uuid)")
-    println(io, "  guardian : $(string(deme.guardian))")
+    println(io, "  guardian : $(string(issuer(deme)))")
     println(io, "  recorder : $(string(deme.recorder))")
     println(io, "  registrar : $(string(deme.registrar))")
     println(io, "  proposer : $(string(deme.proposer))")
@@ -192,7 +190,7 @@ function Base.show(io::IO, chain::BraidChain)
     println(io, "BraidChain:")
     println(io, "  members : $(length(chain.members)) entries")
     println(io, "  generator : $(string(chain.generator))")
-    println(io, "  guardian : $(string(chain.spec.guardian))")
+    println(io, "  guardian : $(string(issuer(spec)))")
     println(io, "  recorder : $(string(chain.spec.recorder))")
     println(io, "")
     #println(io, show_string(chain.ledger))
@@ -483,7 +481,7 @@ struct Admission
     ticketid::TicketID # document on which basis registrar have decided to approve the member
     id::Pseudonym
     #timestamp::DateTime # Timestamp could be used as a deadline
-    approval::Union{Seal, Nothing}
+    seal::Union{Seal, Nothing}
     # demespec::Digest # To prevent malicios guardian to downgrade cryptographic parameters, set a selective route compromising anonimity. Uppon receiving admission member would test that demespec is the one as sent in the invite.  
 end
 
@@ -491,7 +489,7 @@ end
 
 Admission(ticketid::TicketID, id::Pseudonym) = Admission(ticketid, id, nothing)
 
-Base.:(==)(x::Admission, y::Admission) = x.ticketid == y.ticketid && x.id == y.id && x.approval == y.approval
+Base.:(==)(x::Admission, y::Admission) = x.ticketid == y.ticketid && x.id == y.id && x.seal == y.seal
 
 """
     isbinding(admission::Admission, spec::DemeSpec)
@@ -507,9 +505,9 @@ isbinding(admission::Admission, deme::DemeSpec) = issuer(admission) == deme.regi
 Cryptographically sign a document `x::T` and returns a signed document with the same type. To check whether a document
 is signed see `issuer` method.
 """
-approve(admission::Admission, signer::Signer) = @set admission.approval = seal(admission, signer)
+approve(admission::Admission, signer::Signer) = @set admission.seal = seal(admission, signer)
 
-issuer(admission::Admission) = isnothing(admission.approval) ? nothing : pseudonym(admission.approval)
+issuer(admission::Admission) = isnothing(admission.seal) ? nothing : pseudonym(admission.seal)
 
 id(admission::Admission) = admission.id
 
@@ -526,7 +524,7 @@ function Base.show(io::IO, admission::Admission)
     println(io, "Admission:")
     println(io, "  ticket : $(string(admission.ticketid))")
     println(io, "  identity : $(string(admission.id))")
-    println(io, "  timestamp : $(admission.timestamp)")
+    println(io, "  timestamp : $(admission.seal.timestamp)")
     print(io, "  issuer : $(string(issuer(admission)))")
 
 end
@@ -623,16 +621,17 @@ function Base.push!(chain::BraidChain, m::Membership)
     return
 end
 
+using Infiltrator
 
 function record!(chain::BraidChain, m::Membership)
 
     N = findfirst(==(m), ledger(chain))
     !isnothing(N) && return N
-    
+
     
     @assert generator(chain) == generator(m)
     @assert !(pseudonym(m) in members(chain))
-    @assert pseudonym(m.admission.approval) == chain.spec.registrar
+    @assert pseudonym(m.admission.seal) == chain.spec.registrar
 
     @assert verify(m, crypto(chain.spec)) # verifies also admission 
 

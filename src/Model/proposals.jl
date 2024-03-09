@@ -269,9 +269,9 @@ end
 
 Issue a vote on a proposal and provided collector `seed` for a member's `selection`. 
 """
-function vote(proposal::Proposal, seed::Digest, selection::Selection, signer::Signer; seq = 1)
+function vote(proposal::Proposal, seed::Digest, selection::Selection, signer::Signer; seq = 1, force = false)
 
-    @assert isconsistent(selection, proposal.ballot)
+    force || @assert isconsistent(selection, proposal.ballot)
     
     proposal_digest = digest(proposal, hasher(signer.spec))
 

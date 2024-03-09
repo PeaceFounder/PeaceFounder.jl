@@ -95,7 +95,7 @@ end
 
 
 # The body method is actually pretty interesting 
-body(admission::Admission) = @set admission.approval = nothing
+body(admission::Admission) = @set admission.seal = nothing
 
 body(spec::DemeSpec) = @set spec.seal = nothing
 
@@ -172,7 +172,7 @@ function verify(admission::Admission, crypto::CryptoSpec)
 
     bytes = canonicalize(body(admission))
     
-    return verify(bytes, admission.approval, crypto)
+    return verify(bytes, admission.seal, crypto)
 end
 
 

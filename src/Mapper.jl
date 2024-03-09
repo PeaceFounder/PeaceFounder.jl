@@ -203,10 +203,11 @@ get_route() = REGISTRAR[].route
 
 get_recruit_key() = Model.key(REGISTRAR[])
 
-get_deme() = BRAID_CHAIN[].spec
+#get_deme() = BRAID_CHAIN[].spec
+get_demespec() = BRAID_CHAIN[].spec
 
-enlist_ticket(ticketid::TicketID, timestamp::DateTime; expiration_time = nothing) = Model.enlist!(REGISTRAR[], ticketid, timestamp)
-enlist_ticket(ticketid::TicketID; expiration_time = nothing) = enlist_ticket(ticketid, Dates.now(); expiration_time)
+enlist_ticket(ticketid::TicketID, timestamp::DateTime; expiration_time = nothing, reset=false) = Model.enlist!(REGISTRAR[], ticketid, timestamp; reset)
+enlist_ticket(ticketid::TicketID; expiration_time = nothing, reset=false) = enlist_ticket(ticketid, Dates.now(); expiration_time, reset)
 
 # Useful for an admin
 #delete_ticket!(ticketid::TicketID) = Model.remove!(REGISTRAR[], ticketid) # 
@@ -218,6 +219,22 @@ get_ticket_admission(ticketid::TicketID) = Model.select(Admission, ticketid, REG
 get_ticket_timestamp(ticketid::TicketID) = Model.select(Ticket, ticketid, REGISTRAR[]).timestamp
 
 get_ticket(tokenid::AbstractString) = Model.select(Ticket, tokenid, REGISTRAR[])
+get_ticket(ticketid::TicketID) = Model.select(Ticket, ticketid, REGISTRAR[])
+
+function delete_ticket(ticketid::TicketID)
+    
+    ticket_index = findfirst(x -> x.ticketid == ticketid, REGISTRAR[].tickets)
+    ticket = REGISTRAR[].tickets[ticket_index]
+
+    @assert isnothing(ticket.admission) "Ticket's can't be removed after admitted. May be allowed in the future with membership termination."
+
+    deleteat!(Mapper.REGISTRAR[].tickets, ticket_index)
+
+    return
+end
+
+
+
 
 # The benfit of refering to a single ticketid is that it is long lasting
 seek_admission(id::Pseudonym, ticketid::TicketID) = Model.admit!(REGISTRAR[], id, ticketid) 

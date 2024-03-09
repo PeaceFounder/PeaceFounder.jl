@@ -637,7 +637,7 @@ end
 list_proposal_instances(voter::DemeAccount) = voter.proposals
 
 
-function cast_vote!(instance::ProposalInstance, deme::DemeSpec, selection, signer::Signer; server::Route)
+function cast_vote!(instance::ProposalInstance, deme::DemeSpec, selection, signer::Signer; server::Route, force = false)
 
     (; index, proposal) = instance
 
@@ -653,7 +653,7 @@ function cast_vote!(instance::ProposalInstance, deme::DemeSpec, selection, signe
     @assert isbinding(commit, proposal, hasher(deme))
     @assert verify(commit, Model.crypto(deme))
     
-    vote = Model.vote(proposal, Model.seed(commit), selection, signer)
+    vote = Model.vote(proposal, Model.seed(commit), selection, signer; force)
     ack = cast_vote(server, proposal.uuid, vote)
 
     @assert isbinding(ack, proposal, hasher(deme))
@@ -667,13 +667,13 @@ function cast_vote!(instance::ProposalInstance, deme::DemeSpec, selection, signe
 end
 
 
-function cast_vote!(voter::DemeAccount, identifier::Union{UUID, Int}, selection)
+function cast_vote!(voter::DemeAccount, identifier::Union{UUID, Int}, selection; force = false)
 
     instance = get_proposal_instance(voter, identifier)
 
     #@warn "Imagine a TOR circuit being created..."
     
-    cast_vote!(instance, voter.deme, selection, voter.signer; server = voter.route)
+    cast_vote!(instance, voter.deme, selection, voter.signer; server = voter.route, force)
 
     return
 end
@@ -799,7 +799,7 @@ update_deme!(client::DemeClient, uuid::UUID) = update_deme!(select(client, uuid)
 
 list_proposal_instances(client::DemeClient, uuid::UUID) = list_proposal_instances(select(client, uuid))
 
-cast_vote!(client::DemeClient, uuid::UUID, index::Int, selection) = cast_vote!(select(client, uuid), index, selection)
+cast_vote!(client::DemeClient, uuid::UUID, index::Int, selection; force=false) = cast_vote!(select(client, uuid), index, selection; force)
 
 check_vote!(client::DemeClient, uuid::UUID, index::Int) = check_vote!(select(client, uuid), index)
 

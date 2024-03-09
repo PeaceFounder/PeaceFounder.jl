@@ -28,7 +28,7 @@ authorized_roles = Mapper.setup(crypto.group, crypto.generator) do pbkeys
 end
 
 PROPOSER = Mapper.PROPOSER[]
-DEMESPEC = Mapper.BRAID_CHAIN[].spec
+DEMESPEC = Mapper.get_demespec() #Mapper.BRAID_CHAIN[].spec
 
 
 function enroll(signer, invite::Invite)
