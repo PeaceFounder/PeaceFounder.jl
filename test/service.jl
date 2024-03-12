@@ -1,5 +1,5 @@
 using Test
-import PeaceFounder: Client, Service, Mapper, Model, Schedulers
+import PeaceFounder: Client, Service, Mapper, Model, Schedulers, RegistrarController
 import .Model: CryptoSpec, DemeSpec, Signer, id, approve
 #import .Service: ROUTER
 import Dates
@@ -40,9 +40,9 @@ eve_invite = Mapper.enlist_ticket(Model.TicketID("Eve"))
 # ------------- invite gets sent over a QR code --------------
 
 # 
-@test !Model.isadmitted(Client.get_ticket_status(SERVER, alice_ticketid))
+@test !RegistrarController.isadmitted(Client.get_ticket_status(SERVER, alice_ticketid))
 alice = Client.enroll!(alice_invite; server = SERVER, key = 2)
-@test Model.isadmitted(Client.get_ticket_status(SERVER, alice_ticketid))
+@test RegistrarController.isadmitted(Client.get_ticket_status(SERVER, alice_ticketid))
 
 bob = Client.enroll!(bob_invite; server = SERVER, key = 3) 
 

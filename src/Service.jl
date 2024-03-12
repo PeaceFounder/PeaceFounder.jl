@@ -5,7 +5,7 @@ module Service
 
 using ..Mapper
 using ..Parser: marshal, unmarshal
-using ..Model: TicketID, Digest, Pseudonym, Digest, Membership, Proposal, Vote, Registrar, bytes
+using ..Model: TicketID, Digest, Pseudonym, Digest, Membership, Proposal, Vote, bytes
 using ..Authorization: AuthServerMiddleware, timestamp, credential
 using Dates: DateTime, Second, now
 using Base: UUID

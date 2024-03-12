@@ -7,7 +7,9 @@ using URIs: URI
 
 import ..Schedulers: Schedulers, Scheduler, next_event
 using ..Model
-using ..Model: CryptoSpec, pseudonym, BraidChain, Registrar, PollingStation, TicketID, Membership, Proposal, Ballot, Selection, Transaction, Signer, BraidBroker, Pseudonym, Vote, id, DemeSpec, Digest, Admission, Ticket, Generator, GroupSpec
+using ..Model: CryptoSpec, pseudonym, BraidChain, PollingStation, TicketID, Membership, Proposal, Ballot, Selection, Transaction, Signer, BraidBroker, Pseudonym, Vote, id, DemeSpec, Digest, Admission, Generator, GroupSpec
+using ..RegistrarController
+using ..RegistrarController: Registrar, Ticket
 
 
 const RECORDER = Ref{Union{Signer, Nothing}}(nothing)
@@ -135,7 +137,7 @@ function setup(demefunc::Function, groupspec::GroupSpec, generator::Generator)
         signer = Signer(demespec.crypto, generator, key_list[N])
         hmac_key = Model.bytes(Model.digest(Vector{UInt8}(string(key_list[N])), demespec.crypto)) # 
         REGISTRAR[] = Registrar(signer, hmac_key)
-        Model.set_demehash!(REGISTRAR[], demespec) 
+        RegistrarController.set_demehash!(REGISTRAR[], demespec) 
     end
 
     N = findfirst(x->x==demespec.braider, pseudonym_list)
@@ -198,7 +200,7 @@ end
 tally_votes!(uuid::UUID) = Model.commit!(POLLING_STATION[], uuid, COLLECTOR[]; with_tally = true);
 
 set_demehash(spec::DemeSpec) = Model.set_demehash!(REGISTRAR[], spec)
-set_route(route::Union{URI, String}) = Model.set_route!(REGISTRAR[], route)
+set_route(route::Union{URI, String}) = RegistrarController.set_route!(REGISTRAR[], route)
 get_route() = REGISTRAR[].route
 
 get_recruit_key() = Model.key(REGISTRAR[])
@@ -206,7 +208,7 @@ get_recruit_key() = Model.key(REGISTRAR[])
 #get_deme() = BRAID_CHAIN[].spec
 get_demespec() = BRAID_CHAIN[].spec
 
-enlist_ticket(ticketid::TicketID, timestamp::DateTime; expiration_time = nothing, reset=false) = Model.enlist!(REGISTRAR[], ticketid, timestamp; reset)
+enlist_ticket(ticketid::TicketID, timestamp::DateTime; expiration_time = nothing, reset=false) = RegistrarController.enlist!(REGISTRAR[], ticketid, timestamp; reset)
 enlist_ticket(ticketid::TicketID; expiration_time = nothing, reset=false) = enlist_ticket(ticketid, Dates.now(); expiration_time, reset)
 
 # Useful for an admin
@@ -214,7 +216,7 @@ enlist_ticket(ticketid::TicketID; expiration_time = nothing, reset=false) = enli
 
 get_ticket_ids() = Model.ticket_ids(REGISTRAR[])
 
-get_ticket_status(ticketid::TicketID) = Model.ticket_status(ticketid, REGISTRAR[])
+get_ticket_status(ticketid::TicketID) = RegistrarController.ticket_status(ticketid, REGISTRAR[])
 get_ticket_admission(ticketid::TicketID) = Model.select(Admission, ticketid, REGISTRAR[])
 get_ticket_timestamp(ticketid::TicketID) = Model.select(Ticket, ticketid, REGISTRAR[]).timestamp
 
@@ -237,7 +239,7 @@ end
 
 
 # The benfit of refering to a single ticketid is that it is long lasting
-seek_admission(id::Pseudonym, ticketid::TicketID) = Model.admit!(REGISTRAR[], id, ticketid) 
+seek_admission(id::Pseudonym, ticketid::TicketID) = RegistrarController.admit!(REGISTRAR[], id, ticketid) 
 get_admission(id::Pseudonym) = Model.select(Admission, id, REGISTRAR[])
 list_admissions() = [i.admission for i in REGISTRAR[].tickets]
 

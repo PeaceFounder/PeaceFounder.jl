@@ -929,7 +929,7 @@ See also [`record!`](@ref)
 """
 function record!(ballotbox::BallotBox, record::CastRecord)
 
-    @assert length(ballotbox.queue) == 0 "BallotBox have uncommited votes."
+    @assert length(ballotbox.queue) == 0 "BallotBox has uncommited votes."
 
     (; vote ) = record
 

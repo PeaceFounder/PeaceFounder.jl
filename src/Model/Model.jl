@@ -5,7 +5,6 @@ module Model
 
 using StructEquality
 
-#using StructHelpers
 
 using JSON3, StructTypes # used temporaraly for canonicalize
 
@@ -14,10 +13,6 @@ using Dates
 using Setfield
 
 using HistoryTrees
-
-#using Infiltrator
-
-# Proposals and Braids can be treated the same way as they are in a blockchain as proofs of work.
 
 
 
@@ -127,7 +122,7 @@ end
 
 include("crypto.jl")
 include("braidchains.jl")
-include("registrar.jl")
+#include("registrar.jl")
 include("braids.jl") # reordered
 include("proposals.jl")
 include("seal.jl") # Defines how values should be canonicalized. Could contain means for a signer with a state.

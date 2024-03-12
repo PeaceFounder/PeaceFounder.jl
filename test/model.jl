@@ -1,8 +1,11 @@
 using Dates
 using Test
 import PeaceFounder.Model
+import PeaceFounder.RegistrarController
 
-import .Model: CryptoSpec, pseudonym, BraidChain, commit!, Registrar, PollingStation, TicketID, add!, id, admit!, commit, verify, generator, Membership, approve, record!, ack_leaf, isbinding, roll, constituents, members, state, Proposal, vote, Ballot, Selection, uuid, record, spine, tally, seed, set_seed!, ack_cast, hasher, HMAC, enlist!, DemeSpec, generate, Signer, key, braid, Model, set_demehash!, Ticket, tokenid, select, digest, voters
+import .Model: CryptoSpec, pseudonym, BraidChain, commit!, PollingStation, TicketID, add!, id, commit, verify, generator, Membership, approve, record!, ack_leaf, isbinding, roll, constituents, members, state, Proposal, vote, Ballot, Selection, uuid, record, spine, tally, seed, set_seed!, ack_cast, hasher, HMAC, DemeSpec, generate, Signer, key, braid, Model, select, digest, voters
+import .RegistrarController: Registrar, admit!, enlist!, set_demehash!, Ticket, tokenid
+
 
 crypto = CryptoSpec("sha256", "EC: P_192")
 #crypto = CryptoSpec("sha256", "EC: P-192")

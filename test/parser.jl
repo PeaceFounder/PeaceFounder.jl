@@ -1,6 +1,7 @@
 using Test
-import PeaceFounder: Model, Parser
-import .Model: TicketID, Digest, Pseudonym, Admission, Seal, DemeSpec, CryptoSpec, Membership, Signature, Generator, id, HashSpec, Invite
+import PeaceFounder: Model, Parser, RegistrarController
+import .Model: TicketID, Digest, Pseudonym, Admission, Seal, DemeSpec, CryptoSpec, Membership, Signature, Generator, id, HashSpec
+import .RegistrarController: Invite
 import .Parser: marshal, unmarshal
 import Dates: DateTime, now
 import URIs: URI

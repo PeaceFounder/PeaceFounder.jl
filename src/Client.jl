@@ -2,10 +2,11 @@ module Client
 # Methods to interact with HTTP server
 
 using ..Model
-using ..Model: Membership, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, HashSpec, AckConsistency, AckInclusion, CastAck, DemeSpec, Signer, TicketStatus, Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen, digest, tokenid
+using ..Model: Membership, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, HashSpec, AckConsistency, AckInclusion, CastAck, DemeSpec, Signer,  Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen, digest
+using ..RegistrarController: TicketStatus, tokenid, Invite
 using Base: UUID
 
-using ..Model: id, hasher, pseudonym, isbinding, generator, isadmitted, state, verify, crypto, index, root, commit, isconsistent, istallied, issuer, Invite
+using ..Model: id, hasher, pseudonym, isbinding, generator, state, verify, crypto, index, root, commit, isconsistent, istallied, issuer
 import ..Authorization: AuthClientMiddleware
 
 using HTTP: Router, Request, Response, Handler, HTTP, iserror, StatusError
@@ -447,7 +448,9 @@ Model.pseudonym(voter::DemeAccount, g) = pseudonym(voter.signer, g)
 Model.pseudonym(voter::DemeAccount, proposal::Proposal) = pseudonym(voter.signer, Model.generator(proposal))
 Model.pseudonym(voter::DemeAccount, instance::ProposalInstance) = pseudonym(voter, instance.proposal)
 
-Model.isadmitted(voter::DemeAccount) = !isnothing(voter.guard.admission)
+#Model.isadmitted(voter::DemeAccount) = !isnothing(voter.guard.admission)
+
+isadmitted(voter::DemeAccount) = !isnothing(voter.guard.admission)
 
 Model.hasher(voter::DemeAccount) = hasher(voter.deme)
 

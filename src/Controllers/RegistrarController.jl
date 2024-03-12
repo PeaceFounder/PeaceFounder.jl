@@ -1,6 +1,12 @@
+module RegistrarController
+
 import Random
 using URIs
 using Base64: base64encode # for tokenid
+using Dates: DateTime
+
+using ..Model: TicketID, Admission, HMAC, Digest, DemeSpec, HashSpec, Pseudonym, Signer, CryptoSpec, digest, bytes, approve
+import ..Model: id, hasher, generate, key, select, isbinding
 
 # One could add expiration policy and etc. Currently that is not needed.
 
@@ -214,7 +220,7 @@ Base.show(io::IO, invite::Invite) = print(io, string(invite))
 # This gives a nasty error for some reason when CryptoGroups are imported.
 #@batteries Invite
 
-isbinding(spec::DemeSpec, invite::Invite) = Model.digest(spec, invite.hasher) == invite.demehash
+isbinding(spec::DemeSpec, invite::Invite) = digest(spec, invite.hasher) == invite.demehash
 
 # Parsing to string and back
 
@@ -340,3 +346,6 @@ end
 Check whether ticket is addmitted. 
 """
 isadmitted(status::TicketStatus) = !isnothing(status.admission)
+
+
+end

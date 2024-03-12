@@ -2,7 +2,10 @@ using Test
 
 import PeaceFounder.Model
 import PeaceFounder.Mapper
-using PeaceFounder.Model: CryptoSpec, pseudonym, TicketID, Membership, Proposal, Ballot, Selection, generator, state, id, vote, seed, tally, approve, istallied, DemeSpec, hasher, HMAC, token, isbinding, Generator, generate, Signer, Invite, tokenid
+using PeaceFounder.Model: CryptoSpec, pseudonym, TicketID, Membership, Proposal, Ballot, Selection, generator, state, id, vote, seed, tally, approve, istallied, DemeSpec, hasher, HMAC, isbinding, Generator, generate, Signer
+import PeaceFounder.RegistrarController
+import PeaceFounder.RegistrarController: tokenid, Invite
+
 
 import Dates: Dates, Date
 
@@ -69,7 +72,7 @@ access_bob, ack = enroll(bob, invite_bob)
 eve = Signer(crypto, 4)
 access_eve, ack = enroll(eve, invite_eve)
 
-@test Mapper.get_ticket_status(ticketid_alice) isa Model.TicketStatus
+@test Mapper.get_ticket_status(ticketid_alice) isa RegistrarController.TicketStatus
 @test Mapper.get_ticket_admission(ticketid_alice) isa Model.Admission
 
 ### Braiding

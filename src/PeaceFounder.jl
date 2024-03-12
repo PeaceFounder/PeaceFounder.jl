@@ -13,6 +13,9 @@ using .StaticSets
 include("Model/Model.jl")
 using .Model
 
+include("Controllers/RegistrarController.jl")
+using .RegistrarController
+
 include("Utils/Schedulers.jl")
 import .Schedulers
 
