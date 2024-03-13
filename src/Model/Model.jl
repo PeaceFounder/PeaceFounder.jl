@@ -74,6 +74,13 @@ Return a pseudonym used to seal the vote.
 """
 function pseudonym end
 
+function select end # This will be defined on the archive eventually 
+
+function members end
+
+function state end
+
+
 # I could implement that in the library
 using HistoryTrees: InclusionProof, ConsistencyProof
 

@@ -157,28 +157,5 @@ function Base.show(io::IO, braid::BraidReceipt)
 end
 
 
-function Base.push!(chain::BraidChain, braidwork::BraidReceipt)
-
-    push!(chain.ledger, braidwork)
-    push!(chain.tree, digest(braidwork, hasher(chain.spec)))
-
-    chain.generator = output_generator(braidwork)
-    chain.members = Set(output_members(braidwork))
-
-    return
-end
-
-
-function record!(chain::BraidChain, braidwork::BraidReceipt)
-
-    @assert generator(chain) == input_generator(braidwork)
-    @assert members(chain) == Set(input_members(braidwork))
-
-    @assert verify(braidwork, crypto(chain.spec)) "Braid is invalid"
-
-    push!(chain, braidwork)
-
-    return length(chain)
-end
 
 

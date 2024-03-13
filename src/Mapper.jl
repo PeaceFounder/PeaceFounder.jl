@@ -7,9 +7,13 @@ using URIs: URI
 
 import ..Schedulers: Schedulers, Scheduler, next_event
 using ..Model
-using ..Model: CryptoSpec, pseudonym, BraidChain, PollingStation, TicketID, Membership, Proposal, Ballot, Selection, Transaction, Signer, BraidBroker, Pseudonym, Vote, id, DemeSpec, Digest, Admission, Generator, GroupSpec
+using ..Model: CryptoSpec, pseudonym, PollingStation, TicketID, Membership, Proposal, Ballot, Selection, Transaction, Signer, BraidBroker, Pseudonym, Vote, id, DemeSpec, Digest, Admission, Generator, GroupSpec
 using ..RegistrarController
 using ..RegistrarController: Registrar, Ticket
+using ..BraidChainController
+using ..BraidChainController: BraidChain
+
+
 
 
 const RECORDER = Ref{Union{Signer, Nothing}}(nothing)
@@ -243,7 +247,7 @@ seek_admission(id::Pseudonym, ticketid::TicketID) = RegistrarController.admit!(R
 get_admission(id::Pseudonym) = Model.select(Admission, id, REGISTRAR[])
 list_admissions() = [i.admission for i in REGISTRAR[].tickets]
 
-get_chain_roll() = Model.roll(BRAID_CHAIN[])
+get_chain_roll() = BraidChainController.roll(BRAID_CHAIN[])
 get_member(_id::Pseudonym) = filter(x -> Model.id(x) == _id, list_members())[1] # Model.select
 
 get_chain_commit() = Model.commit(BRAID_CHAIN[])
@@ -278,7 +282,7 @@ get_members() = Model.members(BRAID_CHAIN[])
 get_generator(N::Int) = Model.generator(BRAID_CHAIN[], N)
 get_generator() = Model.generator(BRAID_CHAIN[])
 
-get_chain_proposal_list() = collect(Model.list(Proposal, BRAID_CHAIN[]))
+get_chain_proposal_list() = collect(BraidChainController.list(Proposal, BRAID_CHAIN[]))
 
 
 function schedule_pulse!(uuid::UUID, timestamp, nonceid)

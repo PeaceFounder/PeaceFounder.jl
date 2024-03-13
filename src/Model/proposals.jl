@@ -134,12 +134,6 @@ UUID for a proposal. Issued by proposer and it's purpose is to croslink to an ex
 """
 uuid(proposal::Proposal) = proposal.uuid
 
-"""
-    isbinding(chain::BraidChain, state::ChainState)::Bool
-
-Check that chain state is consistent with braidchain ledger.
-"""
-isbinding(chain::BraidChain, state::ChainState) = root(chain, index(state)) == root(state) && generator(chain, index(state)) == generator(state)
 
 
 isdone(proposal::Proposal; time) = proposal.closed < time
@@ -181,45 +175,6 @@ function Base.show(io::IO, proposal::Proposal)
 
 end
 
-function Base.push!(chain::BraidChain, p::Proposal)
-    push!(chain.ledger, p)
-    push!(chain.tree, digest(p, hasher(chain.spec)))
-    return
-end
-
-
-function record!(chain::BraidChain, p::Proposal)
-
-    # avoiding dublicates
-    for (N, i) in enumerate(ledger(chain))
-        if i isa Proposal && uuid(i) == uuid(p)
-            if body(i) == body(p)
-                return N
-            else
-                error("Can't register proposal as a different proposal with given uuid already exists in the chain.")
-            end
-        end
-    end
-
-    @assert isbinding(chain, state(p))
-    @assert pseudonym(p.approval) == chain.spec.proposer
-    @assert verify(p, crypto(chain.spec))
-    
-    @assert chain.ledger[state(p).index] isa BraidReceipt "Proposals can only be anchored on braids." 
-
-    push!(chain, p)
-
-    N = length(chain)
-
-    return N
-end
-
-# It could also throw an error 
-#members(chain::BraidChain, proposal::Proposal) = members(chain, proposal.anchor)
-voters(chain::BraidChain, proposal::Proposal) = voters(chain, proposal.anchor)
-
-
-select(::Type{Proposal}, uuid::UUID, chain::BraidChain) = select(Proposal, x -> x.uuid == uuid, chain)
 
 """
     struct Vote

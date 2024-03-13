@@ -7,14 +7,23 @@ export Model, Mapper, Service, Client, Schedulers
 
 # Beacons, Ballots could be defined in seperate components as well
 
+function record! end
+
+function commit! end
+
+
+
 include("Utils/StaticSets.jl")
-using .StaticSets
+import .StaticSets
 
 include("Model/Model.jl")
-using .Model
+import .Model
 
 include("Controllers/RegistrarController.jl")
-using .RegistrarController
+import .RegistrarController
+
+include("Controllers/BraidChainController.jl")
+import .BraidChainController
 
 include("Utils/Schedulers.jl")
 import .Schedulers
@@ -23,16 +32,16 @@ include("Utils/Authorization.jl")
 import .Authorization
 
 include("Mapper.jl")
-using .Mapper
+import .Mapper
 
 include("Parser.jl")
 import .Parser
 
 include("Service.jl")
-using .Service
+import .Service
 
 include("Client.jl")
-using .Client
+import .Client
 
 include("AuditTools.jl")
 import .AuditTools
