@@ -1,29 +1,26 @@
 module Client
 # Methods to interact with HTTP server
 
-using ..Model
-using ..Model: Membership, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, HashSpec, AckConsistency, AckInclusion, CastAck, DemeSpec, Signer,  Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen, digest
-using ..RegistrarController: TicketStatus, tokenid, Invite
 using Base: UUID
-
-using ..Model: id, hasher, pseudonym, isbinding, generator, state, verify, crypto, index, root, commit, isconsistent, istallied, issuer
-import ..Authorization: AuthClientMiddleware
-
+using URIs: URI
 using HTTP: Router, Request, Response, Handler, HTTP, iserror, StatusError
 
-using JSON3
+using JSON3 # shouldn't be necessary
 using Dates
 using Setfield
 
 import StructTypes
 #using StructHelpers 
 
-using ..Parser: marshal, unmarshal
+using ..Core.Model: Model, Membership, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, HashSpec, DemeSpec, Signer,  Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen, digest, commit
+using ..Core.Model: id, hasher, pseudonym, isbinding, generator, state, verify, crypto, index, root, isconsistent, istallied, issuer
+using ..Core.ProtocolSchema: TicketStatus, tokenid, Invite, AckConsistency, AckInclusion, CastAck
+using ..Core.Parser: marshal, unmarshal
+using ..Authorization: AuthClientMiddleware
 
-using ..Model: base16encode, base16decode
+import ..Core.Model
+#using ..Core.Model: base16encode, base16decode # Perhaps I can move this function in Parser instead
 
-
-using URIs: URI
 
 abstract type Route end
 

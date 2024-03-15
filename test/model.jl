@@ -1,12 +1,19 @@
-using Dates
 using Test
-import PeaceFounder: Model, RegistrarController, BraidChainController
 
-import .Model: CryptoSpec, pseudonym, PollingStation, TicketID, add!, id, commit, verify, generator, Membership, approve, ack_leaf, isbinding, Proposal, vote, Ballot, Selection, uuid, record, tally, seed, set_seed!, ack_cast, hasher, HMAC, DemeSpec, generate, Signer, key, braid, Model, select, digest, voters, members, spine
-import .RegistrarController: Registrar, admit!, enlist!, set_demehash!, Ticket, tokenid
-import .BraidChainController: BraidChain, record!, commit!, roll, constituents, state
+using Dates
+using PeaceFounder.Core: Model
+using PeaceFounder.Server: Controllers
 
-# commit!, record!, roll, constituents, members, state, spine, 
+import .Model: CryptoSpec, pseudonym, TicketID, id, commit, verify, generator, Membership, approve, isbinding, Proposal, vote, Ballot, Selection, uuid, tally, seed, hasher, HMAC, DemeSpec, generate, Signer, key, braid, Model, select, digest, voters, members
+
+import .Controllers: Registrar, admit!, enlist!, set_demehash!, Ticket, tokenid
+import .Controllers: record!, commit!, ack_leaf
+import .Controllers: BraidChain, roll, constituents, state
+import .Controllers: PollingStation, add!, ack_cast, set_seed!, spine
+
+# Auditing could also be implemented
+# import .Model: archive, audit
+
 
 crypto = CryptoSpec("sha256", "EC: P_192")
 #crypto = CryptoSpec("sha256", "EC: P-192")
@@ -187,8 +194,7 @@ v = vote(proposal, _seed, Selection(2), eve)
 record!(POLLING_STATION, uuid(proposal), v)
 commit!(POLLING_STATION, uuid(proposal), COLLECTOR)
 
-
-_record = record(POLLING_STATION, uuid(proposal), 3)
+_record = get(POLLING_STATION, uuid(proposal))[3]
 @test _record.vote == v
 @test isbinding(_record, spine(POLLING_STATION, uuid(proposal)), crypto)
 

@@ -1,7 +1,11 @@
 using Test
-import PeaceFounder: Client, Service, Mapper, Model, Schedulers, Parser
-import .Model: CryptoSpec, DemeSpec, Signer, id, approve, Selection
+
 import Dates
+
+import PeaceFounder.Server: Service, Mapper
+import PeaceFounder: Client, Schedulers
+import PeaceFounder.Core.Model: Model, CryptoSpec, DemeSpec, Selection, Signer, id, approve
+import PeaceFounder.Core.Parser
 
 #crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
 crypto = CryptoSpec("sha256", "EC: P_192")

@@ -1,8 +1,10 @@
 using Test
-import PeaceFounder: Client, Service, Mapper, Model, Schedulers, RegistrarController
-import .Model: CryptoSpec, DemeSpec, Signer, id, approve
-#import .Service: ROUTER
 import Dates
+
+import PeaceFounder.Server: Service, Mapper, Controllers
+import PeaceFounder: Client, Schedulers
+import PeaceFounder.Core.Model: Model, CryptoSpec, DemeSpec, Signer, id, approve
+import PeaceFounder.Core.ProtocolSchema
 
 crypto = CryptoSpec("sha256", "EC: P_192")
 #crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
@@ -40,9 +42,9 @@ eve_invite = Mapper.enlist_ticket(Model.TicketID("Eve"))
 # ------------- invite gets sent over a QR code --------------
 
 # 
-@test !RegistrarController.isadmitted(Client.get_ticket_status(SERVER, alice_ticketid))
+@test !ProtocolSchema.isadmitted(Client.get_ticket_status(SERVER, alice_ticketid))
 alice = Client.enroll!(alice_invite; server = SERVER, key = 2)
-@test RegistrarController.isadmitted(Client.get_ticket_status(SERVER, alice_ticketid))
+@test ProtocolSchema.isadmitted(Client.get_ticket_status(SERVER, alice_ticketid))
 
 bob = Client.enroll!(bob_invite; server = SERVER, key = 3) 
 
@@ -114,8 +116,8 @@ Client.check_vote!(eve, proposal.uuid)
 
 ballotbox = Mapper.ballotbox(proposal.uuid)
 deleteat!(ballotbox.ledger, 1) # deleting alice's vote
-Model.reset_tree!(ballotbox) 
-Model.commit!(Mapper.POLLING_STATION[], proposal.uuid, Mapper.COLLECTOR[])
+Controllers.reset_tree!(ballotbox) 
+Controllers.commit!(Mapper.POLLING_STATION[], proposal.uuid, Mapper.COLLECTOR[])
 
 @test_throws ErrorException Client.check_vote!(bob, proposal.uuid) # bob finds out about misconduct
 

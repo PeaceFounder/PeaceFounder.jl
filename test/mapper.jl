@@ -1,13 +1,12 @@
 using Test
 
-import PeaceFounder.Model
-import PeaceFounder.Mapper
-using PeaceFounder.Model: CryptoSpec, pseudonym, TicketID, Membership, Proposal, Ballot, Selection, generator, state, id, vote, seed, tally, approve, istallied, DemeSpec, hasher, HMAC, isbinding, Generator, generate, Signer
-import PeaceFounder.RegistrarController
-import PeaceFounder.RegistrarController: tokenid, Invite
+using Dates: Dates, Date
+
+import PeaceFounder.Core.Model: Model, CryptoSpec, pseudonym, TicketID, Membership, Admission, Proposal, Ballot, Selection, generator, state, id, vote, seed, tally, approve, istallied, DemeSpec, hasher, HMAC, isbinding, Generator, generate, Signer
+import PeaceFounder.Core.ProtocolSchema: tokenid, Invite, TicketStatus
+import PeaceFounder.Server.Mapper
 
 
-import Dates: Dates, Date
 
 crypto = CryptoSpec("sha256", "EC: P_192")
 #crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
@@ -72,8 +71,8 @@ access_bob, ack = enroll(bob, invite_bob)
 eve = Signer(crypto, 4)
 access_eve, ack = enroll(eve, invite_eve)
 
-@test Mapper.get_ticket_status(ticketid_alice) isa RegistrarController.TicketStatus
-@test Mapper.get_ticket_admission(ticketid_alice) isa Model.Admission
+@test Mapper.get_ticket_status(ticketid_alice) isa TicketStatus
+@test Mapper.get_ticket_admission(ticketid_alice) isa Admission
 
 ### Braiding
 

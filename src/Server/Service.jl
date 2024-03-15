@@ -2,11 +2,11 @@ module Service
 
 # This is the outermost layer for the sercvice concerned with providing services for outsied world. 
 # Defines how HTTP requests are processed
-
-using ..Mapper
-using ..Parser: marshal, unmarshal
-using ..Model: TicketID, Digest, Pseudonym, Digest, Membership, Proposal, Vote, bytes
+using ..Core.Parser: marshal, unmarshal
+using ..Core.Model: TicketID, Digest, Pseudonym, Digest, Membership, Proposal, Vote, bytes
 using ..Authorization: AuthServerMiddleware, timestamp, credential
+using ..Mapper
+
 using Dates: DateTime, Second, now
 using Base: UUID
 using SwaggerMarkdown

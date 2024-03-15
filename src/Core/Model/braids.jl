@@ -3,7 +3,8 @@ import ShuffleProofs: Braid, Simulator, BraidProof, ProtocolSpec
 import CryptoGroups
 import CryptoGroups: PGroup, ECGroup, ECP, MODP, Group
 
-struct BraidBroker end # ToDo
+# This would belong to a Controllers instead
+# struct BraidBroker end # ToDo
 
 #(::G)(g::Generator) where G <: Group = G(g.data)
 

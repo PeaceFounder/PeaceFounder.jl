@@ -74,45 +74,23 @@ Return a pseudonym used to seal the vote.
 """
 function pseudonym end
 
-function select end # This will be defined on the archive eventually 
 
-function members end
-
+# Theese functions will be defined on the archive eventually 
+function select end 
+function members end 
 function state end
 
+function voters end # this is somewhat not part of the model either. perhaps I could provide a method for alias
 
-# I could implement that in the library
-using HistoryTrees: InclusionProof, ConsistencyProof
-
-Base.hash(proof::InclusionProof, h::UInt) = struct_hash(proof, h)
-Base.hash(proof::ConsistencyProof, h::UInt) = struct_hash(proof, h)
-
-Base.:(==)(a::InclusionProof, b::InclusionProof) = struct_equal(a, b)
-Base.:(==)(a::ConsistencyProof, b::ConsistencyProof) = struct_equal(a, b)
-
-#@batteries InclusionProof
-#@batteries ConsistencyProof
-
-# Note that admission is within a member as it's necessary to 
+# alias(votes, chain)::Vector{Int} # returns integers representing every vote
+# alias(vote, chain)::Union{Int, Nothing}
+# alias(pseudonym, proposal, chain)::Union{Int, Nothing}
+# alias(psuedonym, bbox)::Union{Int, Nothing}
+# alias(vote, bbox)::Union{Int, Nothing}
+# alias(receipt) # this is how client could retrieve it
 
 
-function Base.show(io::IO, proof::InclusionProof)
-
-    println(io, "InclusionProof:")
-    println(io, "  index : $(proof.index)")
-    println(io, "  leaf : $(string(proof.leaf))")
-    print(io, "  path : $([string(i) for i in proof.path])")
-
-end
-
-function Base.show(io::IO, proof::ConsistencyProof)
-
-    println(io, "ConsistencyProof:")
-    println(io, "  index : $(proof.index)")
-    println(io, "  root : $(string(proof.root))")
-    print(io, "  path : $([string(i) for i in proof.path])")
-
-end
+function commit end # may be deprecated as it is too similar to commit!
 
 
 function show_string(x)
@@ -129,7 +107,6 @@ end
 
 include("crypto.jl")
 include("braidchains.jl")
-#include("registrar.jl")
 include("braids.jl") # reordered
 include("proposals.jl")
 include("seal.jl") # Defines how values should be canonicalized. Could contain means for a signer with a state.

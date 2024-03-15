@@ -1,9 +1,9 @@
 module Parser
 
-using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Membership, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, HashSpec, Commit, AckInclusion, Generator, CryptoSpec, DemeSpec, HashSpec, parse_groupspec, lower_groupspec, BraidReceipt
-using ..RegistrarController: TicketStatus, Invite
-using HistoryTrees: InclusionProof, ConsistencyProof
+using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Membership, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, HashSpec, Commit, Generator, CryptoSpec, DemeSpec, HashSpec, parse_groupspec, lower_groupspec, BraidReceipt
 
+using ..ProtocolSchema: TicketStatus, Invite, AckInclusion #, AckConsistency 
+using HistoryTrees: InclusionProof, ConsistencyProof
 
 using Dates: DateTime
 

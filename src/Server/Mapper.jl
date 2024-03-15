@@ -5,16 +5,9 @@ import Dates: Dates, DateTime
 using Base: UUID
 using URIs: URI
 
-import ..Schedulers: Schedulers, Scheduler, next_event
-using ..Model
-using ..Model: CryptoSpec, pseudonym, PollingStation, TicketID, Membership, Proposal, Ballot, Selection, Transaction, Signer, BraidBroker, Pseudonym, Vote, id, DemeSpec, Digest, Admission, Generator, GroupSpec
-using ..RegistrarController
-using ..RegistrarController: Registrar, Ticket
-using ..BraidChainController
-using ..BraidChainController: BraidChain
-
-
-
+using ..Schedulers: Schedulers, Scheduler, next_event
+using ..Core.Model: Model, CryptoSpec, pseudonym, TicketID, Membership, Proposal, Ballot, Selection, Transaction, Signer, Pseudonym, Vote, id, DemeSpec, Digest, Admission, Generator, GroupSpec
+using ..Controllers: Controllers, Registrar, Ticket, BraidChain, PollingStation
 
 const RECORDER = Ref{Union{Signer, Nothing}}(nothing)
 const REGISTRAR = Ref{Union{Registrar, Nothing}}(nothing)
@@ -35,7 +28,7 @@ const TALLY_PROCESS = Ref{Task}()
 const ENTROPY_SCHEDULER = Scheduler(retry_interval = 1)
 const ENTROPY_PROCESS = Ref{Task}()
 
-const BRAID_BROKER = Ref{BraidBroker}
+#const BRAID_BROKER = Ref{BraidBroker}
 const BRAID_BROKER_SCHEDULER = Scheduler(retry_interval = 5)
 const BRAID_BROKER_PROCESS = Ref{Task}()
 
@@ -43,14 +36,14 @@ const BRAID_BROKER_PROCESS = Ref{Task}()
 function entropy_process_loop()
     
     uuid = wait(ENTROPY_SCHEDULER)
-    bbox = Model.ballotbox(POLLING_STATION[], uuid)
+    bbox = get(POLLING_STATION[], uuid) # bbox = Model.ballotbox(POLLING_STATION[], uuid)
 
     if isnothing(bbox.commit)
 
         spec = BRAID_CHAIN[].spec
         _seed = Model.digest(rand(UInt8, 16), Model.hasher(spec))
-        Model.set_seed!(bbox, _seed)
-        Model.commit!(bbox, COLLECTOR[]; with_tally = false)
+        Controllers.set_seed!(bbox, _seed)
+        Controllers.commit!(bbox, COLLECTOR[]; with_tally = false)
 
     end
 
@@ -75,8 +68,8 @@ function broker_process_loop(; force = false)
     end
 
 
-    record!(BRAID_CHAIN[], _braid)
-    commit!(BRAID_CHAIN[], RECORDER[])
+    Controllers.record!(BRAID_CHAIN[], _braid)
+    Controllers.commit!(BRAID_CHAIN[], RECORDER[])
 
     return
 end
@@ -112,7 +105,7 @@ function setup(demefunc::Function, groupspec::GroupSpec, generator::Generator)
     demespec = demefunc(pseudonym_list)
 
     @assert groupspec == demespec.crypto.group "GroupSpec does not match argument"
-    @assert verify(demespec, demespec.crypto) "DemeSpec is not corectly signed"
+    @assert Model.verify(demespec, demespec.crypto) "DemeSpec is not corectly signed"
 
     # This covers a situation where braidchain is initialized externally
     # more work would need to be put to actually support that though
@@ -128,8 +121,8 @@ function setup(demefunc::Function, groupspec::GroupSpec, generator::Generator)
     N = findfirst(x->x==demespec.recorder, pseudonym_list)
     if !isnothing(N)
         RECORDER[] = Signer(demespec.crypto, generator, key_list[N])
-        Model.record!(BRAID_CHAIN[], demespec)
-        Model.commit!(BRAID_CHAIN[], RECORDER[]) 
+        Controllers.record!(BRAID_CHAIN[], demespec)
+        Controllers.commit!(BRAID_CHAIN[], RECORDER[]) 
     
         BRAID_BROKER_PROCESS[] = @async while true
             broker_process_loop()
@@ -141,7 +134,7 @@ function setup(demefunc::Function, groupspec::GroupSpec, generator::Generator)
         signer = Signer(demespec.crypto, generator, key_list[N])
         hmac_key = Model.bytes(Model.digest(Vector{UInt8}(string(key_list[N])), demespec.crypto)) # 
         REGISTRAR[] = Registrar(signer, hmac_key)
-        RegistrarController.set_demehash!(REGISTRAR[], demespec) 
+        Controllers.set_demehash!(REGISTRAR[], demespec) 
     end
 
     N = findfirst(x->x==demespec.braider, pseudonym_list)
@@ -201,10 +194,10 @@ end
 
 # Need to decide on whether this would be more appropriate
 #system_roles() = (; recorder = id(RECORDER[]), registrar = id(REGISTRAR[]), braider = id(BRAIDER[]), collector = id(COLLECTOR[]))
-tally_votes!(uuid::UUID) = Model.commit!(POLLING_STATION[], uuid, COLLECTOR[]; with_tally = true);
+tally_votes!(uuid::UUID) = Controllers.commit!(POLLING_STATION[], uuid, COLLECTOR[]; with_tally = true);
 
-set_demehash(spec::DemeSpec) = Model.set_demehash!(REGISTRAR[], spec)
-set_route(route::Union{URI, String}) = RegistrarController.set_route!(REGISTRAR[], route)
+set_demehash(spec::DemeSpec) = Controllers.set_demehash!(REGISTRAR[], spec)
+set_route(route::Union{URI, String}) = Controllers.set_route!(REGISTRAR[], route)
 get_route() = REGISTRAR[].route
 
 get_recruit_key() = Model.key(REGISTRAR[])
@@ -212,19 +205,19 @@ get_recruit_key() = Model.key(REGISTRAR[])
 #get_deme() = BRAID_CHAIN[].spec
 get_demespec() = BRAID_CHAIN[].spec
 
-enlist_ticket(ticketid::TicketID, timestamp::DateTime; expiration_time = nothing, reset=false) = RegistrarController.enlist!(REGISTRAR[], ticketid, timestamp; reset)
+enlist_ticket(ticketid::TicketID, timestamp::DateTime; expiration_time = nothing, reset=false) = Controllers.enlist!(REGISTRAR[], ticketid, timestamp; reset)
 enlist_ticket(ticketid::TicketID; expiration_time = nothing, reset=false) = enlist_ticket(ticketid, Dates.now(); expiration_time, reset)
 
 # Useful for an admin
 #delete_ticket!(ticketid::TicketID) = Model.remove!(REGISTRAR[], ticketid) # 
 
-get_ticket_ids() = Model.ticket_ids(REGISTRAR[])
+get_ticket_ids() = Controllers.ticket_ids(REGISTRAR[])
 
-get_ticket_status(ticketid::TicketID) = RegistrarController.ticket_status(ticketid, REGISTRAR[])
-get_ticket_admission(ticketid::TicketID) = Model.select(Admission, ticketid, REGISTRAR[])
+get_ticket_status(ticketid::TicketID) = Controllers.ticket_status(ticketid, REGISTRAR[])
+get_ticket_admission(ticketid::TicketID) = Model.select(Admission, ticketid, REGISTRAR[]) # TODO: use get instead
 get_ticket_timestamp(ticketid::TicketID) = Model.select(Ticket, ticketid, REGISTRAR[]).timestamp
 
-get_ticket(tokenid::AbstractString) = Model.select(Ticket, tokenid, REGISTRAR[])
+get_ticket(tokenid::AbstractString) = Model.select(Ticket, tokenid, REGISTRAR[]) 
 get_ticket(ticketid::TicketID) = Model.select(Ticket, ticketid, REGISTRAR[])
 
 function delete_ticket(ticketid::TicketID)
@@ -240,41 +233,39 @@ function delete_ticket(ticketid::TicketID)
 end
 
 
-
-
 # The benfit of refering to a single ticketid is that it is long lasting
-seek_admission(id::Pseudonym, ticketid::TicketID) = RegistrarController.admit!(REGISTRAR[], id, ticketid) 
+seek_admission(id::Pseudonym, ticketid::TicketID) = Controllers.admit!(REGISTRAR[], id, ticketid) 
 get_admission(id::Pseudonym) = Model.select(Admission, id, REGISTRAR[])
 list_admissions() = [i.admission for i in REGISTRAR[].tickets]
 
-get_chain_roll() = BraidChainController.roll(BRAID_CHAIN[])
+get_chain_roll() = Controllers.roll(BRAID_CHAIN[])
 get_member(_id::Pseudonym) = filter(x -> Model.id(x) == _id, list_members())[1] # Model.select
 
 get_chain_commit() = Model.commit(BRAID_CHAIN[])
 
 function submit_chain_record!(transaction::Transaction) 
 
-    N = Model.record!(BRAID_CHAIN[], transaction)
-    Model.commit!(BRAID_CHAIN[], RECORDER[])
+    N = Controllers.record!(BRAID_CHAIN[], transaction)
+    Controllers.commit!(BRAID_CHAIN[], RECORDER[])
 
-    ack = Model.ack_leaf(BRAID_CHAIN[], N)
+    ack = Controllers.ack_leaf(BRAID_CHAIN[], N)
     return ack
 end
 
 get_chain_record(N::Int) = BRAID_CHAIN[][N]
-get_chain_ack_leaf(N::Int) = Model.ack_leaf(BRAID_CHAIN[], N)
-get_chain_ack_root(N::Int) = Model.ack_root(BRAID_CHAIN[], N)
+get_chain_ack_leaf(N::Int) = Controllers.ack_leaf(BRAID_CHAIN[], N)
+get_chain_ack_root(N::Int) = Controllers.ack_root(BRAID_CHAIN[], N)
 
 enroll_member(member::Membership) = submit_chain_record!(member)
 enlist_proposal(proposal::Proposal) = submit_chain_record!(proposal)
 
-get_roll() = Model.roll(BRAID_CHAIN[])
+get_roll() = Controllers.roll(BRAID_CHAIN[])
 
-get_peers() = Model.peers(BRAID_CHAIN[])
+get_peers() = Controllers.peers(BRAID_CHAIN[])
 
-get_constituents() = Model.constituents(BRAID_CHAIN[])
+get_constituents() = Controllers.constituents(BRAID_CHAIN[])
 
-reset_tree() = Model.reset_tree!(BRAID_CHAIN[])
+reset_tree() = Controllers.reset_tree!(BRAID_CHAIN[])
 
 get_members(N::Int) = Model.members(BRAID_CHAIN[], N)
 get_members() = Model.members(BRAID_CHAIN[])
@@ -282,31 +273,31 @@ get_members() = Model.members(BRAID_CHAIN[])
 get_generator(N::Int) = Model.generator(BRAID_CHAIN[], N)
 get_generator() = Model.generator(BRAID_CHAIN[])
 
-get_chain_proposal_list() = collect(BraidChainController.list(Proposal, BRAID_CHAIN[]))
+get_chain_proposal_list() = collect(Controllers.list(Proposal, BRAID_CHAIN[]))
 
 
-function schedule_pulse!(uuid::UUID, timestamp, nonceid)
+# function schedule_pulse!(uuid::UUID, timestamp, nonceid)
     
-    Model.schedule!(DEALER[], uuid, timestamp, nonceid)
-    Schedulers.schedule!(DEALER_SCHEDULER, timestamp)
+#     Model.schedule!(DEALER[], uuid, timestamp, nonceid)
+#     Schedulers.schedule!(DEALER_SCHEDULER, timestamp)
 
-    return
-end
+#     return
+# end
 
 
 function submit_chain_record!(proposal::Proposal)
 
-    N = Model.record!(BRAID_CHAIN[], proposal)
-    Model.commit!(BRAID_CHAIN[], RECORDER[])
+    N = Controllers.record!(BRAID_CHAIN[], proposal)
+    Controllers.commit!(BRAID_CHAIN[], RECORDER[])
 
     #anchored_members = Model.members(BRAID_CHAIN[], proposal)
-    anchored_members = Model.voters(BRAID_CHAIN[], proposal)
-    Model.add!(POLLING_STATION[], proposal, anchored_members)
+    anchored_members = Model.voters(BRAID_CHAIN[], proposal) # I could get a braid output_members
+    Controllers.add!(POLLING_STATION[], proposal, anchored_members)
 
     Schedulers.schedule!(ENTROPY_SCHEDULER, proposal.open, proposal.uuid)
     Schedulers.schedule!(TALLY_SCHEDULER, proposal.closed, proposal.uuid)
 
-    ack = Model.ack_leaf(BRAID_CHAIN[], N)
+    ack = Controllers.ack_leaf(BRAID_CHAIN[], N)
     return ack
 end
 
@@ -324,34 +315,34 @@ function cast_vote(uuid::UUID, vote::Vote; late_votes = false)
     else
         # need to bounce back if not within window. It could still be allowed to 
 
-        N = Model.record!(POLLING_STATION[], uuid, vote)
-        Model.commit!(POLLING_STATION[], uuid, COLLECTOR[])
+        N = Controllers.record!(POLLING_STATION[], uuid, vote)
+        Controllers.commit!(POLLING_STATION[], uuid, COLLECTOR[])
 
-        ack = Model.ack_cast(POLLING_STATION[], uuid, N)
+        ack = Controllers.ack_cast(POLLING_STATION[], uuid, N)
         return ack
     end
 end
 
 @deprecate cast_vote! cast_vote
 
-ballotbox(uuid::UUID) = Model.ballotbox(POLLING_STATION[], uuid)
+ballotbox(uuid::UUID) = Controllers.ballotbox(POLLING_STATION[], uuid)
 proposal(uuid::UUID) = ballotbox(uuid).proposal
 tally(uuid::UUID) = ballotbox(uuid).tally
 
 get_ballotbox_commit(uuid::UUID) = Model.commit(POLLING_STATION[], uuid)
 
-get_ballotbox_ack_leaf(uuid::UUID, N::Int) = Model.ack_leaf(POLLING_STATION[], uuid, N)
-get_ballotbox_ack_root(uuid::UUID, N::Int) = Model.ack_root(POLLING_STATION[], uuid, N)
+get_ballotbox_ack_leaf(uuid::UUID, N::Int) = Controllers.ack_leaf(POLLING_STATION[], uuid, N)
+get_ballotbox_ack_root(uuid::UUID, N::Int) = Controllers.ack_root(POLLING_STATION[], uuid, N)
 
-get_ballotbox_spine(uuid::UUID) = Model.spine(POLLING_STATION[], uuid)
+get_ballotbox_spine(uuid::UUID) = Controllers.spine(POLLING_STATION[], uuid)
 
 function get_ballotbox_record(uuid::UUID, N::Int; fairness::Bool = true)
    
-    bbox = Model.ballotbox(PollingStation[], uuid)        
+    bbox = Controllers.ballotbox(PollingStation[], uuid)        
     
     # If fair then only when the tally is published the vote can be accessed
     if fairness && isnothing(bbox.tally) || !fairness
-        Model.record(bbox, N)
+        return bbox[N] # Model.record(bbox, N)
     else
         error("Due to fairness individual votes will be available only after tallly will be committed by the collector")
     end
@@ -361,14 +352,15 @@ end
 get_ballotbox_receipt(uuid::UUID, N::Int) = Model.receipt(POOLING_STATION[], uuid, N)
 
 
+# The access seems better to be dealt at the topmost level
 function get_ballotbox_ledger(uuid::UUID; fairness::Bool = true, tally_trigger_delay::Union{Nothing, Int} = nothing)
 
-    bbox = Model.ballotbox(PollingStation[], uuid)        
+    bbox = Controllers.ballotbox(PollingStation[], uuid)        
 
-    trigger_tally!(uuid; tally_trigger_delay)
+    # trigger_tally!(uuid; tally_trigger_delay)
     # If fair then only when the tally is published the vote can be accessed
     if fairness && isnothing(bbox.tally) || !fairness
-        Model.ledger(bbox)
+        Controllers.ledger(bbox)
     else
         error("Due to fairness individual votes will be available only after tallly will be committed by the collector")
     end

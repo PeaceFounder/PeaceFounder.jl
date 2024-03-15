@@ -1,7 +1,10 @@
 using Test
-using PeaceFounder: Client, Service, Mapper, Model, Schedulers
-import .Model: CryptoSpec, DemeSpec, Signer, id, approve, Selection
+
 import Dates
+
+import PeaceFounder.Server: Service, Mapper
+import PeaceFounder: Client, Schedulers
+import PeaceFounder.Core.Model: Model, CryptoSpec, DemeSpec, Selection, Signer, id, approve
 
 const PORT = 3222
 

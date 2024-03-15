@@ -1,11 +1,11 @@
 using Test
-import PeaceFounder: Model, Parser, RegistrarController
-import .Model: TicketID, Digest, Pseudonym, Admission, Seal, DemeSpec, CryptoSpec, Membership, Signature, Generator, id, HashSpec
-import .RegistrarController: Invite
-import .Parser: marshal, unmarshal
-import Dates: DateTime, now
-import URIs: URI
 
+using Dates: DateTime, now
+using URIs: URI
+
+import PeaceFounder.Core.Parser: marshal, unmarshal
+import PeaceFounder.Core.Model: Model, TicketID, Digest, Pseudonym, Admission, Seal, DemeSpec, CryptoSpec, Membership, Signature, Generator, id, HashSpec
+import PeaceFounder.Core.ProtocolSchema: Invite
 
 isconsistent(event::T) where T = unmarshal(marshal(event), T) == event
 
@@ -26,10 +26,10 @@ admission = Admission(TicketID("Alice"), Pseudonym(UInt8[1, 2, 3, 4]), Seal(Pseu
 event = Seal(Pseudonym(UInt8[1, 2, 3, 4]), now(), Signature(123, 4345))
 @test isconsistent(event)
 
-@test isconsistent(Model.CryptoSpec("sha256", "EC: P_192"))
-@test isconsistent(Model.CryptoSpec("sha256", "MODP: 23, 11, 2"))
+@test isconsistent(CryptoSpec("sha256", "EC: P_192"))
+@test isconsistent(CryptoSpec("sha256", "MODP: 23, 11, 2"))
 
-crypto = Model.CryptoSpec("sha256", "MODP: 23, 11, 2")
+crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
 SIGNER = Model.generate(Model.Signer, crypto)
 event = DemeSpec(;
                     uuid = Base.UUID(121432),

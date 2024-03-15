@@ -1,4 +1,3 @@
-using HistoryTrees: InclusionProof, ConsistencyProof
 import HistoryTrees: leaf, root
 using CryptoGroups: CryptoGroups, ECP, EC2N, Koblitz, MODP
 using Dates: DateTime
@@ -10,11 +9,8 @@ import CryptoSignatures
 import Nettle
 
 
-
 import CryptoSignatures.DSA as Signature
 
-index(proof::ConsistencyProof) = proof.index
-index(proof::InclusionProof) = proof.index
 
 
 """
@@ -492,114 +488,6 @@ function Base.show(io::IO, commit::Commit)
 end
 
 
-"""
-    struct AckInclusion{T}
-        proof::InclusionProof
-        commit::Commit{T}
-    end
-
-Represents an acknowldgment from the issuer that a leaf is permanently included in the ledger. 
-In case the ledger is tampered with this acknowledgement acts as sufficient proof to blame the issuer.
-
-**Interface:** [`leaf`](@ref), [`id`](@ref), [`issuer`](@ref), [`commit`](@ref), [`index`](@ref), [`verify`](@ref)
-"""
-@struct_hash_equal struct AckInclusion{T}
-    proof::InclusionProof
-    commit::Commit{T}
-end
-
-#@batteries AckInclusion
-
-function Base.show(io::IO, ack::AckInclusion)
-
-    println(io, "AckInclusion:")
-    println(io, show_string(ack.proof))
-    print(io, show_string(ack.commit))
-
-end
-
-"""
-    leaf(ack::AckInclusion)
-
-Access a leaf diggest for which the acknowledgment is made.
-"""
-leaf(ack::AckInclusion) = leaf(ack.proof)
-id(ack::AckInclusion) = id(ack.commit)
-issuer(ack::AckInclusion) = issuer(ack.commit)
-
-"""
-    index(ack::AckInclusion)::Int
-
-Return an index at which the leaf is recorded in the ledger. To obtain the current ledger index use `index(commit(ack))`.
-"""
-index(ack::AckInclusion) = index(ack.proof)
-
-"""
-    commit(x)
-
-Access a commit of an object `x`. 
-"""
-commit(ack::AckInclusion) = ack.commit
-state(ack::AckInclusion) = state(ack.commit)
-
-
-isbinding(proof::InclusionProof, commit::Commit, hasher::HashSpec) = HistoryTrees.verify(proof, root(commit), index(commit); hash = hasher)
-
-#verify(ack::AckInclusion, crypto::CryptoSpec) = HistoryTrees.verify(ack.proof, root(ack.commit), index(ack.commit); hash = hasher(crypto)) && verify(commit(ack), crypto)
-verify(ack::AckInclusion, crypto::CryptoSpec) = isbinding(ack.proof, ack.commit, crypto) && verify(commit(ack), crypto)
-
-isbinding(ack::AckInclusion, id::Pseudonym) = issuer(ack) == id
-
-"""
-    struct AckConsistency{T}
-        proof::ConsistencyProof
-        commit::Commit{T}
-    end
-
-Represents an ackknowledgment from the issuer that a root is permanetly included in the ledger. This acknowledgemnt assures
-that ledger up to `index(ack)` is included in the current ledger which has has index `index(commit(ack))`. This is useful in
-a combination with `AckInclusion` to privatelly update it's validity rather than asking an explicit element. Also
-ensures that other elements in the ledger are not being tampered with.
-
-**Interface:** [`root`](@ref), [`id`](@ref), [`issuer`](@ref), [`commit`](@ref), [`index`](@ref), [`verify`](@ref)
-"""
-struct AckConsistency{T}
-    proof::ConsistencyProof
-    commit::Commit{T}
-end
-
-"""
-    root(x::AckConsistency)
-
-Access a root diggest for which the acknowledgment is made.
-"""
-root(ack::AckConsistency) = root(ack.proof)
-id(ack::AckConsistency) = id(ack.commit)
-issuer(ack::AckConsistency) = issuer(ack.commit)
-
-commit(ack::AckConsistency) = ack.commit
-state(ack::AckConsistency) = state(ack.commit)
-
-isbinding(proof::ConsistencyProof, commit::Commit, hasher::HashSpec) = HistoryTrees.verify(proof, root(commit), index(commit); hash = hasher)
-
-verify(ack::AckConsistency, crypto::CryptoSpec) = isbinding(ack.proof, ack.commit, crypto) && verify(commit(ack), crypto)
-
-"""
-    index(ack::AckConsistency)
-
-Return an index for a root at which the consistency proof is made. To obtain the current ledger index use `index(commit(ack))`.
-
-"""
-index(ack::AckConsistency) = index(ack.proof)
-
-
-function Base.show(io::IO, ack::AckConsistency)
-
-    println(io, "AckConsistency:")
-    println(io, show_string(ack.proof))
-    print(io, show_string(ack.commit))
-
-end
 
 """
 

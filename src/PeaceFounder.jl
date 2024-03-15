@@ -3,48 +3,28 @@ module PeaceFounder
 # A patch to make JSON3 to work with BigInt
 Base.split_sign(x::BigInt) = (x, x<0) 
 
-export Model, Mapper, Service, Client, Schedulers
+# Can't export Core
+# export Core, Server, Client
 
-# Beacons, Ballots could be defined in seperate components as well
+# The Core is a module that the minimum to be able to audit the evidence. The Server on the other hand is concerned with serving a service and recording new transactions which maintain integrity specified within the Model. The Client depends only on the Core and Authorization.
 
-function record! end
+include("Core/Core.jl")
+import .Core
 
-function commit! end
-
-
-
-include("Utils/StaticSets.jl")
+include("Utils/StaticSets.jl") 
 import .StaticSets
 
-include("Model/Model.jl")
-import .Model
-
-include("Controllers/RegistrarController.jl")
-import .RegistrarController
-
-include("Controllers/BraidChainController.jl")
-import .BraidChainController
-
-include("Utils/Schedulers.jl")
+include("Utils/Schedulers.jl") 
 import .Schedulers
 
-include("Utils/Authorization.jl")
+include("Utils/Authorization.jl") # Client, Server
 import .Authorization
 
-include("Mapper.jl")
-import .Mapper
+include("Server/Server.jl")
+import .Server
 
-include("Parser.jl")
-import .Parser
-
-include("Service.jl")
-import .Service
-
-include("Client.jl")
+include("Client.jl") # Note that Client only depends on the Core and Authorization
 import .Client
-
-include("AuditTools.jl")
-import .AuditTools
 
 
 end 

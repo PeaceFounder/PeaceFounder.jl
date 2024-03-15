@@ -120,23 +120,6 @@ generator(commit::Commit{ChainState}) = generator(commit.state)
 index(state::ChainState) = state.index
 root(state::ChainState) = state.root
 
-"""
-    isbinding(record::Transaction, ack::AckInclusion{ChainState}, crypto::CryptoSpec)
-
-A generic method checking whether transaction is included in the braidchain.
-"""
-isbinding(record::Transaction, ack::AckInclusion{ChainState}, crypto::CryptoSpec) = digest(record, crypto) == leaf(ack)
-
-isbinding(record::Transaction, ack::AckInclusion{ChainState}, hasher::HashSpec) = digest(record, hasher) == leaf(ack)
-isbinding(ack::AckInclusion{ChainState}, record::Transaction, hasher::HashSpec) = isbinding(record, ack, hasher)
-
-
-isbinding(ack::AckInclusion{ChainState}, id::Pseudonym) = issuer(ack) == id
-
-isbinding(ack::AckInclusion{ChainState}, deme::DemeSpec) = issuer(ack) == deme.recorder
-
-isbinding(record::Transaction, ack::AckInclusion{ChainState}, deme::DemeSpec) = isbinding(ack, deme) && isbinding(record, ack, hasher(deme))
-
 
 isbinding(commit::Commit{ChainState}, deme::DemeSpec) = issuer(commit) == deme.recorder
 

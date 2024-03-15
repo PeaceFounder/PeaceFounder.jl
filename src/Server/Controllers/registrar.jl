@@ -1,12 +1,14 @@
-module RegistrarController
+#module RegistrarController
 
 import Random
 using URIs
 using Base64: base64encode # for tokenid
 using Dates: DateTime
 
-using ..Model: TicketID, Admission, HMAC, Digest, DemeSpec, HashSpec, Pseudonym, Signer, CryptoSpec, digest, bytes, approve
-import ..Model: id, hasher, generate, key, select, isbinding
+using ..Core.Model: TicketID, Admission, HMAC, Digest, DemeSpec, HashSpec, Pseudonym, Signer, CryptoSpec, digest, bytes, approve
+
+import ..Core.Model: id, hasher, generate, key, select, isbinding
+import ..Core.ProtocolSchema: isadmitted, tokenid, Invite, TicketStatus # reexporting
 
 # One could add expiration policy and etc. Currently that is not needed.
 
@@ -169,7 +171,7 @@ Return true if there already is a ticket with `ticketid`.
 Base.in(ticketid::TicketID, registrar::Registrar) = ticketid in ticket_ids(registrar)
 
 
-using Infiltrator
+#using Infiltrator
 
 """
     token(ticketid::TicketID, hmac::HMAC)
@@ -191,7 +193,6 @@ end
 
 token(ticketid::TicketID, attempt::UInt8, hmac::HMAC; nlen=16) = token(ticketid, attempt, hasher(hmac), key(hmac); nlen)
 
-tokenid(token::Vector{UInt8}, hash::HashSpec) = digest(token, hash) |> bytes |> base64encode
 
 
 """
@@ -206,25 +207,6 @@ set_route!(registrar::Registrar, route::URI) = registrar.route = route
 set_route!(registrar::Registrar, route::String) = set_route!(registrar, URI(route))
 
 
-struct Invite
-    demehash::Digest
-    token::Vector{UInt8} 
-    hasher::HashSpec # HashSpecSpec
-    route::URI
-end
-
-Base.:(==)(x::Invite, y::Invite) = x.demehash == y.demehash && x.token == y.token && x.hasher == y.hasher && x.route == y.route
-
-Base.show(io::IO, invite::Invite) = print(io, string(invite))
-
-# This gives a nasty error for some reason when CryptoGroups are imported.
-#@batteries Invite
-
-isbinding(spec::DemeSpec, invite::Invite) = digest(spec, invite.hasher) == invite.demehash
-
-# Parsing to string and back
-
-hasher(invite::Invite) = invite.hasher
 
 
 """
@@ -309,20 +291,6 @@ unpack(x::Vector) = length(x) == 0 ? nothing : x[1]
 unpack(x::Nothing) = nothing
 
 
-"""
-struct TicketStatus
-    ticketid::TicketID
-    timestamp::DateTime
-    admission::Union{Nothing, Admission}
-end
-    
-Represents a public state of a ticket. See [`ticket_status`](@ref) and [`isadmitted`](@ref) methods. 
-"""
-struct TicketStatus
-    ticketid::TicketID
-    timestamp::DateTime
-    admission::Union{Nothing, Admission}
-end
 
 """
     ticket_status(ticketid::TicketID, registrar::Registrar)::Union{TicketStatus, Nothing}
@@ -340,12 +308,6 @@ function ticket_status(ticketid::TicketID, registrar::Registrar)
     end
 end
 
-"""
-    isadmitted(status::TicketStatus)
-
-Check whether ticket is addmitted. 
-"""
-isadmitted(status::TicketStatus) = !isnothing(status.admission)
 
 
-end
+#end

@@ -3,68 +3,6 @@ ToDo: a well specified encoding is essential here. Binary tree encoding may suff
 """
 function canonicalize end
 
-# """
-# One to one mapping from a value to byte vector. Necessary to uniquelly hash an object.
-# """
-# function canonicalize(m::Membership)
-#     io = IOBuffer()
-#     JSON3.write(io, m)
-#     return take!(io)
-# end
-
-# function canonicalize(v::Vote)
-#     io = IOBuffer()
-#     JSON3.write(io, v)
-#     return take!(io)
-# end
-
-# function canonicalize(p::Proposal)
-#     io = IOBuffer()
-#     JSON3.write(io, p)
-#     return take!(io)
-# end
-
-
-# function canonicalize(state::ChainState)
-#     io = IOBuffer()
-#     JSON3.write(io, state)
-#     return take!(io)
-# end
-
-# function canonicalize(state::BallotBoxState)
-#     io = IOBuffer()
-#     JSON3.write(io, state)
-#     return take!(io)
-# end
-
-# function canonicalize(admission::Admission)
-#     io = IOBuffer()
-#     JSON3.write(io, admission)
-#     return take!(io)
-# end
-
-
-# function canonicalize(promise::NonceCommitment)
-#     io = IOBuffer()
-#     JSON3.write(io, promise)
-#     return take!(io)
-# end
-
-
-# function canonicalize(lot::Lot)
-#     io = IOBuffer()
-#     JSON3.write(io, lot)
-#     return take!(io)
-# end
-
-
-# function canonicalize(receipt::CastReceipt)
-#     io = IOBuffer()
-#     JSON3.write(io, receipt)
-#     return take!(io)
-# end
-
-
 # digest could have a generic method with canonicalize. 
 
 digest(vote::Vote, hasher::HashSpec) = digest(canonicalize(vote), hasher)

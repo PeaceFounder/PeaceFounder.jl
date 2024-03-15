@@ -1,4 +1,4 @@
-module BraidChainController
+#module BraidChainController
 
 # This module defines BraidChain with the focus of exposing it to the Mapper layer and offering it's incremental state updates
 # with the record! function. For the sake of simplicity all controllers may be combined under a single module Controllers.
@@ -6,12 +6,11 @@ module BraidChainController
 using Base: UUID
 using HistoryTrees: HistoryTree, InclusionProof, ConsistencyProof
 using Dates: DateTime
-using ..Model: Pseudonym, Transaction, DemeSpec, Generator, Commit, ChainState, Signer, Membership, Proposal, BraidReceipt, Digest, hasher, digest, id, seal, pseudonym, crypto, verify, index, AckInclusion, AckConsistency, input_generator, input_members, output_generator, output_members
-import ..Model: select, isbinding, generator, root, commit, members, state, voters
+using ..Core.Model: Pseudonym, Transaction, DemeSpec, Generator, Commit, ChainState, Signer, Membership, Proposal, BraidReceipt, Digest, hasher, digest, id, seal, pseudonym, crypto, verify, input_generator, input_members, output_generator, output_members
+using ..Core.ProtocolSchema: AckInclusion, AckConsistency
 
-#import ..PeaceFounder: record!, commit!, ack_leaf, ack_root
-import ..Model: record!, commit!, ack_leaf, ack_root
-
+import ..Core.Model: isbinding, generator, members, voters
+#import ..LedgerInterface: record!, commit!, ack_leaf, ack_root, commit_index, reset_tree!, root, commit, select, state, leaf
 
 """
     struct BraidChain
@@ -411,4 +410,4 @@ voters(chain::BraidChain, proposal::Proposal) = voters(chain, proposal.anchor)
 select(::Type{Proposal}, uuid::UUID, chain::BraidChain) = select(Proposal, x -> x.uuid == uuid, chain)
 
 
-end
+#end
