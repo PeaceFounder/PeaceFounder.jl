@@ -306,7 +306,7 @@ struct TicketStatus
     admission::Union{Nothing, Admission}
 end
     
-Represents a public state of a ticket. See [`ticket_status`](@ref) and [`isadmitted`](@ref) methods. 
+Represents a public state of a ticket. See [`isadmitted`](@ref) method. 
 """
 struct TicketStatus
     ticketid::TicketID

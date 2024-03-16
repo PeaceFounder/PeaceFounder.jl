@@ -18,8 +18,6 @@ function copy_if_changed(source, destination)
     end
 end
 
-
-
 #cp((@__DIR__) * "/../README.md", (@__DIR__) * "/src/index.md", force = true)
 copy_if_changed((@__DIR__) * "/../README.md", (@__DIR__) * "/src/index.md")
 
@@ -39,7 +37,7 @@ makedocs(
         ]
 
     ),
-    modules = [PeaceFounder.Model, PeaceFounder.Client],
+    modules = [PeaceFounder.Core.Model, PeaceFounder.Client],
     pages = [
         "index.md",
         "Overview" => "overview.md",
@@ -48,8 +46,11 @@ makedocs(
         "Audit" => "audit.md",
         "API" => [
             "HTTP" => "schema.md",
-            "PeaceFounder.Model" => "model_api.md",
-            "PeaceFounder.AuditTools" => "audittools.md",
+            "PeaceFounder.Core.Model" => "model.md",
+            "PeaceFounder.Core.AuditTools" => "audittools.md",
+            "PeaceFounder.Server.Controllers" => "controllers.md"
+        ],
+        "Utilities" => [
             "PeaceFounder.Schedulers" => "schedulers.md"
         ]
     ],
@@ -62,7 +63,7 @@ SCHEMA_PATH = joinpath(@__DIR__, "build/assets/schema.json")
 rm(SCHEMA_PATH, force=true)
 
 open(SCHEMA_PATH, "w") do file
-    schema = PeaceFounder.Service.OxygenInstance.getschema()
+    schema = PeaceFounder.Server.Service.OxygenInstance.getschema()
     JSON3.write(file, schema)
 end
 
