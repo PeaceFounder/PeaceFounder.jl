@@ -7,7 +7,7 @@ using URIs: URI
 
 using ..Schedulers: Schedulers, Scheduler, next_event
 using ..Core.Model: Model, CryptoSpec, pseudonym, TicketID, Membership, Proposal, Ballot, Selection, Transaction, Signer, Pseudonym, Vote, id, DemeSpec, Digest, Admission, Generator, GroupSpec
-using ..Controllers: Controllers, Registrar, Ticket, BraidChain, PollingStation
+using ..Controllers: Controllers, Registrar, Ticket, BraidChainController, PollingStation
 
 const RECORDER = Ref{Union{Signer, Nothing}}(nothing)
 const REGISTRAR = Ref{Union{Registrar, Nothing}}(nothing)
@@ -19,7 +19,7 @@ const PROPOSER = Ref{Union{Signer, Nothing}}(nothing)
 # islocked() == false => lock else error in the case for a member
 # wheras for braiding imediately lock is being waited for
 const MEMBER_LOCK = ReentrantLock()
-const BRAID_CHAIN = Ref{Union{BraidChain, Nothing}}(nothing)
+const BRAID_CHAIN = Ref{Union{BraidChainController, Nothing}}(nothing)
 
 const POLLING_STATION = Ref{Union{PollingStation, Nothing}}(nothing)
 const TALLY_SCHEDULER = Scheduler(UUID, retry_interval = 5) 
@@ -110,7 +110,7 @@ function setup(demefunc::Function, groupspec::GroupSpec, generator::Generator)
     # This covers a situation where braidchain is initialized externally
     # more work would need to be put to actually support that though
     if isnothing(BRAID_CHAIN[])
-        BRAID_CHAIN[] = BraidChain(demespec)
+        BRAID_CHAIN[] = BraidChainController(demespec)
     end
 
     if isnothing(POLLING_STATION[])

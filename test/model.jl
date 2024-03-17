@@ -8,7 +8,7 @@ import .Model: CryptoSpec, pseudonym, TicketID, id, commit, verify, generator, M
 
 import .Controllers: Registrar, admit!, enlist!, set_demehash!, Ticket, tokenid
 import .Controllers: record!, commit!, ack_leaf
-import .Controllers: BraidChain, roll, constituents, state
+import .Controllers: BraidChainController, roll, constituents, state
 import .Controllers: PollingStation, add!, ack_cast, set_seed!, spine
 
 # Auditing could also be implemented
@@ -41,7 +41,7 @@ demespec = DemeSpec(;
 ) |> approve(GUARDIAN) 
 
 
-BRAID_CHAIN = BraidChain(demespec)
+BRAID_CHAIN = BraidChainController(demespec)
 record!(BRAID_CHAIN, demespec)
 
 commit!(BRAID_CHAIN, BRAID_CHAIN_RECORDER)

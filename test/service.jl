@@ -49,7 +49,7 @@ alice = Client.enroll!(alice_invite; server = SERVER, key = 2)
 bob = Client.enroll!(bob_invite; server = SERVER, key = 3) 
 
 # Braiding in between registration. Within this time admission can be attained, wheras 
-# no new Membership certificates can be added to the BraidChain. 
+# no new Membership certificates can be added to the BraidChainController. 
 
 input_generator = Mapper.get_generator()
 input_members = Mapper.get_members()

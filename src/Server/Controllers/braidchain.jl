@@ -1,6 +1,6 @@
 #module BraidChainController
 
-# This module defines BraidChain with the focus of exposing it to the Mapper layer and offering it's incremental state updates
+# This module defines BraidChainController with the focus of exposing it to the Mapper layer and offering it's incremental state updates
 # with the record! function. For the sake of simplicity all controllers may be combined under a single module Controllers.
 
 using Base: UUID
@@ -27,7 +27,7 @@ Represents a braidchain ledger with it's associated state. Can be instantitated 
 
 **Interface:**  [`push!`](@ref), [`record!`](@ref), [`state`](@ref), [`length`](@ref), [`list`](@ref), [`select`](@ref), [`roll`](@ref), [`constituents`](@ref), [`generator`](@ref), [`commit`](@ref), [`commit_index`](@ref), [`ledger`](@ref), [`leaf`](@ref), [`root`](@ref), [`ack_leaf`](@ref), [`ack_root`](@ref), [`members`](@ref), [`commit!`](@ref)
 """
-mutable struct BraidChain
+mutable struct BraidChainController
     members::Set{Pseudonym}
     ledger::BraidChainLedger
     spec::DemeSpec
@@ -46,9 +46,9 @@ function print_vector(io::IO, vector::Vector)
 end
 
 
-function Base.show(io::IO, chain::BraidChain)
+function Base.show(io::IO, chain::BraidChainController)
 
-    println(io, "BraidChain:")
+    println(io, "BraidChainController:")
     println(io, "  members : $(length(chain.members)) entries")
     println(io, "  generator : $(string(chain.generator))")
     println(io, "  guardian : $(string(issuer(spec)))")
@@ -62,9 +62,9 @@ function Base.show(io::IO, chain::BraidChain)
 end
 
 
-function BraidChain(spec::DemeSpec) 
+function BraidChainController(spec::DemeSpec) 
     
-    chain = BraidChain(Set{Pseudonym}(), BraidChainLedger(Transaction[]), spec, generator(spec), HistoryTree(Digest, hasher(spec)), nothing)
+    chain = BraidChainController(Set{Pseudonym}(), BraidChainLedger(Transaction[]), spec, generator(spec), HistoryTree(Digest, hasher(spec)), nothing)
     # 
     # push!(chain, spec) 
 
@@ -72,7 +72,7 @@ function BraidChain(spec::DemeSpec)
 end
     
 
-function record!(chain::BraidChain, spec::DemeSpec)
+function record!(chain::BraidChainController, spec::DemeSpec)
 
     @assert length(chain.ledger) == 0 "Reinitialization not yet implemented"
 
@@ -85,11 +85,11 @@ end
 
 
 """
-    reset_tree!(ledger::BraidChain)
+    reset_tree!(ledger::BraidChainController)
 
 Recompute a chain tree hash. 
 """
-function reset_tree!(chain::BraidChain)
+function reset_tree!(chain::BraidChainController)
 
     d = Digest[digest(i, hasher(chain.crypto)) for i in chain.ledger]
     tree = HistoryTree(d, hasher(chain.crypto))
@@ -100,35 +100,35 @@ function reset_tree!(chain::BraidChain)
 end
 
 """
-    push!(ledger::BraidChain, t::Transaction)
+    push!(ledger::BraidChainController, t::Transaction)
 
-Add an element to the BraidChain bypassing transaction verification with the chain.
+Add an element to the BraidChainController bypassing transaction verification with the chain.
 This should only be used when the ledger is loaded from a trusted source like
 a local disk or when final root hash is validated with a trusted source.
 """
-function Base.push!(chain::BraidChain, t::Transaction)
+function Base.push!(chain::BraidChainController, t::Transaction)
     push!(chain.ledger, t)
     #push!(chain.tree, digest(t, crypto(chain)))
     push!(chain.tree, digest(t, hasher(chain.spec)))
     return
 end
 
-Base.length(chain::BraidChain) = length(chain.ledger)
+Base.length(chain::BraidChainController) = length(chain.ledger)
 
 """
-    list(T, ledger::BraidChain)::Vector{Tuple{Int, T}}
+    list(T, ledger::BraidChainController)::Vector{Tuple{Int, T}}
 
 List braidchain elements with a given type together with their index.
 """
-list(::Type{T}, chain::BraidChain) where T <: Transaction = ((n,p) for (n,p) in enumerate(chain.ledger) if p isa T)
+list(::Type{T}, chain::BraidChainController) where T <: Transaction = ((n,p) for (n,p) in enumerate(chain.ledger) if p isa T)
 
 # list also accpets filter arguments. 
 """
-    select(T, predicate::Function, ledger::BraidChain)::Union{T, Nothing}
+    select(T, predicate::Function, ledger::BraidChainController)::Union{T, Nothing}
 
 Return a first element from a ledger with a type `T` which satisfies a predicate. 
 """
-function select(::Type{T}, f::Function, chain::BraidChain) where T <: Transaction
+function select(::Type{T}, f::Function, chain::BraidChainController) where T <: Transaction
 
     for i in chain.ledger
         if i isa T && f(i)
@@ -141,62 +141,62 @@ end
 
 
 """
-    roll(ledger::BraidChain)::Vector{Membership}
+    roll(ledger::BraidChainController)::Vector{Membership}
 
 Return all member certificates from a braidchain ledger.
 """
-roll(chain::BraidChain) = (m for m in chain.ledger if m isa Membership)
+roll(chain::BraidChainController) = (m for m in chain.ledger if m isa Membership)
 
 """
-    constituents(ledger::BraidChain)::Set{Pseudonym}
+    constituents(ledger::BraidChainController)::Set{Pseudonym}
 
 Return all member identity pseudonyms. 
 """
-constituents(chain::BraidChain) = Set(id(i) for i in roll(chain))
+constituents(chain::BraidChainController) = Set(id(i) for i in roll(chain))
 
 """
-    generator(ledger::BraidChain)
+    generator(ledger::BraidChainController)
 
 Return a current relative generator for a braidchain ledger.
 """
-generator(chain::BraidChain) = chain.generator
+generator(chain::BraidChainController) = chain.generator
 
 """
-    commit(ledger::BraidChain)
+    commit(ledger::BraidChainController)
 
 Return a current commit for a braichain. 
 """
-commit(chain::BraidChain) = chain.commit
+commit(chain::BraidChainController) = chain.commit
 
-commit_index(chain::BraidChain) = index(commit(chain))
+commit_index(chain::BraidChainController) = index(commit(chain))
 
 
-ledger(chain::BraidChain) = chain.ledger
+ledger(chain::BraidChainController) = chain.ledger
 
 """
-    leaf(ledger::BraidChain, N::Int)::Digest
+    leaf(ledger::BraidChainController, N::Int)::Digest
 
 Return a ledger's element digest at given index.
 """
-leaf(chain::BraidChain, N::Int) = leaf(chain.tree, N)
+leaf(chain::BraidChainController, N::Int) = leaf(chain.tree, N)
 
 """
-    root(ledger::BraidChain[, N::Int])::Digest
+    root(ledger::BraidChainController[, N::Int])::Digest
 
 Return a ledger root digest. In case when index is not given a current index is used.
 """
-root(chain::BraidChain) = root(chain.tree)
-root(chain::BraidChain, N::Int) = root(chain.tree, N)
+root(chain::BraidChainController) = root(chain.tree)
+root(chain::BraidChainController, N::Int) = root(chain.tree, N)
 
 
-Base.getindex(chain::BraidChain, n::Int) = chain.ledger[n]
+Base.getindex(chain::BraidChainController, n::Int) = chain.ledger[n]
 
 """
-    ack_leaf(ledger::BraidChain, index::Int)::AckInclusion
+    ack_leaf(ledger::BraidChainController, index::Int)::AckInclusion
 
 Return a proof for record inclusion with respect to a current braidchain ledger history tree root. 
 """
-function ack_leaf(chain::BraidChain, index::Int) 
+function ack_leaf(chain::BraidChainController, index::Int) 
 
     @assert commit_index(chain) >= index
     
@@ -206,11 +206,11 @@ function ack_leaf(chain::BraidChain, index::Int)
 end
 
 """
-    ack_root(ledger::BraidChain, index::Int)
+    ack_root(ledger::BraidChainController, index::Int)
 
 Return a proof for the ledger root at given index with respect to the current braidchain ledger history tree root.
 """
-function ack_root(chain::BraidChain, index::Int) 
+function ack_root(chain::BraidChainController, index::Int) 
     
     @assert commit_index(chain) >= index
     
@@ -225,7 +225,7 @@ end
 
 Return a generator at braidchain ledger row index. If `index` is omitted return the current state value.
 """
-function generator(chain::BraidChain, n::Int)
+function generator(chain::BraidChainController, n::Int)
     
     for i in view(chain.ledger, n:-1:1) # I could also use a reverse there
 
@@ -240,12 +240,12 @@ end
 
 
 """
-    members(ledger::BraidChain[, index::Int])::Set{Pseudonym}
+    members(ledger::BraidChainController[, index::Int])::Set{Pseudonym}
 
 Return a set of member pseudonyms at relative generator at braidchain ledger row index.
 If `index` is omitted return a current state value.
 """
-function members(chain::BraidChain, n::Int)
+function members(chain::BraidChainController, n::Int)
     
     mset = Set{Pseudonym}()
     for i in view(chain.ledger, n:-1:1)
@@ -269,28 +269,28 @@ function members(chain::BraidChain, n::Int)
 end
 
 
-members(chain::BraidChain) = chain.members
+members(chain::BraidChainController) = chain.members
 
 """
-    state(ledger::BraidChain)
+    state(ledger::BraidChainController)
 
 Return a current braidchain ledger state metadata.
 """
-state(chain::BraidChain) = ChainState(length(chain), root(chain), generator(chain), length(members(chain)))
+state(chain::BraidChainController) = ChainState(length(chain), root(chain), generator(chain), length(members(chain)))
 
-state(chain::BraidChain, n::Int) = error("Not Implemented")
+state(chain::BraidChainController, n::Int) = error("Not Implemented")
 
 
 Base.findlast(::Type{T}, ledger::Vector{Transaction}) where T <: Transaction = findlast(x -> x isa T, ledger)
-Base.findlast(::Type{T}, chain::BraidChain) where T <: Transaction = findlast(T, chain.ledger)
+Base.findlast(::Type{T}, chain::BraidChainController) where T <: Transaction = findlast(T, chain.ledger)
 
 
 """
-    commit!(ledger::BraidChain, signer::Signer)
+    commit!(ledger::BraidChainController, signer::Signer)
 
 Commit a current braidchain ledger state with a signer's issued cryptographic signature. 
 """
-function commit!(chain::BraidChain, signer::Signer) 
+function commit!(chain::BraidChainController, signer::Signer) 
 
     @assert chain.spec.recorder == id(signer)
 
@@ -300,14 +300,14 @@ function commit!(chain::BraidChain, signer::Signer)
     return
 end
 
-members(chain::BraidChain, state::ChainState) = members(chain, state.index)
+members(chain::BraidChainController, state::ChainState) = members(chain, state.index)
 
-voters(chain::BraidChain, index::Int) = output_members(chain.ledger[index]::BraidReceipt)
-voters(chain::BraidChain, state::ChainState) = voters(chain, state.index)
+voters(chain::BraidChainController, index::Int) = output_members(chain.ledger[index]::BraidReceipt)
+voters(chain::BraidChainController, state::ChainState) = voters(chain, state.index)
 
 
 
-function Base.push!(chain::BraidChain, m::Membership)
+function Base.push!(chain::BraidChainController, m::Membership)
 
     push!(chain.ledger, m)
     push!(chain.members, pseudonym(m))
@@ -317,7 +317,7 @@ function Base.push!(chain::BraidChain, m::Membership)
 end
 
 
-function record!(chain::BraidChain, m::Membership)
+function record!(chain::BraidChainController, m::Membership)
 
     N = findfirst(==(m), ledger(chain))
     !isnothing(N) && return N
@@ -336,7 +336,7 @@ function record!(chain::BraidChain, m::Membership)
 end
 
 
-function Base.push!(chain::BraidChain, braidwork::BraidReceipt)
+function Base.push!(chain::BraidChainController, braidwork::BraidReceipt)
 
     push!(chain.ledger, braidwork)
     push!(chain.tree, digest(braidwork, hasher(chain.spec)))
@@ -348,7 +348,7 @@ function Base.push!(chain::BraidChain, braidwork::BraidReceipt)
 end
 
 
-function record!(chain::BraidChain, braidwork::BraidReceipt)
+function record!(chain::BraidChainController, braidwork::BraidReceipt)
 
     @assert generator(chain) == input_generator(braidwork)
     @assert members(chain) == Set(input_members(braidwork))
@@ -362,21 +362,21 @@ end
 
 
 """
-    isbinding(chain::BraidChain, state::ChainState)::Bool
+    isbinding(chain::BraidChainController, state::ChainState)::Bool
 
 Check that chain state is consistent with braidchain ledger.
 """
-isbinding(chain::BraidChain, state::ChainState) = root(chain, index(state)) == root(state) && generator(chain, index(state)) == generator(state)
+isbinding(chain::BraidChainController, state::ChainState) = root(chain, index(state)) == root(state) && generator(chain, index(state)) == generator(state)
 
 
-function Base.push!(chain::BraidChain, p::Proposal)
+function Base.push!(chain::BraidChainController, p::Proposal)
     push!(chain.ledger, p)
     push!(chain.tree, digest(p, hasher(chain.spec)))
     return
 end
 
 
-function record!(chain::BraidChain, p::Proposal)
+function record!(chain::BraidChainController, p::Proposal)
 
     # avoiding dublicates
     for (N, i) in enumerate(ledger(chain))
@@ -404,10 +404,10 @@ end
 
 
 # It could also throw an error 
-#members(chain::BraidChain, proposal::Proposal) = members(chain, proposal.anchor)
-voters(chain::BraidChain, proposal::Proposal) = voters(chain, proposal.anchor)
+#members(chain::BraidChainController, proposal::Proposal) = members(chain, proposal.anchor)
+voters(chain::BraidChainController, proposal::Proposal) = voters(chain, proposal.anchor)
 
-select(::Type{Proposal}, uuid::UUID, chain::BraidChain) = select(Proposal, x -> x.uuid == uuid, chain)
+select(::Type{Proposal}, uuid::UUID, chain::BraidChainController) = select(Proposal, x -> x.uuid == uuid, chain)
 
 
 #end
