@@ -22,7 +22,6 @@ Base.iterate(ledger::BraidChainLedger, index) = iterate(ledger.records, index)
 
 Base.view(ledger::BraidChainLedger, args) = BraidChainLedger(view(ledger.records, args))
 
-
 """
     struct DemeSpec <: Transaction
         uuid::UUID
@@ -104,6 +103,12 @@ generator(spec::DemeSpec) = generator(crypto(spec))
 
 isbinding(spec::DemeSpec, hash::Digest, hasher::HashSpec) = digest(spec, hasher) == hash
 isbinding(spec::DemeSpec, hash::Vector{UInt8}, hasher::HashSpec) = isbinding(spec, Digest(hash), hasher)
+
+
+verify(x, spec::DemeSpec) = verify(x, spec.crypto)
+verify(x, y, spec::DemeSpec) = verify(x, y, spec.crypto)
+verify(x, y, z, spec::DemeSpec) = verify(x, y, z, spec.crypto)
+verify(x, y, z, w, spec::DemeSpec) = verify(x, y, z, w, spec.crypto)
 
 """
     struct ChainState

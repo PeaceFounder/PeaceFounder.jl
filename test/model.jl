@@ -47,7 +47,8 @@ record!(BRAID_CHAIN, demespec)
 commit!(BRAID_CHAIN, BRAID_CHAIN_RECORDER)
 set_demehash!(REGISTRAR, demespec)
 
-POLLING_STATION = PollingStation(crypto)
+#POLLING_STATION = PollingStation(crypto)
+POLLING_STATION = PollingStation()
 
 
 function enroll(signer, invite)
@@ -167,7 +168,7 @@ ack = ack_leaf(BRAID_CHAIN, N)
 @test verify(ack, crypto)
 
 #add!(POLLING_STATION, proposal, members(BRAID_CHAIN, proposal))
-add!(POLLING_STATION, proposal, voters(BRAID_CHAIN, proposal))
+add!(POLLING_STATION, demespec, proposal, voters(BRAID_CHAIN, proposal))
 
 # Ideally the seed would be a Pulse from the League of Entropy
 _seed = digest(rand(UInt8, 16), hasher(demespec))

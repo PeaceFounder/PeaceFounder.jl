@@ -114,7 +114,7 @@ function setup(demefunc::Function, groupspec::GroupSpec, generator::Generator)
     end
 
     if isnothing(POLLING_STATION[])
-        POLLING_STATION[] = PollingStation(demespec.crypto)
+        POLLING_STATION[] = PollingStation()
     end
 
 
@@ -290,9 +290,10 @@ function submit_chain_record!(proposal::Proposal)
     N = Controllers.record!(BRAID_CHAIN[], proposal)
     Controllers.commit!(BRAID_CHAIN[], RECORDER[])
 
+    spec = get_demespec()
     #anchored_members = Model.members(BRAID_CHAIN[], proposal)
     anchored_members = Model.voters(BRAID_CHAIN[], proposal) # I could get a braid output_members
-    Controllers.add!(POLLING_STATION[], proposal, anchored_members)
+    Controllers.add!(POLLING_STATION[], spec, proposal, anchored_members)
 
     Schedulers.schedule!(ENTROPY_SCHEDULER, proposal.open, proposal.uuid)
     Schedulers.schedule!(TALLY_SCHEDULER, proposal.closed, proposal.uuid)
@@ -326,7 +327,7 @@ end
 @deprecate cast_vote! cast_vote
 
 ballotbox(uuid::UUID) = Controllers.ballotbox(POLLING_STATION[], uuid)
-proposal(uuid::UUID) = ballotbox(uuid).proposal
+proposal(uuid::UUID) = ballotbox(uuid).ledger.proposal
 tally(uuid::UUID) = ballotbox(uuid).tally
 
 get_ballotbox_commit(uuid::UUID) = Model.commit(POLLING_STATION[], uuid)

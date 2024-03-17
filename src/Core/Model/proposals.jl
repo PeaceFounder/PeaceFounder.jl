@@ -240,13 +240,13 @@ function vote(proposal::Proposal, seed::Digest, selection::Selection, signer::Si
 end
 
 """
-    isbinding(vote::Vote, proposal::Proposal, crypto::CryptoSpec)
+    isbinding(vote::Vote, proposal::Proposal, crypto::HashSpec)
 
 Check that the vote is bound to a proposal.. 
 """
-isbinding(vote::Vote, proposal::Proposal, crypto::CryptoSpec) = vote.proposal == digest(proposal, hasher(crypto))
+isbinding(vote::Vote, proposal::Proposal, spec::HashSpec) = vote.proposal == digest(proposal, spec)
 
-isbinding(record, spine::Vector{Digest}, crypto::CryptoSpec) = isbinding(record, spine, hasher(crypto))
+isbinding(record, spine::Vector{Digest}, spec::HashSpec) = isbinding(record, spine, spec)
 
 """
     pseudonym(vote::Vote)::Union{Pseudonym, Nothing}
@@ -387,6 +387,7 @@ end
 Construct a CastReceipt from a CastRecord with a provided hasher function.
 """
 receipt(record::CastRecord, hasher::HashSpec) = CastReceipt(digest(record.vote, hasher), record.timestamp)
+receipt(record::CastRecord, spec) = receipt(record, hasher(spec))
 
 
 isbinding(receipt::CastReceipt, spine::Vector{Digest}, hasher::HashSpec) = digest(receipt, hasher) in spine
@@ -401,28 +402,37 @@ Check that the receipt is bidning to a vote.
 isbinding(receipt::CastReceipt, vote::Vote, hasher::HashSpec) = receipt.vote == digest(vote, hasher)
 
 
-
-
 struct BallotBoxLedger
-    votes::AbstractVector{CastRecord}
+    records::AbstractVector{CastRecord}
     proposal::Proposal # could be a dublicate
     # seed::Digest # The seed is more like operational, and one only needs to compare that it is equal to all votes
     spec::DemeSpec # needs to be most recent one. In case the collector is different it can be passed as parameters
 end
 
-
 #Base.push!(ledger::BraidChainLedger, vote::Vote) = push!(ledger.records, record)
 
+Base.push!(ledger::BallotBoxLedger, record::CastRecord) = push!(ledger.records, record)
+Base.getindex(ledger::BallotBoxLedger, index::Int) = ledger.records[index]
+Base.length(ledger::BallotBoxLedger) = length(ledger.records)
+Base.findfirst(f::Function, ledger::BallotBoxLedger) = findfirst(f, ledger.records) 
 
-Base.push!(ledger::BallotBoxLedger, record::CastRecord) = push!(ledger.votes, record)
-Base.getindex(ledger::BallotBoxLedger, index::Int) = ledger.votes[index]
-Base.length(ledger::BallotBoxLedger) = length(ledger.votes)
+Base.iterate(ledger::BallotBoxLedger) = iterate(ledger.records)
+Base.iterate(ledger::BallotBoxLedger, index) = iterate(ledger.records, index)
 
 
+generator(ledger::BallotBoxLedger) = generator(ledger.proposal)
+uuid(ledger::BallotBoxLedger) = uuid(ledger.proposal)
 
-selections(votes::Vector{CastRecord}) = (i.vote.selection for i in votes) # Note that dublicates are removed at this stage
+
+#selections(votes::Vector{CastRecord}) = (i.vote.selection for i in votes) # Note that dublicates are removed at this stage
 
 
+function selections(bbox::BallotBoxLedger)
+
+    bitmask = tallyview(bbox)
+    
+    return (i.vote.selection for i in bbox.records[bitmask]) # perhaps view also suppoerts bitmask
+end
 
 function tallyview(votes::Vector{CastRecord}, ballot::Ballot) # tally_bitmask or counting_bitmask, counted_votes
     
@@ -465,4 +475,37 @@ function tallyview(votes::Vector{CastRecord}, ballot::Ballot) # tally_bitmask or
     return valid_votes
 end
 
-tallyview(bbox::BallotBoxLedger) = tallyview(bbox.votes, bbox.proposal.ballot)
+tallyview(bbox::BallotBoxLedger) = tallyview(bbox.records, bbox.proposal.ballot)
+
+
+"""
+    tally(ledger::BallotBox)
+
+Compute a tally for a ballotbox ledger. 
+"""
+tally(ledger::BallotBoxLedger) = tally(ledger.proposal.ballot, selections(ledger))
+
+
+
+"""
+    state(ledger::BallotBoxLedger; seed::Digest, root::Digest = root(ledger), with_tally::Union{Nothing, Bool} = nothing)::BallotBoxState
+
+Return a state metadata for ballotbox ledger. 
+"""
+function state(ledger::BallotBoxLedger; seed::Digest, root::Union{Digest, Nothing} = root(ledger), with_tally::Bool = false)
+    
+    if with_tally
+        _tally = tally(ledger)
+        _view = tallyview(ledger)
+    else
+        _tally = nothing
+        _view = nothing
+    end
+
+    proposal = digest(ledger.proposal, ledger.spec)
+
+    return BallotBoxState(proposal, seed, length(ledger), root, _tally, _view)
+end
+
+# TODO: Implement state for arbitrary index
+# function state(ledger::BallotBoxLedger, N::Int; seed::Digest, root::Digest, with_tally::Union{Nothing, Bool} = nothing) end

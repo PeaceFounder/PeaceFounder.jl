@@ -88,7 +88,8 @@ Check binding of two objects `x` and `y`. Some general examples:
 - Check that a record is included in the ledger.
 - Check that a given object is consistent with a ledger.
 """
-isbinding(x, y, hasher::HashSpec) = isbinding(y, x, hasher)::Bool # May not be clean enough
+# Can't have both methods present
+#isbinding(x, y, hasher::HashSpec) = isbinding(y, x, hasher)::Bool # May not be clean enough
 isbinding(x, y, spec) = isbinding(x, y, hasher(spec)::HashSpec)::Bool
 
 
@@ -200,8 +201,8 @@ hasher(crypto::CryptoSpec) = crypto.hasher
     
 Return a resulting digest applying hasher on the given message. When message is not octet string a `canonicalize` method is applied first.
 """
-digest(x, crypto::CryptoSpec) = digest(x, hasher(crypto))
-digest(x::Digest, y::Digest, crypto::CryptoSpec) = digest(x, y, hasher(crypto))
+digest(x, spec) = digest(x, hasher(spec))
+digest(x::Digest, y::Digest, spec) = digest(x, y, hasher(spec))
 
 digest(x::Integer, hasher::HashSpec) = digest(collect(reinterpret(UInt8, [x])), hasher)
 

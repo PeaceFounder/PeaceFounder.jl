@@ -115,7 +115,7 @@ Client.check_vote!(eve, proposal.uuid)
 # ------------- collector maliciously drops Alice's vote --------------
 
 ballotbox = Mapper.ballotbox(proposal.uuid)
-deleteat!(ballotbox.ledger, 1) # deleting alice's vote
+deleteat!(ballotbox.ledger.records, 1) # deleting alice's vote
 Controllers.reset_tree!(ballotbox) 
 Controllers.commit!(Mapper.POLLING_STATION[], proposal.uuid, Mapper.COLLECTOR[])
 

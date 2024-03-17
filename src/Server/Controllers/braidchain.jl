@@ -15,7 +15,7 @@ import ..Core.Model: isbinding, generator, members, voters
 """
     struct BraidChain
         members::Set{Pseudonym}
-        ledger::Vector{Transaction}
+        ledger::BraidChainLedger
         spec::DemeSpec
         generator::Generator
         tree::HistoryTree
@@ -29,7 +29,6 @@ Represents a braidchain ledger with it's associated state. Can be instantitated 
 """
 mutable struct BraidChain
     members::Set{Pseudonym}
-    #ledger::Vector{Transaction}
     ledger::BraidChainLedger
     spec::DemeSpec
     generator::Generator
