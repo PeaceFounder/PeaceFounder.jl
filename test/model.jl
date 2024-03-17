@@ -4,11 +4,11 @@ using Dates
 using PeaceFounder.Core: Model
 using PeaceFounder.Server: Controllers
 
-import .Model: CryptoSpec, pseudonym, TicketID, id, commit, verify, generator, Membership, approve, isbinding, Proposal, vote, Ballot, Selection, uuid, tally, seed, hasher, HMAC, DemeSpec, generate, Signer, key, braid, Model, select, digest, voters, members
+import .Model: CryptoSpec, pseudonym, TicketID, id, commit, verify, generator, Membership, approve, isbinding, Proposal, vote, Ballot, Selection, uuid, tally, seed, hasher, HMAC, DemeSpec, generate, Signer, key, braid, Model, select, digest, voters, members, root
 
 import .Controllers: Registrar, admit!, enlist!, set_demehash!, Ticket, tokenid
 import .Controllers: record!, commit!, ack_leaf
-import .Controllers: BraidChainController, roll, constituents, state
+import .Controllers: BraidChainController, roll, constituents, state, ledger
 import .Controllers: PollingStation, add!, ack_cast, set_seed!, spine
 
 # Auditing could also be implemented
@@ -202,3 +202,15 @@ _record = get(POLLING_STATION, uuid(proposal))[3]
 r = tally(POLLING_STATION, uuid(proposal)) 
 
 commit!(POLLING_STATION, uuid(proposal), COLLECTOR; with_tally = true) 
+
+
+# Testing ledger input output
+
+reloaded_chain = BraidChainController(ledger(BRAID_CHAIN))
+
+@test reloaded_chain.generator == BRAID_CHAIN.generator
+@test reloaded_chain.members == BRAID_CHAIN.members
+@test reloaded_chain.spec == BRAID_CHAIN.spec
+@test root(reloaded_chain.tree) == root(BRAID_CHAIN.tree)
+
+

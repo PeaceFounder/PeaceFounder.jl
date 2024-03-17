@@ -22,6 +22,39 @@ Base.iterate(ledger::BraidChainLedger, index) = iterate(ledger.records, index)
 
 Base.view(ledger::BraidChainLedger, args) = BraidChainLedger(view(ledger.records, args))
 
+
+"""
+    members(ledger::BraidChainLedger[, index::Int])::Set{Pseudonym}
+
+Return a set of member pseudonyms at relative generator at braidchain ledger row index.
+If `index` is omitted return a current state value.
+"""
+function members(ledger::BraidChainLedger, n::Int)
+    
+    mset = Set{Pseudonym}()
+    for i in view(ledger, n:-1:1)
+
+        if i isa Membership
+            push!(mset, pseudonym(i))
+        end
+        
+        if i isa BraidReceipt
+
+            for j in output_members(i)
+                push!(mset, j)
+            end
+
+            return mset
+        end
+
+    end
+
+    return mset
+end
+
+members(ledger::BraidChainLedger) = members(ledger, length(ledger))
+
+
 """
     struct DemeSpec <: Transaction
         uuid::UUID

@@ -6,7 +6,7 @@
 using Base: UUID
 using HistoryTrees: HistoryTree, InclusionProof, ConsistencyProof
 using Dates: DateTime
-using ..Core.Model: Pseudonym, Transaction, DemeSpec, Generator, Commit, ChainState, Signer, Membership, Proposal, BraidReceipt, Digest, hasher, digest, id, seal, pseudonym, crypto, verify, input_generator, input_members, output_generator, output_members, BraidChainLedger
+using ..Core.Model: Pseudonym, Transaction, DemeSpec, Generator, Commit, ChainState, Signer, Membership, Proposal, BraidReceipt, Digest, hasher, digest, id, seal, pseudonym, crypto, verify, input_generator, input_members, output_generator, output_members, BraidChainLedger, issuer, show_string
 using ..Core.ProtocolSchema: AckInclusion, AckConsistency
 
 import ..Core.Model: isbinding, generator, members, voters
@@ -37,6 +37,42 @@ mutable struct BraidChainController
 end
 
 
+function BraidChainController(spec::DemeSpec) 
+    
+    chain = BraidChainController(Set{Pseudonym}(), BraidChainLedger(Transaction[]), spec, generator(spec), HistoryTree(Digest, hasher(spec)), nothing)
+
+    return chain
+end
+
+
+function BraidChainController(ledger::BraidChainLedger; commit = nothing)
+
+    N = findlast(x -> x isa DemeSpec, ledger.records)
+    spec = ledger[N]
+
+    N = findlast(x -> x isa DemeSpec || x isa BraidReceipt, ledger.records)
+    record = ledger[N]
+
+    _generator = 
+        record isa DemeSpec ? generator(record) :
+        record isa BraidReceipt ? output_generator(record) : nothing
+    
+    tree = HistoryTree(Digest, hasher(spec))
+
+    # members!
+    
+    _members = members(ledger)
+
+    chain = BraidChainController(_members, ledger, spec, _generator, tree, commit)
+    
+    reset_tree!(chain)
+
+    return chain
+end
+
+
+
+
 function print_vector(io::IO, vector::Vector)
     
     for i in vector
@@ -51,7 +87,7 @@ function Base.show(io::IO, chain::BraidChainController)
     println(io, "BraidChainController:")
     println(io, "  members : $(length(chain.members)) entries")
     println(io, "  generator : $(string(chain.generator))")
-    println(io, "  guardian : $(string(issuer(spec)))")
+    println(io, "  guardian : $(string(issuer(chain.spec)))")
     println(io, "  recorder : $(string(chain.spec.recorder))")
     println(io, "")
     #println(io, show_string(chain.ledger))
@@ -62,14 +98,6 @@ function Base.show(io::IO, chain::BraidChainController)
 end
 
 
-function BraidChainController(spec::DemeSpec) 
-    
-    chain = BraidChainController(Set{Pseudonym}(), BraidChainLedger(Transaction[]), spec, generator(spec), HistoryTree(Digest, hasher(spec)), nothing)
-    # 
-    # push!(chain, spec) 
-
-    return chain
-end
     
 
 function record!(chain::BraidChainController, spec::DemeSpec)
@@ -91,8 +119,8 @@ Recompute a chain tree hash.
 """
 function reset_tree!(chain::BraidChainController)
 
-    d = Digest[digest(i, hasher(chain.crypto)) for i in chain.ledger]
-    tree = HistoryTree(d, hasher(chain.crypto))
+    d = Digest[digest(i, hasher(chain.spec)) for i in chain.ledger]
+    tree = HistoryTree(d, hasher(chain.spec))
 
     chain.tree = tree
 
@@ -239,36 +267,7 @@ function generator(chain::BraidChainController, n::Int)
 end
 
 
-"""
-    members(ledger::BraidChainController[, index::Int])::Set{Pseudonym}
-
-Return a set of member pseudonyms at relative generator at braidchain ledger row index.
-If `index` is omitted return a current state value.
-"""
-function members(chain::BraidChainController, n::Int)
-    
-    mset = Set{Pseudonym}()
-    for i in view(chain.ledger, n:-1:1)
-
-        if i isa Membership
-            push!(mset, pseudonym(i))
-        end
-        
-        if i isa BraidReceipt
-
-            for j in output_members(i)
-                push!(mset, j)
-            end
-
-            return mset
-        end
-
-    end
-
-    return mset
-end
-
-
+members(chain::BraidChainController, n::Int) = members(chain.ledger, n)
 members(chain::BraidChainController) = chain.members
 
 """
