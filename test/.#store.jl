@@ -1,1 +1,0 @@
-jerdmanis@Janiss-MacBook-Pro.local.21739
