@@ -9,8 +9,8 @@ import .ProtocolSchema
 include("Parser.jl") # Client, Server, Audit
 import .Parser # Could be split into RecordParser and ReplyParser
 
-# include("LedgerStore.jl")
-# import .LedgerStore
+include("Store.jl") # LedgerStore
+import .Store
 
 include("AuditTools.jl") # Audit
 import .AuditTools

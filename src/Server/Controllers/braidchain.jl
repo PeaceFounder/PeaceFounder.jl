@@ -6,7 +6,7 @@
 using Base: UUID
 using HistoryTrees: HistoryTree, InclusionProof, ConsistencyProof
 using Dates: DateTime
-using ..Core.Model: Pseudonym, Transaction, DemeSpec, Generator, Commit, ChainState, Signer, Membership, Proposal, BraidReceipt, Digest, hasher, digest, id, seal, pseudonym, crypto, verify, input_generator, input_members, output_generator, output_members
+using ..Core.Model: Pseudonym, Transaction, DemeSpec, Generator, Commit, ChainState, Signer, Membership, Proposal, BraidReceipt, Digest, hasher, digest, id, seal, pseudonym, crypto, verify, input_generator, input_members, output_generator, output_members, BraidChainLedger
 using ..Core.ProtocolSchema: AckInclusion, AckConsistency
 
 import ..Core.Model: isbinding, generator, members, voters
@@ -29,7 +29,8 @@ Represents a braidchain ledger with it's associated state. Can be instantitated 
 """
 mutable struct BraidChain
     members::Set{Pseudonym}
-    ledger::Vector{Transaction}
+    #ledger::Vector{Transaction}
+    ledger::BraidChainLedger
     spec::DemeSpec
     generator::Generator
     tree::HistoryTree
@@ -55,7 +56,7 @@ function Base.show(io::IO, chain::BraidChain)
     println(io, "  recorder : $(string(chain.spec.recorder))")
     println(io, "")
     #println(io, show_string(chain.ledger))
-    print_vector(io, chain.ledger)
+    print_vector(io, chain.ledger.records)
     println(io, "")
     print(io, show_string(chain.commit))
 
@@ -64,7 +65,7 @@ end
 
 function BraidChain(spec::DemeSpec) 
     
-    chain = BraidChain(Set{Pseudonym}(), Transaction[], spec, generator(spec), HistoryTree(Digest, hasher(spec)), nothing)
+    chain = BraidChain(Set{Pseudonym}(), BraidChainLedger(Transaction[]), spec, generator(spec), HistoryTree(Digest, hasher(spec)), nothing)
     # 
     # push!(chain, spec) 
 
@@ -227,7 +228,7 @@ Return a generator at braidchain ledger row index. If `index` is omitted return 
 """
 function generator(chain::BraidChain, n::Int)
     
-    for i in view(chain.ledger, n:-1:1)
+    for i in view(chain.ledger, n:-1:1) # I could also use a reverse there
 
         if i isa BraidReceipt
             return output_generator(i)

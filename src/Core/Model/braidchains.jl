@@ -8,6 +8,21 @@ Represents an abstract record type which can be stored in the braidchain ledger.
 """
 abstract type Transaction end # an alternative name is Transaction
 
+struct BraidChainLedger
+    records::AbstractVector{Transaction}
+end
+
+Base.push!(ledger::BraidChainLedger, record::Transaction) = push!(ledger.records, record)
+Base.getindex(ledger::BraidChainLedger, index::Int) = ledger.records[index]
+Base.length(ledger::BraidChainLedger) = length(ledger.records)
+Base.findfirst(f::Function, ledger::BraidChainLedger) = findfirst(f, ledger.records) # 
+
+Base.iterate(ledger::BraidChainLedger) = iterate(ledger.records)
+Base.iterate(ledger::BraidChainLedger, index) = iterate(ledger.records, index)
+
+Base.view(ledger::BraidChainLedger, args) = BraidChainLedger(view(ledger.records, args))
+
+
 """
     struct DemeSpec <: Transaction
         uuid::UUID

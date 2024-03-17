@@ -255,6 +255,9 @@ Return a pseudonym with which vote is sealed.
 """
 pseudonym(vote::Vote) = isnothing(vote.seal) ? nothing : pseudonym(vote.seal)
 
+
+
+
 """
     struct BallotBoxState
         proposal::Digest
@@ -398,12 +401,30 @@ Check that the receipt is bidning to a vote.
 isbinding(receipt::CastReceipt, vote::Vote, hasher::HashSpec) = receipt.vote == digest(vote, hasher)
 
 
+
+
+struct BallotBoxLedger
+    votes::AbstractVector{CastRecord}
+    proposal::Proposal # could be a dublicate
+    # seed::Digest # The seed is more like operational, and one only needs to compare that it is equal to all votes
+    spec::DemeSpec # needs to be most recent one. In case the collector is different it can be passed as parameters
+end
+
+
+#Base.push!(ledger::BraidChainLedger, vote::Vote) = push!(ledger.records, record)
+
+
+Base.push!(ledger::BallotBoxLedger, record::CastRecord) = push!(ledger.votes, record)
+Base.getindex(ledger::BallotBoxLedger, index::Int) = ledger.votes[index]
+Base.length(ledger::BallotBoxLedger) = length(ledger.votes)
+
+
+
 selections(votes::Vector{CastRecord}) = (i.vote.selection for i in votes) # Note that dublicates are removed at this stage
 
-#tallyview(votes::Vector{CastRecord}) = BitVector(true for i in votes) 
 
 
-function tallyview(votes::Vector{CastRecord}, ballot::Ballot)
+function tallyview(votes::Vector{CastRecord}, ballot::Ballot) # tally_bitmask or counting_bitmask, counted_votes
     
 
     function lt(x::CastRecord, y::CastRecord)
@@ -443,3 +464,5 @@ function tallyview(votes::Vector{CastRecord}, ballot::Ballot)
 
     return valid_votes
 end
+
+tallyview(bbox::BallotBoxLedger) = tallyview(bbox.votes, bbox.proposal.ballot)
