@@ -71,8 +71,6 @@ function BraidChainController(ledger::BraidChainLedger; commit = nothing)
 end
 
 
-
-
 function print_vector(io::IO, vector::Vector)
     
     for i in vector
@@ -97,8 +95,6 @@ function Base.show(io::IO, chain::BraidChainController)
 
 end
 
-
-    
 
 function record!(chain::BraidChainController, spec::DemeSpec)
 
@@ -266,9 +262,11 @@ function generator(chain::BraidChainController, n::Int)
     return generator(chain.spec)
 end
 
-
 members(chain::BraidChainController, n::Int) = members(chain.ledger, n)
+members(chain::BraidChainController, state::ChainState) = members(chain, state.index)
 members(chain::BraidChainController) = chain.members
+
+voters(chain::BraidChainController, anchor) = voters(ledger(chain), anchor)
 
 """
     state(ledger::BraidChainController)
@@ -298,12 +296,6 @@ function commit!(chain::BraidChainController, signer::Signer)
 
     return
 end
-
-members(chain::BraidChainController, state::ChainState) = members(chain, state.index)
-
-voters(chain::BraidChainController, index::Int) = output_members(chain.ledger[index]::BraidReceipt)
-voters(chain::BraidChainController, state::ChainState) = voters(chain, state.index)
-
 
 
 function Base.push!(chain::BraidChainController, m::Membership)
@@ -402,11 +394,6 @@ function record!(chain::BraidChainController, p::Proposal)
 end
 
 
-# It could also throw an error 
-#members(chain::BraidChainController, proposal::Proposal) = members(chain, proposal.anchor)
-voters(chain::BraidChainController, proposal::Proposal) = voters(chain, proposal.anchor)
-
 select(::Type{Proposal}, uuid::UUID, chain::BraidChainController) = select(Proposal, x -> x.uuid == uuid, chain)
-
 
 #end

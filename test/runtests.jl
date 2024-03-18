@@ -6,6 +6,10 @@ module ModelTest
 include("model.jl")
 end
 
+module StoreTest
+include("store.jl")
+end
+
 module SchedulerTest
 include("scheduler.jl")
 end

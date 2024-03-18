@@ -54,6 +54,11 @@ end
 
 members(ledger::BraidChainLedger) = members(ledger, length(ledger))
 
+voters(ledger::BraidChainLedger, index::Int) = output_members(ledger[index]::BraidReceipt)
+voters(ledger::BraidChainLedger, state) = voters(ledger, index(state)::Int)
+
+# now I need to port voters here 
+
 
 """
     struct DemeSpec <: Transaction

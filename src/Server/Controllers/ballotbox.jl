@@ -51,6 +51,15 @@ BallotBoxController(proposal::Proposal, voters::Vector{Pseudonym}, spec::DemeSpe
 BallotBoxController(proposal::Proposal, voters::Vector{Pseudonym}, spec::DemeSpec) = BallotBoxController(proposal, voters, spec, spec.collector)
 
 
+function BallotBoxController(ledger::BallotBoxLedger, voters::AbstractVector{Pseudonym}; collector=ledger.spec.collector, commit=nothing, seed = !isnothing(commit) ? commit.state.seed : nothing)
+
+    bbox = BallotBoxController(ledger, StaticSet(voters), collector, seed, Vote[], HistoryTree(Digest, hasher(ledger.spec)), commit)
+    reset_tree!(bbox)
+
+    return bbox
+end
+
+
 function Base.show(io::IO, ballotbox::BallotBoxController)
 
     println(io, "BallotBoxController:")
@@ -548,6 +557,7 @@ ack_cast(station::PollingStation, uuid::UUID, N::Int) = ack_cast(ballotbox(stati
 # record(station::PollingStation, uuid::UUID, N::Int) = record(ballotbox(station, uuid), N)
 
 Base.get(station::PollingStation, uuid::UUID) = ballotbox(station, uuid) # TODO: use select
+Base.get(station::PollingStation, proposal::Proposal) = get(station, uuid(proposal))
 
 
 """

@@ -9,10 +9,7 @@ import .Model: CryptoSpec, pseudonym, TicketID, id, commit, verify, generator, M
 import .Controllers: Registrar, admit!, enlist!, set_demehash!, Ticket, tokenid
 import .Controllers: record!, commit!, ack_leaf
 import .Controllers: BraidChainController, roll, constituents, state, ledger
-import .Controllers: PollingStation, add!, ack_cast, set_seed!, spine
-
-# Auditing could also be implemented
-# import .Model: archive, audit
+import .Controllers: BallotBoxController, PollingStation, add!, ack_cast, set_seed!, spine
 
 
 crypto = CryptoSpec("sha256", "EC: P_192")
@@ -203,7 +200,6 @@ r = tally(POLLING_STATION, uuid(proposal))
 
 commit!(POLLING_STATION, uuid(proposal), COLLECTOR; with_tally = true) 
 
-
 # Testing ledger input output
 
 reloaded_chain = BraidChainController(ledger(BRAID_CHAIN))
@@ -213,4 +209,11 @@ reloaded_chain = BraidChainController(ledger(BRAID_CHAIN))
 @test reloaded_chain.spec == BRAID_CHAIN.spec
 @test root(reloaded_chain.tree) == root(BRAID_CHAIN.tree)
 
+# testing bbox
+
+bbox = get(POLLING_STATION, proposal)
+_voters = voters(ledger(BRAID_CHAIN), proposal)
+reloaded_bbox = BallotBoxController(ledger(bbox), _voters)
+
+@test root(reloaded_bbox.tree) == root(bbox.tree)
 

@@ -146,6 +146,7 @@ isstarted(proposal::Proposal; time) = proposal.open < time
 Issuer of approval for the proposal.
 """
 issuer(proposal::Proposal) = isnothing(proposal.approval) ? nothing : pseudonym(proposal.approval)
+index(proposal::Proposal) = index(proposal.anchor)
 
 
 function status(proposal::Proposal)
