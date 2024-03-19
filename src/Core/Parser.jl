@@ -68,6 +68,9 @@ function marshal(x)
     return take!(io)
 end
 
+marshal(io::IO, x) = JSON3.write(io, x) 
+
+
 unmarshal(bytes) = JSON3.read(bytes)
 unmarshal(bytes, T::DataType) = JSON3.read(bytes, T)
 

@@ -342,6 +342,8 @@ struct CastRecord
     timestamp::DateTime
 end
 
+Base.:(==)(x::CastRecord, y::CastRecord) = x.vote == y.vote && x.timestamp == y.timestamp
+
 function Base.show(io::IO, receipt::CastRecord)
 
     println(io, "CastRecord:")

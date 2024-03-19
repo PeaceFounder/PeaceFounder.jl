@@ -127,11 +127,28 @@ v = vote(proposal, _seed, Selection(2), alice)
 N = record!(POLLING_STATION, uuid(proposal), v) # This should have failed
 commit!(POLLING_STATION, uuid(proposal), COLLECTOR)
 
+v = vote(proposal, _seed, Selection(1), alice)
+N = record!(POLLING_STATION, uuid(proposal), v) # This should have failed
+commit!(POLLING_STATION, uuid(proposal), COLLECTOR)
 
 
+# BRAIDCHAIN
 
+STORE_DIR = joinpath(tempdir(), "braidchain")
 
-# store it within a temporary folder
+save(ledger(BRAID_CHAIN), STORE_DIR; force=true)
+loaded_ledger = load(STORE_DIR)
 
-# read it from the folder
+# TODO: Fix braidreceipt and test ledger equality
 
+# BALLOTBOX
+
+bbox = ledger(get(POLLING_STATION, proposal))
+BBOX_DIR = joinpath(tempdir(), "ballotbox")
+
+save(bbox, BBOX_DIR; force=true)
+loaded_bbox_ledger = load(BBOX_DIR)
+
+@test loaded_bbox_ledger.records == bbox.records
+@test loaded_bbox_ledger.proposal == bbox.proposal
+@test loaded_bbox_ledger.spec == bbox.spec
