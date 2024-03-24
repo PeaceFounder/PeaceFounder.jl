@@ -9,11 +9,11 @@ using Dates: DateTime
 
 Represents a simple ballot form for multiple choice question. 
 """
-@struct_hash_equal struct Ballot
+struct Ballot
     options::Vector{String}
 end
 
-#@batteries Ballot
+@batteries Ballot
 """
     struct Selection
         option::Int
@@ -21,11 +21,11 @@ end
 
 Represents voter's selection for a `Ballot` form.
 """
-@struct_hash_equal struct Selection
+struct Selection
     option::Int
 end
 
-#@batteries Selection
+@batteries Selection
 """
     isconsistent(selection::Selection, ballot::Ballot)
 
@@ -94,7 +94,7 @@ which collects votes and issues vote inclusion receipts and is responsable for m
 also includes an `anchor` which sets a relative generator with which members vote anonymously. To be considered valid is signed by
 `proposer` authorizing vote to take place.
 """
-@struct_hash_equal struct Proposal <: Transaction 
+struct Proposal <: Transaction 
     uuid::UUID
     summary::String
     description::String
@@ -112,7 +112,7 @@ also includes an `anchor` which sets a relative generator with which members vot
     Proposal(; uuid, summary, description, ballot, open, closed, collector = nothing, state = nothing, approval = nothing) = Proposal(uuid, summary, description, ballot, open, closed, collector, state, approval)
 end
 
-#@batteries Proposal
+@batteries Proposal
 """
     state(proposal::Proposal)::ChainState
 
@@ -271,7 +271,7 @@ pseudonym(vote::Vote) = isnothing(vote.seal) ? nothing : pseudonym(vote.seal)
         
 Represents a public ballot box state. Contains an immutable proposal and seed digest; a current ledger `index`, history tree `root`. When ellections end a `tally` is included in the state and a `view` is added listing all counted votes. Note that the `view` attribute is important for a client to know whether it's key have leaked and somone lese havbe superseeded it's vote by revoting.
 """
-@struct_hash_equal struct BallotBoxState
+struct BallotBoxState
     proposal::Digest
     seed::Digest
     index::Int
@@ -280,7 +280,7 @@ Represents a public ballot box state. Contains an immutable proposal and seed di
     view::Union{Nothing, BitVector} # 
 end 
 
-#@batteries BallotBoxState
+@batteries BallotBoxState
 
 BallotBoxState(proposal::Digest, seed::Digest, index::Int, root::Nothing, tally::Nothing, view::Nothing) = BallotBoxState(proposal, seed, index, Digest(), tally, view)
 

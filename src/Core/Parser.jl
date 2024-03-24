@@ -1,6 +1,6 @@
 module Parser
 
-using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Membership, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, HashSpec, Commit, Generator, CryptoSpec, DemeSpec, HashSpec, parse_groupspec, lower_groupspec, BraidReceipt
+using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Membership, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Commit, Generator, CryptoSpec, DemeSpec, HashSpec, parse_groupspec, lower_groupspec, BraidReceipt
 
 using ..ProtocolSchema: TicketStatus, Invite, AckInclusion #, AckConsistency 
 using HistoryTrees: InclusionProof, ConsistencyProof
@@ -99,10 +99,9 @@ function StructTypes.construct(::Type{CryptoSpec}, x)
     hasher = HashSpec(x["hash"])
     group = parse_groupspec(x["group"])
     generator = Generator(hex2bytes(x["generator"]))
-
+    
     return CryptoSpec(hasher, group, generator)
 end
-
 
 StructTypes.StructType(::Type{DemeSpec}) = StructTypes.Struct()
 StructTypes.omitempties(::Type{DemeSpec}) = (:timestamp, :signature)

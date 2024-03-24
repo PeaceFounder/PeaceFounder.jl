@@ -1,6 +1,5 @@
 module Mapper
 
-import Sockets
 import Dates: Dates, DateTime
 using Base: UUID
 using URIs: URI

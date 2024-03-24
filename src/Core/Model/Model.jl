@@ -3,8 +3,8 @@ module Model
 
 # A patch to Base. An alternative is to patch JSON3.jl 
 
-using StructEquality
-
+# using StructEquality
+using StructHelpers
 
 using JSON3, StructTypes # used temporaraly for canonicalize
 

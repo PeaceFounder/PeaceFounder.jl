@@ -1,17 +1,11 @@
-import HistoryTrees: leaf, root
-using CryptoGroups: CryptoGroups, ECP, EC2N, Koblitz, MODP
+import HistoryTrees: leaf, root, HistoryTree
+using CryptoGroups: CryptoGroups, ECP, EC2N, Koblitz, MODP, GroupSpec
 using Dates: DateTime
-
-import CryptoGroups
-const GroupSpec = CryptoGroups.Spec # TODO: upstream the naming
 
 import CryptoSignatures
 import Nettle
 
-
 import CryptoSignatures.DSA as Signature
-
-
 
 """
     struct Generator
@@ -20,13 +14,11 @@ import CryptoSignatures.DSA as Signature
 
 Datatype which stores cryptogrpahic group point in standart octet form intended to be used as a base. See also `Pseudonym`.
 """
-@struct_hash_equal struct Generator
+struct Generator
     data::Vector{UInt8}
 end
 
-Generator(g::Generator) = g
-
-#@batteries Generator
+@batteries Generator
 
 bytes(generator::Generator) = generator.data
 
@@ -49,20 +41,28 @@ Base.:(==)(x::Digest, y::Digest) = x.data == y.data
 bytes(digest::Digest) = digest.data
 
 
-
-"""
-    struct HashSpec
-        spec::String
-    end
-
-A specification for a hasher. See method [`digest`](@ref).
-"""
-struct HashSpec # HashSpecSpec?
-    spec::String
-end
+using CryptoGroups: HashSpec
 
 
-HashSpec(hasher::HashSpec) = hasher
+HistoryTree(::Type{Digest}, hasher::HashSpec) = HistoryTree(Digest, (x, y) -> digest(x, y, hasher))
+HistoryTree(d::Vector{Digest}, hasher::HashSpec) = HistoryTree(d, (x, y) -> digest(x, y, hasher))
+
+
+# Although CryptoGroups also define HashSpec which is used further for defining a random oracle that which is further used
+# internally in CryptoSignatures and ShuffleProofs 
+# """
+#     struct HashSpec
+#         spec::String
+#     end
+
+# A specification for a hasher. See method [`digest`](@ref).
+# """
+# struct HashSpec 
+#     spec::String
+# end
+
+
+# HashSpec(hasher::HashSpec) = hasher
 
 """
     digest(bytes::Vector{UInt8}, hasher::HashSpec)::Digest
@@ -71,11 +71,12 @@ HashSpec(hasher::HashSpec) = hasher
 Compute a hash digest. When input is not in bytes the [`canonicalize`](@ref) method is applied first.
 """
 function digest(data::Vector{UInt8}, hasher::HashSpec)
-    return Digest(Nettle.digest(hasher.spec, data))
+    #return Digest(Nettle.digest(hasher.spec, data))
+    return Digest(hasher(data))
 end
 
-(hasher::HashSpec)(x) = digest(x, hasher)
-(hasher::HashSpec)(x, y) = digest(x, y, hasher)
+#(hasher::HashSpec)(x) = digest(x, hasher)
+#(hasher::HashSpec)(x, y) = digest(x, y, hasher)
 
 
 """
@@ -177,6 +178,7 @@ struct CryptoSpec
     generator::Generator
 
     CryptoSpec(hash_spec, group_spec, generator) = new(HashSpec(hash_spec), _groupspec(group_spec), Generator(generator))
+    CryptoSpec(hash_spec::HashSpec, group_spec, generator) = new(hash_spec, _groupspec(group_spec), Generator(generator))
 
     function CryptoSpec(hash_spec, group_spec)
         spec = _groupspec(group_spec)
@@ -223,9 +225,11 @@ end
 
 A datatype which stores public key in canonical standart octet form.
 """
-@struct_hash_equal struct Pseudonym
+struct Pseudonym
     pk::Vector{UInt8}
 end
+
+@batteries Pseudonym
 
 # This is needed internally for easy grouping of the votes
 function Base.isless(a::Pseudonym, b::Pseudonym)
@@ -440,12 +444,12 @@ implements `index` and `root` necessaary to fix a ledger state.
 
 **Interface:** [`id`](@ref), [`issuer`](@ref), [`verify`](@ref), [`index`](@ref), [`root`](@ref), [`state`](@ref)
 """
-@struct_hash_equal struct Commit{T}
+struct Commit{T}
     state::T
     seal::Seal
 end
 
-#@batteries Commit
+@batteries Commit
 
 id(commit::Commit) = pseudonym(commit.seal) # It is an id because of the context
 

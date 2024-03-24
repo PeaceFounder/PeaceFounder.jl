@@ -1,7 +1,7 @@
 module ProtocolSchema
 
-using StructEquality
-#using StructHelpers
+#using StructEquality
+using StructHelpers
 
 using Base64: base64encode
 using URIs: URI
@@ -59,12 +59,12 @@ In case the ledger is tampered with this acknowledgement acts as sufficient proo
 
 **Interface:** [`leaf`](@ref), [`id`](@ref), [`issuer`](@ref), [`commit`](@ref), [`index`](@ref), [`verify`](@ref)
 """
-@struct_hash_equal struct AckInclusion{T}
+struct AckInclusion{T}
     proof::InclusionProof
     commit::Commit{T}
 end
 
-#@batteries AckInclusion
+@batteries AckInclusion
 
 function Base.show(io::IO, ack::AckInclusion)
 
@@ -99,7 +99,7 @@ commit(ack::AckInclusion) = ack.commit
 state(ack::AckInclusion) = state(ack.commit)
 
 
-isbinding(proof::InclusionProof, commit::Commit, hasher::HashSpec) = HistoryTrees.verify(proof, root(commit), index(commit); hash = hasher)
+isbinding(proof::InclusionProof, commit::Commit, hasher::HashSpec) = HistoryTrees.verify(proof, root(commit), index(commit); hash = (x, y) -> digest(x, y, hasher))
 
 #verify(ack::AckInclusion, crypto::CryptoSpec) = HistoryTrees.verify(ack.proof, root(ack.commit), index(ack.commit); hash = hasher(crypto)) && verify(commit(ack), crypto)
 verify(ack::AckInclusion, crypto::CryptoSpec) = isbinding(ack.proof, ack.commit, crypto) && verify(commit(ack), crypto)
@@ -136,7 +136,7 @@ issuer(ack::AckConsistency) = issuer(ack.commit)
 commit(ack::AckConsistency) = ack.commit
 state(ack::AckConsistency) = state(ack.commit)
 
-isbinding(proof::ConsistencyProof, commit::Commit, hasher::HashSpec) = HistoryTrees.verify(proof, root(commit), index(commit); hash = hasher)
+isbinding(proof::ConsistencyProof, commit::Commit, hasher::HashSpec) = HistoryTrees.verify(proof, root(commit), index(commit); hash = (x, y) -> digest(x, y, hasher))
 
 verify(ack::AckConsistency, crypto::CryptoSpec) = isbinding(ack.proof, ack.commit, crypto) && verify(commit(ack), crypto)
 

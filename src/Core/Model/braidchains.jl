@@ -160,7 +160,7 @@ Represents a chain state metadata which is sufficient for integrity checks.
 
 **Interface:** [`index`](@ref), [`root`](@ref), [`generator`](@ref)
 """
-@struct_hash_equal struct ChainState
+struct ChainState
     index::Int
     root::Digest
     generator::Generator
@@ -170,7 +170,7 @@ end
 
 ChainState(index::Int, root::Nothing, generator::Generator) = ChainState(index, Digest(), generator)
 
-#@batteries ChainState
+@batteries ChainState
 
 generator(state::ChainState) = state.generator
 generator(commit::Commit{ChainState}) = generator(commit.state)

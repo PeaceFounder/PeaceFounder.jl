@@ -146,9 +146,6 @@ end
 is_same_credential(request::Request, response::Response) = credential(request) == credential(response)
 
 
-using Infiltrator
-
-
 # I may need to make one level deeper to call it a proper middleware
 function AuthClientMiddleware(server, credential::AbstractString, secret::Union{String, Vector{UInt8}}; match_timestamps=true)
     

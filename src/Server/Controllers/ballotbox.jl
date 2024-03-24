@@ -280,11 +280,7 @@ function Base.push!(ballotbox::BallotBoxController, record::CastRecord)
     return
 end
 
-
 Base.getindex(bbox::BallotBoxController, index::Int) = bbox.ledger[index]
-
- using Infiltrator
-
 
 function state(bbox::BallotBoxController; with_tally::Union{Nothing, Bool} = nothing)
 

@@ -56,11 +56,11 @@ function BraidChainController(ledger::BraidChainLedger; commit = nothing)
     _generator = 
         record isa DemeSpec ? generator(record) :
         record isa BraidReceipt ? output_generator(record) : nothing
-    
-    tree = HistoryTree(Digest, hasher(spec))
 
-    # members!
-    
+    # I could restore the API with added specialization method!
+    tree = HistoryTree(Digest, hasher(spec))
+    #tree = HistoryTree(Digest, (x, y) -> digest(x, y, hasher(spec)))
+
     _members = members(ledger)
 
     chain = BraidChainController(_members, ledger, spec, _generator, tree, commit)
@@ -117,7 +117,6 @@ function reset_tree!(chain::BraidChainController)
 
     d = Digest[digest(i, hasher(chain.spec)) for i in chain.ledger]
     tree = HistoryTree(d, hasher(chain.spec))
-
     chain.tree = tree
 
     return

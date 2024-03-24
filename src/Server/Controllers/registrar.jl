@@ -171,8 +171,6 @@ Return true if there already is a ticket with `ticketid`.
 Base.in(ticketid::TicketID, registrar::Registrar) = ticketid in ticket_ids(registrar)
 
 
-#using Infiltrator
-
 """
     token(ticketid::TicketID, hmac::HMAC)
 
@@ -186,9 +184,10 @@ function token(ticketid::TicketID, attempt::UInt8, hash::HashSpec, key::Vector{U
 
 
     token_key = hash(UInt8[0, key...]) # 0 is prepended as hash(key(hmac)) is often used as keyid
-    _token = hash(UInt8[bytes(token_key)..., attempt, bytes(ticketid)...])
+    _token = hash(UInt8[token_key..., attempt, bytes(ticketid)...])
 
-    return bytes(_token)[1:nlen] 
+    #return bytes(_token)[1:nlen] 
+    return _token[1:nlen]
 end
 
 token(ticketid::TicketID, attempt::UInt8, hmac::HMAC; nlen=16) = token(ticketid, attempt, hasher(hmac), key(hmac); nlen)
