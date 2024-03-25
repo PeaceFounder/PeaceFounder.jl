@@ -10,9 +10,6 @@ using ..Core.ProtocolSchema: AckInclusion, AckConsistency, CastAck
 import ..Core.Model: uuid, voters, seed, receipt, tally, tallyview, istallied, isbinding
 
 
-#import ..LedgerInterface: record!, commit!, ack_leaf, ack_root, commit_index, reset_tree!, root, commit, select, state, leaf
-
-
 """
     mutable struct BallotBoxController
         proposal::Proposal

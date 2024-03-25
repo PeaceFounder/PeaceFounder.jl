@@ -257,8 +257,6 @@ Return a pseudonym with which vote is sealed.
 pseudonym(vote::Vote) = isnothing(vote.seal) ? nothing : pseudonym(vote.seal)
 
 
-
-
 """
     struct BallotBoxState
         proposal::Digest

@@ -12,6 +12,8 @@ struct BraidChainLedger
     records::AbstractVector{Transaction}
 end
 
+@batteries BraidChainLedger
+
 Base.push!(ledger::BraidChainLedger, record::Transaction) = push!(ledger.records, record)
 Base.getindex(ledger::BraidChainLedger, index::Int) = ledger.records[index]
 Base.length(ledger::BraidChainLedger) = length(ledger.records)

@@ -13,15 +13,13 @@ group(spec::MODP) = CryptoGroups.specialize(PGroup, spec)
 """
     struct BraidReceipt <: Transaction
         braid::Simulator
-        consumer::DemeSpec
         producer::DemeSpec
         approval::Union{Seal, Nothing}
     end
 
 Represents a braider's computation which is supported with zero knowledge proof of shuffle and decryption assuring it's corectness
-stored in a `braid` field; `consumer` denotes a deme for which the braid is intended and `producer` denotes a deme where 
-the braid is made. To assert latter the the braider signs the braidwork and stores that in the `aproval` field.
-See a [`braid`](@ref) method.
+stored in a `braid` field; `producer` denotes a deme where the braid is made. To assert latter the the braider signs the 
+braidwork and stores that in the `aproval` field. See a [`braid`](@ref) method.
 
 **Interface:** [`approve`](@ref), [`verify`](@ref), [`input_generator`](@ref), [`input_members`](@ref), [`output_generator`](@ref), [`output_members`](@ref)
 """
@@ -46,6 +44,8 @@ struct BraidReceipt <: Transaction
     # Necessary for deserialization
     BraidReceipt(braid::Simulator, producer::DemeSpec, approval::Seal) = new(braid, producer, approval)
 end 
+
+@batteries BraidReceipt
 
 @doc raw"""
     braid(generator::Generator, members::Union{Vector{Pseudonym}, Set{Pseudonym}}, consumer::DemeSpec, producer::DemeSpec; verifier = (g) -> ProtocolSpec(; g))
@@ -109,10 +109,9 @@ function verify(braidwork::BraidReceipt, crypto::CryptoSpec; skip_braid::Bool = 
     verify(bytes(_digest), braidwork.approval, braidwork.producer.crypto) || return false
 
     pseudonym(braidwork.approval) == braidwork.producer.braider || return false
-
-    # TODO: check that ProtocolSpec is compatable with the chain
-    # braidwork.braid.verifier == ProtocolSpec(g = braidwork.braid.verifier.g) || return false
-    # typeof(braidwork.braid.verifier.g) == group(crypto.group)
+    
+    braidwork.braid.verifier == ProtocolSpec(g = braidwork.braid.verifier.g) || return false
+    typeof(braidwork.braid.verifier.g) == group(crypto.group) || return false
 
     if !skip_braid
         ShuffleProofs.verify(braidwork.braid) || return false

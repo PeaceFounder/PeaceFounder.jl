@@ -139,7 +139,7 @@ STORE_DIR = joinpath(tempdir(), "braidchain")
 save(ledger(BRAID_CHAIN), STORE_DIR; force=true)
 loaded_ledger = load(STORE_DIR)
 
-# TODO: Fix braidreceipt and test ledger equality
+@test loaded_ledger == ledger(BRAID_CHAIN)
 
 # BALLOTBOX
 

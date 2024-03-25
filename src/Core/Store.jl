@@ -1,6 +1,7 @@
 module Store
 
-using ..Model: BraidChainLedger, DemeSpec, Membership, BraidReceipt, Proposal, Transaction, BallotBoxLedger, CastRecord
+using ShuffleProofs: ShuffleProofs
+using ..Model: BraidChainLedger, DemeSpec, Membership, BraidReceipt, Proposal, Transaction, BallotBoxLedger, CastRecord, Seal
 using ..Parser: marshal, unmarshal
 
 
@@ -55,21 +56,29 @@ function save(record::Union{DemeSpec, Membership, Proposal}, dir::String, index:
 end
 
 
-function save(record::BraidReceipt, path::String; force=false)
-    
-    path *= ".json" # A quick fix
+function save(record::BraidReceipt, dir::String; force=false)
 
-    if isfile(path) 
+    if isdir(dir) 
         if force
-            rm(path)
+            rm(dir, recursive=true)
         else
-            error("$path already exists; use `force` to overwrite.")
+            error("$dir already exists; use `force` to overwrite.")
         end
     end
-        
-    open(path, "w") do file
-        marshal(file, record)
+
+    mkdir(dir)
+
+    open(joinpath(dir, "demespec.json"), "w") do file
+        marshal(file, record.producer)
     end
+
+    open(joinpath(dir, "seal.json"), "w") do file
+        marshal(file, record.approval)
+    end
+    
+    mkdir(joinpath(dir, "braid"))
+
+    ShuffleProofs.save(record.braid, joinpath(dir, "braid"))
     
     return
 end
@@ -81,6 +90,17 @@ function save(record::BraidReceipt, dir::String, index::Int; force=false)
     save(record, path; force)
     
 end
+
+function load(::Type{BraidReceipt}, dir::String)
+
+    braid = ShuffleProofs.load(joinpath(dir, "braid"))
+    spec = unmarshal(read(joinpath(dir, "demespec.json")), DemeSpec)
+    seal = unmarshal(read(joinpath(dir, "seal.json")), Seal)
+
+    return BraidReceipt(braid, spec, seal)
+end
+
+load(::Type{BraidReceipt}, dir::String, index::UInt16) = load(BraidReceipt, joinpath(dir, BRAIDRECEIPT_DIR, index2name(index)))
 
 
 function save(record::CastRecord, path::String; force=false)
@@ -206,7 +226,7 @@ function load_braidchain(dir::String)
             bytes = read(joinpath(dir, MEMBERSHIP_DIR, index2name(i)) * ".json")
             record = unmarshal(bytes, Membership)
         elseif i in braidreceipt_keys
-            @warn "Skiping as unimplemented"
+            record = load(BraidReceipt, dir, i)
         elseif i in proposal_keys
             bytes = read(joinpath(dir, PROPOSAL_DIR, index2name(i)) * ".json")
             record = unmarshal(bytes, Proposal)
