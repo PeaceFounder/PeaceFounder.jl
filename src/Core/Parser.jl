@@ -1,6 +1,6 @@
 module Parser
 
-using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Membership, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Commit, Generator, CryptoSpec, DemeSpec, HashSpec, parse_groupspec, lower_groupspec, BraidReceipt
+using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Membership, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Commit, Generator, CryptoSpec, DemeSpec, HashSpec, parse_groupspec, lower_groupspec #, BraidReceipt
 
 using ..ProtocolSchema: TicketStatus, Invite, AckInclusion #, AckConsistency 
 using HistoryTrees: InclusionProof, ConsistencyProof
@@ -155,8 +155,8 @@ function StructTypes.construct(::Type{ConsistencyProof}, event)
 end
 
 
-StructTypes.StructType(::Type{BraidReceipt}) = StructTypes.Struct()
-StructTypes.omitempties(::Type{BraidReceipt}) = (:approval,)
+#StructTypes.StructType(::Type{BraidReceipt}) = StructTypes.Struct()
+#StructTypes.omitempties(::Type{BraidReceipt}) = (:approval,)
 
 
 ### Special stroing scheme for the invite

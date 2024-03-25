@@ -1,10 +1,8 @@
 import HistoryTrees: leaf, root, HistoryTree
-using CryptoGroups: CryptoGroups, ECP, EC2N, Koblitz, MODP, GroupSpec
+using CryptoGroups: CryptoGroups, ECP, EC2N, Koblitz, MODP, GroupSpec, HashSpec
 using Dates: DateTime
 
 import CryptoSignatures
-import Nettle
-
 import CryptoSignatures.DSA as Signature
 
 """
@@ -41,28 +39,9 @@ Base.:(==)(x::Digest, y::Digest) = x.data == y.data
 bytes(digest::Digest) = digest.data
 
 
-using CryptoGroups: HashSpec
-
-
 HistoryTree(::Type{Digest}, hasher::HashSpec) = HistoryTree(Digest, (x, y) -> digest(x, y, hasher))
 HistoryTree(d::Vector{Digest}, hasher::HashSpec) = HistoryTree(d, (x, y) -> digest(x, y, hasher))
 
-
-# Although CryptoGroups also define HashSpec which is used further for defining a random oracle that which is further used
-# internally in CryptoSignatures and ShuffleProofs 
-# """
-#     struct HashSpec
-#         spec::String
-#     end
-
-# A specification for a hasher. See method [`digest`](@ref).
-# """
-# struct HashSpec 
-#     spec::String
-# end
-
-
-# HashSpec(hasher::HashSpec) = hasher
 
 """
     digest(bytes::Vector{UInt8}, hasher::HashSpec)::Digest
@@ -71,12 +50,8 @@ HistoryTree(d::Vector{Digest}, hasher::HashSpec) = HistoryTree(d, (x, y) -> dige
 Compute a hash digest. When input is not in bytes the [`canonicalize`](@ref) method is applied first.
 """
 function digest(data::Vector{UInt8}, hasher::HashSpec)
-    #return Digest(Nettle.digest(hasher.spec, data))
     return Digest(hasher(data))
 end
-
-#(hasher::HashSpec)(x) = digest(x, hasher)
-#(hasher::HashSpec)(x, y) = digest(x, y, hasher)
 
 
 """
@@ -195,6 +170,7 @@ Return a generator of the specification.
 """
 generator(crypto::CryptoSpec) = crypto.generator
 
+#hasher(spec::HashSpec) = spec
 hasher(crypto::CryptoSpec) = crypto.hasher
 
 """
@@ -247,7 +223,6 @@ function Base.isless(a::Pseudonym, b::Pseudonym)
     return len_a < len_b
 end
 
-#@batteries Pseudonym # treats as immutable; 
 
 bytes(x::Pseudonym) = x.pk
 

@@ -94,7 +94,7 @@ access, ack = enroll(eve, invite_eve)
 input_generator = generator(BRAID_CHAIN)
 input_members = members(BRAID_CHAIN)
 
-braidwork = braid(input_generator, input_members, demespec, demespec, BRAIDER) 
+braidwork = braid(input_generator, input_members, demespec.crypto, demespec, BRAIDER) 
 
 record!(BRAID_CHAIN, braidwork)
 commit!(BRAID_CHAIN, BRAID_CHAIN_RECORDER)

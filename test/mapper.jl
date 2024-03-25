@@ -79,7 +79,7 @@ access_eve, ack = enroll(eve, invite_eve)
 input_generator = Mapper.get_generator()
 input_members = Mapper.get_members()
 
-braidwork = Model.braid(input_generator, input_members, DEMESPEC, DEMESPEC, Mapper.BRAIDER[]) 
+braidwork = Model.braid(input_generator, input_members, DEMESPEC.crypto, DEMESPEC, Mapper.BRAIDER[]) 
 Mapper.submit_chain_record!(braidwork)
 
 ### 

@@ -10,7 +10,9 @@ using ..Core.Model: Pseudonym, Transaction, DemeSpec, Generator, Commit, ChainSt
 using ..Core.ProtocolSchema: AckInclusion, AckConsistency
 
 import ..Core.Model: isbinding, generator, members, voters
-#import ..LedgerInterface: record!, commit!, ack_leaf, ack_root, commit_index, reset_tree!, root, commit, select, state, leaf
+
+# struct BraidBroker end # ToDo
+
 
 """
     struct BraidChain
@@ -296,7 +298,6 @@ function commit!(chain::BraidChainController, signer::Signer)
     return
 end
 
-
 function Base.push!(chain::BraidChainController, m::Membership)
 
     push!(chain.ledger, m)
@@ -305,7 +306,6 @@ function Base.push!(chain::BraidChainController, m::Membership)
     
     return
 end
-
 
 function record!(chain::BraidChainController, m::Membership)
 
@@ -325,18 +325,15 @@ function record!(chain::BraidChainController, m::Membership)
     return N
 end
 
-
 function Base.push!(chain::BraidChainController, braidwork::BraidReceipt)
 
     push!(chain.ledger, braidwork)
     push!(chain.tree, digest(braidwork, hasher(chain.spec)))
-
     chain.generator = output_generator(braidwork)
     chain.members = Set(output_members(braidwork))
 
     return
 end
-
 
 function record!(chain::BraidChainController, braidwork::BraidReceipt)
 

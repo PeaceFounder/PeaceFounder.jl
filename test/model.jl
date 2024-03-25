@@ -122,7 +122,7 @@ access, ack = enroll(eve, invite_eve)
 input_generator = generator(BRAID_CHAIN)
 input_members = members(BRAID_CHAIN)
 
-braidwork = braid(input_generator, input_members, demespec, demespec, BRAIDER) 
+braidwork = braid(input_generator, input_members, demespec.crypto, demespec, BRAIDER) 
 
 @test Model.input_generator(braidwork) == generator(BRAID_CHAIN) 
 @test Set(Model.input_members(braidwork)) == members(BRAID_CHAIN)

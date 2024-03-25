@@ -4,6 +4,7 @@ ToDo: a well specified encoding is essential here. Binary tree encoding may suff
 function canonicalize end
 
 # digest could have a generic method with canonicalize. 
+digest(::Nothing, hasher::HashSpec) = error("Can't digest nothing")
 
 digest(vote::Vote, hasher::HashSpec) = digest(canonicalize(vote), hasher)
 
@@ -16,6 +17,8 @@ digest(receipt::CastReceipt, hasher::HashSpec) = digest(canonicalize(receipt), h
 digest(spec::DemeSpec, hasher::HashSpec) = digest(canonicalize(spec), hasher)
 
 digest(pseudonym::Pseudonym, hasher::HashSpec) = digest(bytes(pseudonym), hasher)
+
+digest(seal::Seal, hasher::HashSpec) = digest(canonicalize(seal), hasher)
 
 
 function body(proposal::Proposal)
@@ -135,20 +138,39 @@ function verify(proposal::Proposal, crypto::CryptoSpec)
 end
 
 
-body(braidwork::BraidReceipt) = @set braidwork.approval = nothing
+function digest(record::BraidReceipt, hasher::HashSpec)
+
+    braid_hash = digest(record.braid, hasher)
+    spec_hash = digest(record.producer, hasher)
+    seal_hash = digest(record.approval, hasher)
+
+    return digest(UInt8[bytes(braid_hash)..., bytes(spec_hash)..., bytes(seal_hash)...], hasher)
+end
+
+body(record::BraidReceipt) = record.braid
+
+digest(braid::ShuffleProofs.Simulator, hasher::HashSpec) = Digest(ShuffleProofs.digest(braid, hasher))
+
+
+# body(braidwork::BraidReceipt) = @set braidwork.approval = nothing
 
 function seal(braidwork::BraidReceipt, signer::Signer)
 
-    bytes = canonicalize(body(braidwork))
+    _digest = digest(braidwork.braid, hasher(signer))
 
-    return seal(bytes, signer)
+    #bytes = canonicalize(body(braidwork))
+
+    return seal(bytes(_digest), signer) # A timestamp is added in front thus it does not do a double hashing at all here.
 end
+
 
 # function verify(braidwork::BraidReceipt, crypto::CryptoSpec)
     
-#     bytes = canonicalize(body(braidwork))
+#     _digest = digest(braidwork, signer.crypto)
+
+#     #bytes = canonicalize(body(braidwork))
     
-#     return verify(bytes, braidwork.approval, crypto)
+#     return verify(_digest, braidwork.approval, crypto)
 # end
 
 # verify(braidwork::BraidReceipt) = verify(braidwork, braidwork.producer.crypto)

@@ -54,7 +54,7 @@ bob = Client.enroll!(bob_invite; server = SERVER, key = 3)
 input_generator = Mapper.get_generator()
 input_members = Mapper.get_members()
 
-braidwork = Model.braid(input_generator, input_members, DEMESPEC, DEMESPEC, Mapper.BRAIDER[]) 
+braidwork = Model.braid(input_generator, input_members, DEMESPEC.crypto, DEMESPEC, Mapper.BRAIDER[]) 
 Mapper.submit_chain_record!(braidwork)
 
 ### 
@@ -66,7 +66,7 @@ eve = Client.enroll!(eve_invite; server = SERVER, key = 4) # Works as expected!
 input_generator = Mapper.get_generator()
 input_members = Mapper.get_members()
 
-braidwork = Model.braid(input_generator, input_members, DEMESPEC, DEMESPEC, Mapper.BRAIDER[]) 
+braidwork = Model.braid(input_generator, input_members, DEMESPEC.crypto, DEMESPEC, Mapper.BRAIDER[]) 
 Mapper.submit_chain_record!(braidwork)
 
 ###

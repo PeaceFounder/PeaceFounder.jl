@@ -54,7 +54,7 @@ Client.enroll!(eve, eve_invite; server = SERVER, key = 4)
 input_generator = Mapper.get_generator()
 input_members = Mapper.get_members()
 
-braidwork = Model.braid(input_generator, input_members, DEMESPEC, DEMESPEC, Mapper.BRAIDER[]) 
+braidwork = Model.braid(input_generator, input_members, DEMESPEC.crypto, DEMESPEC, Mapper.BRAIDER[]) 
 Mapper.submit_chain_record!(braidwork)
 
 # As the ticket is already expired there is no valid invite available and this should throw an error
