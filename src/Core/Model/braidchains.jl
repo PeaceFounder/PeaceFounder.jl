@@ -12,6 +12,8 @@ struct BraidChainLedger
     records::AbstractVector{Transaction}
 end
 
+BraidChainLedger() = BraidChainLedger(Transaction[])
+
 @batteries BraidChainLedger
 
 Base.push!(ledger::BraidChainLedger, record::Transaction) = push!(ledger.records, record)

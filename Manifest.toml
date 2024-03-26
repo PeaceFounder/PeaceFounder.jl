@@ -2,7 +2,7 @@
 
 julia_version = "1.10.0"
 manifest_format = "2.0"
-project_hash = "cd87006c6e4df4542cf96a4a5957d21f86663451"
+project_hash = "bdf3cf4e1b1646d11c41f2412caa658745298616"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -119,9 +119,9 @@ version = "6.2.1+6"
 
 [[deps.HTTP]]
 deps = ["Base64", "CodecZlib", "ConcurrentUtilities", "Dates", "ExceptionUnwrapping", "Logging", "LoggingExtras", "MbedTLS", "NetworkOptions", "OpenSSL", "Random", "SimpleBufferStream", "Sockets", "URIs", "UUIDs"]
-git-tree-sha1 = "995f762e0182ebc50548c434c171a5bb6635f8e4"
+git-tree-sha1 = "8e59b47b9dc525b70550ca082ce85bcd7f5477cd"
 uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
-version = "1.10.4"
+version = "1.10.5"
 
 [[deps.HistoryTrees]]
 git-tree-sha1 = "5e0e766befebd2108cef8e3a14cf715c8496cb2e"
@@ -375,9 +375,9 @@ version = "1.1.1"
 
 [[deps.ShuffleProofs]]
 deps = ["CryptoGroups", "Random"]
-git-tree-sha1 = "79b5a6fac187a4d0ee5e6a0a4a706ca50775363e"
+git-tree-sha1 = "87b0c49235260736a77ac0356fa4e063406d3ab1"
 uuid = "31a120cc-b3cb-4d07-bbdb-d498660ddfd8"
-version = "0.3.0"
+version = "0.3.1"
 
 [[deps.SimpleBufferStream]]
 git-tree-sha1 = "874e8867b33a00e784c8a7e4b60afe9e037b74e1"

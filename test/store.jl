@@ -1,4 +1,4 @@
-using PeaceFounder.Core.Store: save, load
+using PeaceFounder.Core.Store: save, load, tar
 
 using Test
 
@@ -6,7 +6,7 @@ using Dates
 using PeaceFounder.Core: Model
 using PeaceFounder.Server: Controllers
 
-import .Model: CryptoSpec, pseudonym, TicketID, id, commit, verify, generator, Membership, approve, isbinding, Proposal, vote, Ballot, Selection, uuid, tally, seed, hasher, HMAC, DemeSpec, generate, Signer, key, braid, Model, select, digest, voters, members, root
+import .Model: CryptoSpec, pseudonym, TicketID, id, commit, verify, generator, Membership, approve, isbinding, Proposal, vote, Ballot, Selection, uuid, tally, seed, hasher, HMAC, DemeSpec, generate, Signer, key, braid, Model, select, digest, voters, members, root, BraidReceipt
 
 import .Controllers: Registrar, admit!, enlist!, set_demehash!, Ticket, tokenid
 import .Controllers: record!, commit!, ack_leaf
@@ -152,3 +152,13 @@ loaded_bbox_ledger = load(BBOX_DIR)
 @test loaded_bbox_ledger.records == bbox.records
 @test loaded_bbox_ledger.proposal == bbox.proposal
 @test loaded_bbox_ledger.spec == bbox.spec
+
+# testing tar on braid 
+
+io = IOBuffer()
+tar(io, braidwork)
+seekstart(io)
+
+loaded_braidwork = load(BraidReceipt, io)
+
+@test loaded_braidwork == braidwork

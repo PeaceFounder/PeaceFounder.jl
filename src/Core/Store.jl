@@ -1,9 +1,9 @@
 module Store
 
+using Tar
 using ShuffleProofs: ShuffleProofs
 using ..Model: BraidChainLedger, DemeSpec, Membership, BraidReceipt, Proposal, Transaction, BallotBoxLedger, CastRecord, Seal
 using ..Parser: marshal, unmarshal
-
 
 index2name(i::UInt16) = reinterpret(UInt8, [i]) |> reverse |> bytes2hex |> uppercase
 index2name(i::Int) = index2name(UInt16(i))
@@ -101,6 +101,46 @@ function load(::Type{BraidReceipt}, dir::String)
 end
 
 load(::Type{BraidReceipt}, dir::String, index::UInt16) = load(BraidReceipt, joinpath(dir, BRAIDRECEIPT_DIR, index2name(index)))
+
+
+struct TarPath <: ShuffleProofs.Path
+    io::IO
+    path::String
+end
+
+function tar(io::IO, path::String, data::Vector{UInt8}; mode::Integer=0o644)
+    
+    n = length(data)
+
+    Tar.write_header(io, Tar.Header(path, :file, mode, n, ""))
+    Tar.write_data(io, IOBuffer(data), size=n)
+
+end
+
+Base.joinpath(path::TarPath, args...) = TarPath(path.io, joinpath(path.path, args...))
+Base.mkdir(path::TarPath) = nothing
+Base.mkpath(path::TarPath) = nothing
+Base.write(path::TarPath, data::Vector{UInt8}) = tar(path.io, path.path, data)
+
+
+function tar(io::IO, record::BraidReceipt)
+
+    ShuffleProofs.save(record.braid, TarPath(io, "braid"))    
+    tar(io, "demespec.json", marshal(record.producer))
+    tar(io, "seal.json", marshal(record.approval))
+
+    return
+end
+
+function load(::Type{BraidReceipt}, io::IO) 
+    
+    dir = joinpath(tempdir(), "braidreceipt")
+    rm(dir, force=true, recursive=true)
+
+    Tar.extract(io, dir)
+
+    return load(BraidReceipt, dir)
+end
 
 
 function save(record::CastRecord, path::String; force=false)

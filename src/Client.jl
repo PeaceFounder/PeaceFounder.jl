@@ -10,12 +10,12 @@ using Dates
 using Setfield
 
 import StructTypes
-#using StructHelpers 
 
 using ..Core.Model: Model, Membership, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, HashSpec, DemeSpec, Signer,  Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen, digest, commit
 using ..Core.Model: id, hasher, pseudonym, isbinding, generator, state, verify, crypto, index, root, isconsistent, istallied, issuer
 using ..Core.ProtocolSchema: TicketStatus, tokenid, Invite, AckConsistency, AckInclusion, CastAck
 using ..Core.Parser: marshal, unmarshal
+using ..Core.Store: Store
 using ..Authorization: AuthClientMiddleware
 
 import ..Core.Model
@@ -180,7 +180,6 @@ function get_chain_leaf(server::Route, N::Int)
     return ack
 end
 
-
 function get_chain_root(server::Route, N::Int)
 
     response = get(server, "/braidchain/$N/root")
@@ -189,14 +188,25 @@ function get_chain_root(server::Route, N::Int)
     return ack
 end
 
-
 function get_chain_record(server::Route, N::Int)
 
     response = get(server, "/braidchain/$N/record")
-    
-    error("Not implemented")
-end
+    record_type = Dict(response.headers)["X-Record-Type"]
 
+    if record_type == "DemeSpec"
+        return unmarshal(response.body, DemeSpec)
+    elseif record_type == "Membership"
+        return unmarshal(response.body, Membership)
+    elseif record_type == "Proposal"
+        return unmarshal(response.body, Proposal)
+    elseif record_type == "BraidReceipt"
+        return Store.load(Model.BraidReceipt, response.body)
+    else
+        error("Record type $record_type not recognized")
+    end
+        
+    return
+end
 
 function get_ballotbox_commit(server::Route, uuid::UUID)
 

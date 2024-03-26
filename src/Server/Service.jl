@@ -3,7 +3,8 @@ module Service
 # This is the outermost layer for the sercvice concerned with providing services for outsied world. 
 # Defines how HTTP requests are processed
 using ..Core.Parser: marshal, unmarshal
-using ..Core.Model: TicketID, Digest, Pseudonym, Digest, Membership, Proposal, Vote, bytes
+using ..Core.Store: tar
+using ..Core.Model: TicketID, Digest, Pseudonym, Digest, Membership, Proposal, Vote, bytes, BraidReceipt
 using ..Authorization: AuthServerMiddleware, timestamp, credential
 using ..Mapper
 
@@ -11,6 +12,7 @@ using Dates: DateTime, Second, now
 using Base: UUID
 using SwaggerMarkdown
 
+using Oxygen: json
 module OxygenInstance using Oxygen; @oxidise end
 import .OxygenInstance: @get, @put, @post, mergeschema, serve, Request, Response
 
@@ -67,7 +69,7 @@ export serve
 
 
 @get "/deme" function(req::Request)
-    return Response(200, marshal(Mapper.get_demespec()))
+    return Mapper.get_demespec() |> json
 end
 
 
@@ -102,7 +104,7 @@ end
         id = unmarshal(req.body, Pseudonym)
         admission = Mapper.seek_admission(id, ticket.ticketid)
         
-        Response(200, marshal(admission)) # will this exit the function though? This would produce response without headers.
+        admission |> json # will this exit the function though? This would produce response without headers.
     end
     
     return handler(request)
@@ -115,7 +117,7 @@ end
 
     status = Mapper.get_ticket_status(ticketid)
     
-    return Response(200, marshal(status))
+    return status |> json
 end
 
 
@@ -124,7 +126,7 @@ end
     member = unmarshal(req.body, Membership)
     response = Mapper.enroll_member(member)
 
-    return Response(200, marshal(response))
+    return response |> json
 end
 
 
@@ -132,7 +134,7 @@ end
     
     response = Mapper.get_chain_commit()
 
-    return Response(200, marshal(response))
+    return response |> json
 end
 
 
@@ -141,7 +143,7 @@ end
     proposal = unmarshal(req.body, Proposal)
     ack = Mapper.enlist_proposal(proposal)
 
-    return Response(200, marshal(ack))
+    return ack |> json
 end
 
 
@@ -149,7 +151,7 @@ end
 
     proposal_list = Mapper.get_chain_proposal_list()
     
-    return Response(200, marshal(proposal_list))
+    return proposal_list |> json
 end
 
 
@@ -157,7 +159,7 @@ end
 
     ack = Mapper.get_chain_ack_leaf(N)
 
-    return Response(200, marshal(ack))
+    return ack |> json
 end
 
 
@@ -165,15 +167,28 @@ end
 
     ack = Mapper.get_chain_ack_root(N)
 
-    return Response(200, marshal(ack))
+    return ack |> json
 end
 
 
-@get "/braidchain/{N}/record" function get_chain_record(req::Request, N::Int)
+@get "/braidchain/{N}/record" function(req::Request, N::Int)
+
+    # This will include logic to take the files from cache instead
 
     record = Mapper.get_chain_record(N)
+    type_header = "X-Record-Type" => string(nameof(typeof(record)))
 
-    return Response(200, marshal(record)) # type information is important here for receiver!
+    # Backpressure could be added here to reduce memory footprint
+    if record isa BraidReceipt
+
+        io = IOBuffer() 
+        tar(io, record)
+        seekstart(io)
+        
+        return Response(200, ["Content-Type" => "application/x-tar", type_header], io) 
+    end
+
+    return json(record, headers = [type_header])
 end
 
 
@@ -183,7 +198,7 @@ end
 
     commit = Mapper.get_ballotbox_commit(uuid)
     
-    return Response(200, marshal(commit))
+    return commit |> json
 end
 
 
@@ -193,7 +208,7 @@ end
 
     proposal = Mapper.get_ballotbox_proposal(uuid)
     
-    return Response(200, marshal(proposal))
+    return proposal |> json
 end
 
 
@@ -203,7 +218,7 @@ end
 
     spine = Mapper.get_ballotbox_spine(uuid)
     
-    return Response(200, marshal(spine))
+    return spine |> json
 end
 
 
@@ -214,7 +229,7 @@ end
     vote = unmarshal(req.body, Vote)
     ack = Mapper.cast_vote(uuid, vote)
 
-    return Response(200, marshal(ack))
+    return ack |> json
 end
 
 
@@ -223,7 +238,7 @@ end
     uuid = UUID(uuid_hex)
     record = Mapper.get_ballotbox_record(uuid, N)
     
-    return Response(200, marshal(record))
+    return record |> json
 end
 
 
@@ -232,7 +247,7 @@ end
     uuid = UUID(uuid_hex)
     receipt = Mapper.get_ballotbox_receipt(uuid, N)
 
-    return Response(200, marshal(receipt))
+    return receipt |> json
 end
 
 
@@ -241,7 +256,7 @@ end
     uuid = UUID(uuid_hex)
     ack = Mapper.get_ballotbox_ack_leaf(uuid, N)
 
-    return Response(200, marshal(ack))
+    return ack |> json
 end
 
 
@@ -250,7 +265,7 @@ end
     uuid = UUID(uuid_hex)
     ack = Mapper.get_ballotbox_ack_root(uuid, N)
 
-    return Response(200, marshal(ack))
+    return ack |> json
 end
 
 

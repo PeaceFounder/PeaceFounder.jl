@@ -5,6 +5,7 @@ import PeaceFounder.Server: Service, Mapper, Controllers
 import PeaceFounder: Client, Schedulers
 import PeaceFounder.Core.Model: Model, CryptoSpec, DemeSpec, Signer, id, approve
 import PeaceFounder.Core.ProtocolSchema
+import PeaceFounder.Core.Store: BraidChainLedger
 
 crypto = CryptoSpec("sha256", "EC: P_192")
 #crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
@@ -77,7 +78,7 @@ proposal = Model.Proposal(
     description = "",
     ballot = Model.Ballot(["yes", "no"]),
     open = Dates.now() + Dates.Millisecond(100),
-    closed = Dates.now() + Dates.Second(5)
+    closed = Dates.now() + Dates.Second(7)
 ) |> Client.configure(SERVER) |> approve(PROPOSER)
 
 
@@ -124,3 +125,15 @@ Controllers.commit!(Mapper.POLLING_STATION[], proposal.uuid, Mapper.COLLECTOR[])
 blame = Client.blame(bob, proposal.uuid) # can be published anonymously without privacy concerns 
 @test Client.isbinding(blame, proposal, Model.hasher(crypto))
 @test Client.verify(blame, crypto)
+
+# Testing the API for retrieving braidchain records over the network
+
+commit = Client.get_chain_commit(SERVER)
+chain = BraidChainLedger()
+
+for i in 1:commit.state.index
+    record = Client.get_chain_record(SERVER, i)
+    push!(chain, record)
+end
+
+@test Controllers.ledger(Mapper.BRAID_CHAIN[]) == chain
