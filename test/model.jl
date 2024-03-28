@@ -9,7 +9,7 @@ import .Model: CryptoSpec, pseudonym, TicketID, id, commit, verify, generator, M
 import .Controllers: Registrar, admit!, enlist!, set_demehash!, Ticket, tokenid
 import .Controllers: record!, commit!, ack_leaf
 import .Controllers: BraidChainController, roll, constituents, state, ledger
-import .Controllers: BallotBoxController, PollingStation, add!, ack_cast, set_seed!, spine
+import .Controllers: BallotBoxController, PollingStation, init!, ack_cast, set_seed!, spine
 
 
 crypto = CryptoSpec("sha256", "EC: P_192")
@@ -165,7 +165,7 @@ ack = ack_leaf(BRAID_CHAIN, N)
 @test verify(ack, crypto)
 
 #add!(POLLING_STATION, proposal, members(BRAID_CHAIN, proposal))
-add!(POLLING_STATION, demespec, proposal, voters(BRAID_CHAIN, proposal))
+init!(POLLING_STATION, demespec, proposal, voters(BRAID_CHAIN, proposal))
 
 # Ideally the seed would be a Pulse from the League of Entropy
 _seed = digest(rand(UInt8, 16), hasher(demespec))

@@ -23,7 +23,7 @@ import ..Core.Model: uuid, voters, seed, receipt, tally, tallyview, istallied, i
     
 Represents a ballot box for a proposal. Contains `proposal`, a set of eligiable `voters` a `collector` who collects the votes and a `seed` which is selected at random when the voting starts. `queue` contains a list of valid votes which yet to be comitted to a `ledger`. A history `tree` is built on leafs of ledger's receipts (see a [`receipt`](@ref) method). A `commit` contains a collector seal on the current ballotbox state. 
 
-**Interface:** [`reset_tree!`](@ref), [`generator`](@ref), [`uuid`](@ref), [`members`](@ref), [`ledger`](@ref), [`spine`](@ref), [`index`](@ref), [`seed`](@ref), [`leaf`](@ref), [`root`](@ref), [`record`](@ref), [`receipt`](@ref), [`commit`](@ref), [`tally`](@ref), [`set_seed!`](@ref), [`ack_leaf`](@ref), [`ack_root`](@ref), [`ack_cast`](@ref), [`commit_index`](@ref), [`commit_state`](@ref), [`push!`](@ref), [`state`](@ref), [`validate`](@ref), [`record!`](@ref), [`commit!`](@ref)
+**Interface:** [`reset_tree!`](@ref), [`generator`](@ref), [`uuid`](@ref), [`members`](@ref), [`ledger`](@ref), [`spine`](@ref), [`index`](@ref), [`seed`](@ref), [`leaf`](@ref), [`root`](@ref), [`receipt`](@ref), [`commit`](@ref), [`tally`](@ref), [`set_seed!`](@ref), [`ack_leaf`](@ref), [`ack_root`](@ref), [`ack_cast`](@ref), [`commit_index`](@ref), [`commit_state`](@ref), [`push!`](@ref), [`state`](@ref), [`validate`](@ref), [`record!`](@ref), [`commit!`](@ref)
 """
 mutable struct BallotBoxController
     ledger::BallotBoxLedger
@@ -156,11 +156,12 @@ root(ballotbox::BallotBoxController, N::Int) = root(ballotbox.tree, N)
 root(ballotbox::BallotBoxController) = root(ballotbox.tree)
 
 """
-    record(ledger::BallotBoxController, index::Int)::CastRecord
+    getindex(ledger::BallotBoxController, index::Int)::CastRecord
 
 Return a ledger record at provided `index`.
 """
-record(ballotbox::BallotBoxController, N::Int) = ledger(ballotbox)[N]
+Base.getindex(ballotbox::BallotBoxController, N::Int) = ledger(ballotbox)[N]
+
 
 """
     receipt(ledger::BallotBoxController, index::Int)::CastReceipt
@@ -204,8 +205,6 @@ function ack_leaf(ballotbox::BallotBoxController, index::Int)
     return AckInclusion(proof, commit(ballotbox))
 end
 
-
-#isbinding(vote::Vote, ack::AckInclusion{BallotBoxState}, crypto::Crypto) = digest(vote, crypto) == leaf(ack)
 
 """
     isbinding(vote::Vote, ack::CastAck, hasher)
@@ -269,8 +268,6 @@ function Base.push!(ballotbox::BallotBoxController, record::CastRecord)
 
     return
 end
-
-Base.getindex(bbox::BallotBoxController, index::Int) = bbox.ledger[index]
 
 function state(bbox::BallotBoxController; with_tally::Union{Nothing, Bool} = nothing)
 
@@ -341,6 +338,7 @@ function record!(ballotbox::BallotBoxController, vote::Vote)
     return N
 end
 
+
 """
     record!(ledger::BallotBoxController, record::CastRecord)
 
@@ -402,16 +400,13 @@ commit!(ballotbox::BallotBoxController, signer::Signer; with_tally::Union{Nothin
 
 Represents a pooling station which hosts ballotbox ledgers for every proposal collector manages. 
 
-**Interface:** [`add!`](@ref), [`ballotbox`](@ref), [`record!`](@ref), [`commit!`](@ref), [`commit`](@ref), [`ack_leaf`](@ref), [`ack_root`](@ref), [`ack_cast`](@ref), [`record`](@ref), [`receipt`](@ref), [`spine`](@ref), [`ledger`](@ref), [`tally`](@ref), [`set_seed!`](@ref)
+**Interface:** [`init!`](@ref), [`record!`](@ref), [`commit!`](@ref), [`commit`](@ref), [`ack_leaf`](@ref), [`ack_root`](@ref), [`ack_cast`](@ref), [`receipt`](@ref), [`spine`](@ref), [`ledger`](@ref), [`tally`](@ref), [`set_seed!`](@ref)
 """
 struct PollingStation
     halls::Vector{BallotBoxController}
-    #crypto::CryptoSpec
 end
 
-#PollingStation(crypto::CryptoSpec) = PollingStation(BallotBoxController[], crypto)
 PollingStation() = PollingStation(BallotBoxController[])
-
 
 function Base.show(io::IO, station::PollingStation)
     
@@ -424,31 +419,29 @@ function Base.show(io::IO, station::PollingStation)
 
 end
 
-
-# init! would be a better name here!
 """
-    add!(station::PollingStation, proposal::Proposal, voters::Set{Pseudonym}[, collector::Pseudonym])
+    init!(station::PollingStation, proposal::Proposal, voters::Set{Pseudonym}[, collector::Pseudonym])
 
 Creates a new ballotbox for given proposal with provided member pseudonyms at a relative generator anchored in the proposal. 
 A collector is optional and provided only when it differs from one specified in the proposal. 
 """
-function add!(station::PollingStation, spec::DemeSpec, proposal::Proposal, voters::Vector{Pseudonym}, collector::Pseudonym)
+function init!(station::PollingStation, spec::DemeSpec, proposal::Proposal, voters::Vector{Pseudonym}, collector::Pseudonym)
     bbox = BallotBoxController(proposal, voters, spec, collector)
     push!(station.halls, bbox)
     return
 end
 
-add!(station::PollingStation, spec::DemeSpec, proposal::Proposal, voters::Vector{Pseudonym}) = add!(station, spec, proposal, voters, proposal.collector)
+init!(station::PollingStation, spec::DemeSpec, proposal::Proposal, voters::Vector{Pseudonym}) = init!(station, spec, proposal, voters, proposal.collector)
 
 
-add!(station::PollingStation, bbox::BallotBoxController) = push!(station.halls, bbox)
+init!(station::PollingStation, bbox::BallotBoxController) = push!(station.halls, bbox)
 
 """
-    ballotbox(station::PollingStation, uuid::UUID)::BallotBoxController
+    get(station::PollingStation, uuid::UUID)::BallotBoxController
 
 Return a ballotbox ledger with a provided UUID. If none is found throws an error.
 """
-function ballotbox(station::PollingStation, _uuid::UUID) 
+function Base.get(station::PollingStation, _uuid::UUID) 
 
     for hall in station.halls
         if uuid(hall) == _uuid
@@ -460,25 +453,14 @@ function ballotbox(station::PollingStation, _uuid::UUID)
     return
 end
 
-"""
-    record!(station::PollingStation, uuid::UUID, vote::Vote)::Int
-
-Records a `vote` in a ballotbox with provided proposal UUID. Throws an error
-if a ballotbox can't be found.
-"""
-function record!(station::PollingStation, uuid::UUID, vote::Vote)
-    
-    bbox = ballotbox(station, uuid)
-
-    return record!(bbox, vote)
-end
+Base.get(station::PollingStation, proposal::Proposal) = get(station, uuid(proposal))
 
 """
-    ballotbox(station::PollingStation, proposal::Digest)::BallotBoxController
+    get(station::PollingStation, proposal::Digest)::BallotBoxController
 
 Return a ballotbox which has proposal with provided digest.
 """
-function ballotbox(station::PollingStation, proposal::Digest)
+function Base.get(station::PollingStation, proposal::Digest)
 
     for hall in station.halls
 
@@ -490,6 +472,22 @@ function ballotbox(station::PollingStation, proposal::Digest)
 
     error("BallotBoxController with proposal diggest $(proposal) not found")
 end
+
+
+
+"""
+    record!(station::PollingStation, uuid::UUID, vote::Vote)::Int
+
+Records a `vote` in a ballotbox with provided proposal UUID. Throws an error
+if a ballotbox can't be found.
+"""
+function record!(station::PollingStation, uuid::UUID, vote::Vote)
+    
+    bbox = get(station, uuid)
+
+    return record!(bbox, vote)
+end
+
 
 """
     record!(station::PollingStation, uuid::UUID, vote::Vote)::Int
@@ -510,45 +508,35 @@ end
 
 Select a ballotbox with provided uuid and commit it's state with collector. 
 """
-commit!(station::PollingStation, uuid::UUID, signer::Signer; with_tally::Union{Bool, Nothing} = nothing) = commit!(ballotbox(station, uuid), signer; with_tally)
+commit!(station::PollingStation, uuid::UUID, signer::Signer; with_tally::Union{Bool, Nothing} = nothing) = commit!(get(station, uuid), signer; with_tally)
 
 """
     commit(station::PollingStation, uuid::UUID)::Commit
 
 Return a ballotbox commit.
 """
-commit(station::PollingStation, uuid::UUID) = commit(ballotbox(station, uuid))
+commit(station::PollingStation, uuid::UUID) = commit(get(station, uuid))
 
 """
     ack_leaf(station::PollingStation, uuid::UUID, N::Int)::AckInclusion
 
 Return history tree inclusion proof for a tree leaf at index `N` in ballotbox with `uuid`.
 """
-ack_leaf(station::PollingStation, uuid::UUID, N::Int) = ack_leaf(ballotbox(station, uuid), N)
+ack_leaf(station::PollingStation, uuid::UUID, N::Int) = ack_leaf(get(station, uuid), N)
 
 """
     ack_root(station::PollingStation, uuid::UUID, N::Int)::AckConsistency
 
 Return history tree consitency proof tree root at index `N` in ballotbox with `uuid`.
 """
-ack_root(station::PollingStation, uuid::UUID, N::Int) = ack_root(ballotbox(station, uuid), N)
+ack_root(station::PollingStation, uuid::UUID, N::Int) = ack_root(get(station, uuid), N)
 
 """
     ack_cast(station::PollingStation, uuid::UUID, N::Int)::CastAck
 
 Return inclusion proof with receipt and current tree commit for a leaf at index `N` and ballotbox with `uuid`. 
 """
-ack_cast(station::PollingStation, uuid::UUID, N::Int) = ack_cast(ballotbox(station, uuid), N)
-
-# """
-#     record(station::PollingStation, uuid::UUID, N::Int)::CastRecord
-
-# Return a record with an index `N` at ballotbox with `uuid`.
-# """
-# record(station::PollingStation, uuid::UUID, N::Int) = record(ballotbox(station, uuid), N)
-
-Base.get(station::PollingStation, uuid::UUID) = ballotbox(station, uuid) # TODO: use select
-Base.get(station::PollingStation, proposal::Proposal) = get(station, uuid(proposal))
+ack_cast(station::PollingStation, uuid::UUID, N::Int) = ack_cast(get(station, uuid), N)
 
 
 """
@@ -556,35 +544,35 @@ Base.get(station::PollingStation, proposal::Proposal) = get(station, uuid(propos
 
 Return a leaf vector for a ballotbox with proposal `uuid`.
 """
-spine(station::PollingStation, uuid::UUID) = spine(ballotbox(station, uuid))
+spine(station::PollingStation, uuid::UUID) = spine(get(station, uuid))
 
 """
     receipt(station::PollingStation, uuid::UUID, N::Int)::CastReceipt
 
 Return a receipt for a record with index `N` at ballotbox with `uuid`.
 """
-receipt(station::PollingStation, uuid::UUID, N::Int) = receipt(ballotbox(station, uuid), N)
+receipt(station::PollingStation, uuid::UUID, N::Int) = receipt(get(station, uuid), N)
 
 """
     ledger(station::PollingStation, uuid::UUID)::Vector{CastRecord}
 
 Return a vector of records from a ballotbox with `uuid`.
 """
-ledger(station::PollingStation, uuid::UUID) = ledger(ballotbox(station, uuid))
+ledger(station::PollingStation, uuid::UUID) = ledger(get(station, uuid))
 
 """
     tally(station::PollingStation, uuid::UUID)
 
 Compute a tally from ledger records a ballotbox with `uuid`.
 """
-tally(station::PollingStation, uuid::UUID) = tally(ballotbox(station, uuid))
+tally(station::PollingStation, uuid::UUID) = tally(get(station, uuid))
 
 """
     set_seed!(station::PollingStation, uuid::UUID, seed::Digest)
 
 Sets a seed for a ballotbox with provided `uuid`.
 """
-set_seed!(station::PollingStation, uuid::UUID, seed::Digest) = set_seed!(ballotbox(station, uuid), seed)
+set_seed!(station::PollingStation, uuid::UUID, seed::Digest) = set_seed!(get(station, uuid), seed)
 
 
 

@@ -148,7 +148,7 @@ spine = Mapper.get_ballotbox_spine(proposal.uuid)
 
 #Mapper.tally_votes!(proposal.uuid)
 
-ballotbox = Mapper.ballotbox(proposal.uuid)
+ballotbox = Mapper.get_ballotbox(proposal.uuid)
 @test istallied(ballotbox) == false
 sleep(2)
 @test istallied(ballotbox) == true

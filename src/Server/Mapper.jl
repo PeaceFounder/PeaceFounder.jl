@@ -320,7 +320,7 @@ function load_system() # a kwarg could be passed on whether to audit the system
                 @warn "BallotBox commit not found. A new seed will be set."
             end
             
-            Controllers.add!(POLLING_STATION[], bbox)
+            Controllers.init!(POLLING_STATION[], bbox)
 
             Schedulers.schedule!(ENTROPY_SCHEDULER, proposal.open, proposal.uuid)
             Schedulers.schedule!(TALLY_SCHEDULER, proposal.closed, proposal.uuid)
@@ -585,7 +585,7 @@ function submit_chain_record!(proposal::Proposal)
     spec = get_demespec()
     #anchored_members = Model.members(BRAID_CHAIN[], proposal)
     anchored_members = Model.voters(BRAID_CHAIN[], proposal) # I could get a braid output_members
-    Controllers.add!(POLLING_STATION[], spec, proposal, anchored_members)
+    Controllers.init!(POLLING_STATION[], spec, proposal, anchored_members)
 
     init_bbox_store(Controllers.ledger(get(POLLING_STATION[], proposal)))
 
@@ -599,11 +599,11 @@ end
 
 function cast_vote(uuid::UUID, vote::Vote; late_votes = false)
 
-    if !(Model.isstarted(proposal(uuid); time = Dates.now()))
+    if !(Model.isstarted(get_proposal(uuid); time = Dates.now()))
 
         error("Voting have not yet started")
 
-    elseif !late_votes && Model.isdone(proposal(uuid); time = Dates.now())
+    elseif !late_votes && Model.isdone(get_proposal(uuid); time = Dates.now())
 
         error("Vote received for proposal too late")
         
@@ -611,7 +611,7 @@ function cast_vote(uuid::UUID, vote::Vote; late_votes = false)
         # Concurency can be used with a following API but it requires defining 
         # a new vector type which has a write lock.
 
-        bbox = Controllers.ballotbox(POLLING_STATION[], uuid)        
+        bbox = get(POLLING_STATION[], uuid)        
         N = Controllers.record!(bbox, vote)
 
         # commit! may make dublicates in cases when record! executed async
@@ -630,23 +630,22 @@ function cast_vote(uuid::UUID, vote::Vote; late_votes = false)
     end
 end
 
-@deprecate cast_vote! cast_vote
+#@deprecate cast_vote! cast_vote
 
+#ballotbox(uuid::UUID) = get(POLLING_STATION[], uuid)
+get_ballotbox(uuid::UUID) = get(POLLING_STATION[], uuid)
 
-ballotbox(uuid::UUID) = Controllers.ballotbox(POLLING_STATION[], uuid)
-get_ballotbox(uuid::UUID) = Controllers.ballotbox(POLLING_STATION[], uuid)
+#@deprecate ballotbox get_ballotbox
 
-@deprecate ballotbox get_ballotbox
+#proposal(uuid::UUID) = get_ballotbox(uuid).ledger.proposal
+get_proposal(uuid::UUID) = get_ballotbox(uuid).ledger.proposal 
 
-proposal(uuid::UUID) = ballotbox(uuid).ledger.proposal
-get_proposal(uuid::UUID) = ballotbox(uuid).ledger.proposal 
+#@deprecate proposal get_proposal
 
-@deprecate proposal get_proposal
-
-tally(uuid::UUID) = ballotbox(uuid).tally
+#tally(uuid::UUID) = ballotbox(uuid).tally
 get_tally(uuid::UUID) = ballotbox(uuid).tally
 
-@deprecate tally get_tally
+#@deprecate tally get_tally
 
 get_ballotbox_commit(uuid::UUID) = Model.commit(POLLING_STATION[], uuid)
 

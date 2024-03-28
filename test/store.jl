@@ -11,7 +11,7 @@ import .Model: CryptoSpec, pseudonym, TicketID, id, commit, verify, generator, M
 import .Controllers: Registrar, admit!, enlist!, set_demehash!, Ticket, tokenid
 import .Controllers: record!, commit!, ack_leaf
 import .Controllers: BraidChainController, roll, constituents, state, ledger
-import .Controllers: BallotBoxController, PollingStation, add!, ack_cast, set_seed!, spine
+import .Controllers: BallotBoxController, PollingStation, init!, ack_cast, set_seed!, spine
 
 
 crypto = CryptoSpec("sha256", "EC: P_192")
@@ -117,7 +117,7 @@ proposal = Proposal(
 N = record!(BRAID_CHAIN, proposal)
 commit!(BRAID_CHAIN, BRAID_CHAIN_RECORDER)
 
-add!(POLLING_STATION, demespec, proposal, voters(BRAID_CHAIN, proposal))
+init!(POLLING_STATION, demespec, proposal, voters(BRAID_CHAIN, proposal))
 
 _seed = digest(rand(UInt8, 16), hasher(demespec))
 set_seed!(POLLING_STATION, proposal.uuid, _seed)
