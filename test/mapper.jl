@@ -6,6 +6,16 @@ import PeaceFounder.Core.Model: Model, CryptoSpec, pseudonym, TicketID, Membersh
 import PeaceFounder.Core.ProtocolSchema: tokenid, Invite, TicketStatus
 import PeaceFounder.Server.Mapper
 
+function reboot()
+
+    Mapper.reset_system()
+    Mapper.load_system()
+
+end
+
+
+Mapper.DATA_DIR = joinpath(tempdir(), "peacefounder")
+rm(Mapper.DATA_DIR, force=true, recursive=true)
 
 
 crypto = CryptoSpec("sha256", "EC: P_192")
@@ -84,6 +94,8 @@ Mapper.submit_chain_record!(braidwork)
 
 ### 
 
+reboot()
+
 commit = Mapper.get_chain_commit()
 
 proposal = Proposal(
@@ -126,6 +138,8 @@ ack = Mapper.cast_vote(proposal.uuid, v)
 v = vote(proposal, _seed, Selection(1), bob)
 ack = Mapper.cast_vote(proposal.uuid, v)
 
+reboot()
+
 v = vote(proposal, _seed, Selection(1), eve)
 ack = Mapper.cast_vote(proposal.uuid, v)
 
@@ -144,6 +158,9 @@ sleep(2)
 chain_commit = Mapper.get_chain_commit();
 # chain_archive = Mapper.get_chain_archive() # could have a seperate direcotry for braids
 
+
+
+
 # AuditTools.audit_tree(chain_archive, chain_commit) 
 # AuditTools.audit_members(chain_archive)
 # AuditTools.audit_proposals(chain_archive)
@@ -158,3 +175,6 @@ chain_commit = Mapper.get_chain_commit();
 # AuditTools.audit_votes(ballotbox_archive, ballotbox_commit)
 # AuditTools.tally(ballotbox_archive, ballotbox_commit) 
 
+
+
+Mapper.DATA_DIR = "" # For other tests to proceed without issues

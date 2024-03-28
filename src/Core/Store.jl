@@ -50,6 +50,7 @@ end
 function save(record::Union{DemeSpec, Membership, Proposal}, dir::String, index::Int; force=false)
     
     path = joinpath(dir, directory(record), index2name(index)) * ".json"
+    mkpath(dirname(path))
     save(record, path; force)
    
     return
@@ -66,7 +67,8 @@ function save(record::BraidReceipt, dir::String; force=false)
         end
     end
 
-    mkdir(dir)
+    #mkdir(dir)
+    mkpath(dir)
 
     open(joinpath(dir, "demespec.json"), "w") do file
         marshal(file, record.producer)
@@ -152,6 +154,8 @@ function save(record::CastRecord, path::String; force=false)
             error("$path already exists; use `force` to overwrite.")
         end
     end
+
+    mkpath(dirname(path))
     
     open(path, "w") do file
         marshal(file, record)
@@ -228,7 +232,6 @@ function readkeys(path)
 end
 
 
-
 function load(dir::String)
     
     if isdir(joinpath(dir, DEMESPEC_DIR)) && isdir(joinpath(dir, MEMBERSHIP_DIR)) && isdir(joinpath(dir, BRAIDRECEIPT_DIR)) && isdir(joinpath(dir, PROPOSAL_DIR))
@@ -236,6 +239,7 @@ function load(dir::String)
     elseif isdir(joinpath(dir, CASTRECORD_DIR)) && isfile(joinpath(dir, "demespec.json")) && isfile(joinpath(dir, "proposal.json"))
         return load_ballotbox(dir)
     else
+        #@infiltrate
         error("Direcotry $dir does not point to either BraidChainLedger or BallotBoxLedger.")
     end
     
@@ -250,10 +254,17 @@ function load_braidchain(dir::String)
     braidreceipt_keys = readkeys(joinpath(dir, BRAIDRECEIPT_DIR))
     proposal_keys = readkeys(joinpath(dir, PROPOSAL_DIR))
 
-    N = max(maximum(demespec_keys), maximum(membership_keys), 
-            maximum(braidreceipt_keys), maximum(proposal_keys))
+    _keys = [demespec_keys..., membership_keys..., braidreceipt_keys..., proposal_keys...]
+
 
     ledger = BraidChainLedger(Transaction[])
+
+    isempty(_keys) && return ledger
+
+    #N = max(maximum(demespec_keys), maximum(membership_keys), 
+    #maximum(braidreceipt_keys), maximum(proposal_keys))
+
+    N = maximum(_keys)
 
     local record::Transaction
 

@@ -12,13 +12,11 @@ import ..Core.Model: uuid, voters, seed, receipt, tally, tallyview, istallied, i
 
 """
     mutable struct BallotBoxController
-        proposal::Proposal
+        ledger::BallotBoxLedger
         voters::Set{Pseudonym} # better than members
         collector::Pseudonym
         seed::Union{Digest, Nothing}
-        crypto::CryptoSpec # on the other hand the inclusion of a vote should be binding enough as it includes proposal hash.
         queue::Vector{Vote}
-        ledger::Vector{CastRecord}
         tree::HistoryTree
         commit::Union{Commit{BallotBoxState}, Nothing}
     end
@@ -29,19 +27,14 @@ Represents a ballot box for a proposal. Contains `proposal`, a set of eligiable 
 """
 mutable struct BallotBoxController
     ledger::BallotBoxLedger
-    #proposal::Proposal
     voters::StaticSet{Pseudonym} # Ordering is necessary for supporting alias encoding and thus ordinary Set could not be used
     collector::Pseudonym
     seed::Union{Digest, Nothing}
-    #crypto::CryptoSpec # on the other hand the inclusion of a vote should be binding enough as it includes proposal hash.
     queue::Vector{Vote}
-    #ledger::Vector{CastRecord}
     tree::HistoryTree
     commit::Union{Commit{BallotBoxState}, Nothing}
 end
 
-
-#BallotBox(proposal::Proposal, voters::Vector{Pseudonym}, collector::Pseudonym, crypto::CryptoSpec) = BallotBox(BallotBoxLedger(CastRecord[], proposal, spec), StaticSet(voters), collector, nothing, crypto, Vote[], CastRecord[], HistoryTree(Digest, hasher(crypto)), nothing)
 
 BallotBoxController(proposal::Proposal, voters::Vector{Pseudonym}, spec::DemeSpec, collector::Pseudonym) = BallotBoxController(BallotBoxLedger(CastRecord[], proposal, spec), StaticSet(voters), collector, nothing, Vote[], HistoryTree(Digest, hasher(spec)), nothing)
 
@@ -431,6 +424,8 @@ function Base.show(io::IO, station::PollingStation)
 
 end
 
+
+# init! would be a better name here!
 """
     add!(station::PollingStation, proposal::Proposal, voters::Set{Pseudonym}[, collector::Pseudonym])
 
@@ -444,6 +439,9 @@ function add!(station::PollingStation, spec::DemeSpec, proposal::Proposal, voter
 end
 
 add!(station::PollingStation, spec::DemeSpec, proposal::Proposal, voters::Vector{Pseudonym}) = add!(station, spec, proposal, voters, proposal.collector)
+
+
+add!(station::PollingStation, bbox::BallotBoxController) = push!(station.halls, bbox)
 
 """
     ballotbox(station::PollingStation, uuid::UUID)::BallotBoxController

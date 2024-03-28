@@ -1,6 +1,6 @@
 module Parser
 
-using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Membership, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Commit, Generator, CryptoSpec, DemeSpec, HashSpec, parse_groupspec, lower_groupspec #, BraidReceipt
+using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Membership, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Commit, Generator, CryptoSpec, DemeSpec, HashSpec, parse_groupspec, lower_groupspec, Signer
 
 using ..ProtocolSchema: TicketStatus, Invite, AckInclusion #, AckConsistency 
 using HistoryTrees: InclusionProof, ConsistencyProof
@@ -21,6 +21,8 @@ Model.canonicalize(x) = marshal(x)
 
 # Needed for canonicalize method
 StructTypes.StructType(::Type{Signature}) = StructTypes.Struct()
+
+StructTypes.StructType(::Type{Signer}) = StructTypes.Struct()
 
 StructTypes.StructType(::Type{Proposal}) = StructTypes.Struct()
 StructTypes.omitempties(::Type{Proposal}) = (:approval,)

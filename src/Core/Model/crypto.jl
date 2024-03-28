@@ -262,7 +262,6 @@ A signer type. See a method `generate(Signer, spec)` for initialization.
 struct Signer
     spec::CryptoSpec
     pbkey::Pseudonym
-    #key::Vector{UInt8}
     key::BigInt
 end
 
