@@ -144,14 +144,6 @@ Check every member registration certificate consistency with the ledger. In part
 """
 function audit_members end
 
-"""
-    audit_lots(ledger::BraidChainArchive)
-
-Check integrity correct nonce commitments. Note that it is possible that this will be moved out 
-to a ballotbox ledger in the future. Also service like DRAND would be beneficial to reduce trust
-assumptions.
-"""
-function audit_lots end
 
 
 """

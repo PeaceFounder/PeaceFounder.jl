@@ -106,10 +106,11 @@ end
 
 
 include("crypto.jl")
-include("braidchains.jl")
+include("braidchain.jl")
 include("braids.jl") # reordered
-include("proposals.jl")
+include("ballotbox.jl")
 include("seal.jl") # Defines how values should be canonicalized. Could contain means for a signer with a state.
+include("audit.jl")
 
 
 export isbinding, braid, approve, verify, canonicalize

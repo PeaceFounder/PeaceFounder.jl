@@ -4,7 +4,7 @@ using Dates
 using PeaceFounder.Core: Model
 using PeaceFounder.Server: Controllers
 
-import .Model: CryptoSpec, pseudonym, TicketID, id, commit, verify, generator, Membership, approve, isbinding, Proposal, vote, Ballot, Selection, uuid, tally, seed, hasher, HMAC, DemeSpec, generate, Signer, key, braid, Model, select, digest, voters, members, root
+import .Model: CryptoSpec, pseudonym, TicketID, id, commit, verify, generator, Membership, approve, isbinding, Proposal, vote, Ballot, Selection, uuid, tally, seed, hasher, HMAC, DemeSpec, generate, Signer, key, braid, Model, select, digest, voters, members, root, audit
 
 import .Controllers: Registrar, admit!, enlist!, set_demehash!, Ticket, tokenid
 import .Controllers: record!, commit!, ack_leaf
@@ -216,4 +216,30 @@ _voters = voters(ledger(BRAID_CHAIN), proposal)
 reloaded_bbox = BallotBoxController(ledger(bbox), _voters)
 
 @test root(reloaded_bbox.tree) == root(bbox.tree)
+
+# Ledger auditing
+
+@test root(ledger(BRAID_CHAIN)) == root(BRAID_CHAIN)
+@test audit(ledger(BRAID_CHAIN))
+
+
+
+
+# chain_commit = Mapper.get_chain_commit();
+# chain_archive = Mapper.get_chain_archive() # could have a seperate direcotry for braids
+
+# AuditTools.audit_tree(chain_archive, chain_commit) 
+# AuditTools.audit_members(chain_archive)
+# AuditTools.audit_proposals(chain_archive)
+# AuditTools.audit_lots(chain_archive)
+
+# ballotbox_commit = Mapper.get_ballotbox_commit(proposal.uuid)
+# ballotbox_archive = Mapper.get_ballotbox_archive(proposal.uuid) # contains a proposal, seed and ledger
+
+# @test isbinding(ballotbox_archive, chain_archive) # tests proposal and the seed, teh coresponding lot
+
+# AuditTools.audit_tree(ballotbox_archive, ballotbox_commit)
+# AuditTools.audit_votes(ballotbox_archive, ballotbox_commit)
+# AuditTools.tally(ballotbox_archive, ballotbox_commit) 
+
 

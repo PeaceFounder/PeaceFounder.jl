@@ -1,4 +1,4 @@
-using HistoryTrees: HistoryTree, InclusionProof, ConsistencyProof
+using HistoryTrees: HistoryTrees, HistoryTree
 using Base: UUID, @kwdef
 
 """
@@ -61,7 +61,23 @@ members(ledger::BraidChainLedger) = members(ledger, length(ledger))
 voters(ledger::BraidChainLedger, index::Int) = output_members(ledger[index]::BraidReceipt)
 voters(ledger::BraidChainLedger, state) = voters(ledger, index(state)::Int)
 
-# now I need to port voters here 
+
+function root(ledger::BraidChainLedger, N::Int)
+
+    spec::DemeSpec = ledger[1]
+    
+    leafs = Digest[]
+
+    for record in view(ledger, 1:N)
+        push!(leafs, digest(record, hasher(spec)))
+    end
+
+    # 
+    tree = HistoryTree(leafs, hasher(spec)) # this executes tree hash directly
+    return HistoryTrees.root(tree)
+end
+
+root(ledger::BraidChainLedger) = root(ledger, length(ledger))
 
 
 """
@@ -233,11 +249,9 @@ Represents an admission certificate for a pseudonym `id`.
 struct Admission
     ticketid::TicketID # document on which basis registrar have decided to approve the member
     id::Pseudonym
-    #timestamp::DateTime # Timestamp could be used as a deadline
     seal::Union{Seal, Nothing}
-    # demespec::Digest # To prevent malicios guardian to downgrade cryptographic parameters, set a selective route compromising anonimity. Uppon receiving admission member would test that demespec is the one as sent in the invite.  
+    # demespec::Digest # To prevent malicios guardian to downgrade cryptographic parameters, set a selective route compromising anonimity. Uppon receiving admission member would test that demespec is the one as sent in the invite. 
 end
-
 
 
 Admission(ticketid::TicketID, id::Pseudonym) = Admission(ticketid, id, nothing)
@@ -362,6 +376,3 @@ function Base.show(io::IO, member::Membership)
     print(io, "  pseudonym : $(string(pseudonym(member)))")
 
 end
-
-
-

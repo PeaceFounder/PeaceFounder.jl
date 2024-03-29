@@ -33,11 +33,8 @@ struct BraidReceipt <: Transaction
         
         @assert braid.proposition isa Braid
 
-        #return new(braid, consumer, producer, nothing)
         return new(braid, nothing, nothing)
     end
-
-    #BraidReceipt(braid::Simulator, producer::DemeSpec, ::Nothing) = BraidReceipt(braid, consumer, producer)
 
     BraidReceipt(braidwork::BraidReceipt, producer::DemeSpec, approval::Seal) = new(braidwork.braid, producer, approval)
 
@@ -108,6 +105,7 @@ function verify(braidwork::BraidReceipt, crypto::CryptoSpec; skip_braid::Bool = 
     _digest = digest(braidwork.braid, crypto)
     verify(bytes(_digest), braidwork.approval, braidwork.producer.crypto) || return false
 
+    # Theese hings perhaps should be within a constructor of each type!
     pseudonym(braidwork.approval) == braidwork.producer.braider || return false
     
     braidwork.braid.verifier == ProtocolSpec(g = braidwork.braid.verifier.g) || return false

@@ -59,10 +59,7 @@ function BraidChainController(ledger::BraidChainLedger; commit = nothing)
         record isa DemeSpec ? generator(record) :
         record isa BraidReceipt ? output_generator(record) : nothing
 
-    # I could restore the API with added specialization method!
     tree = HistoryTree(Digest, hasher(spec))
-    #tree = HistoryTree(Digest, (x, y) -> digest(x, y, hasher(spec)))
-
     _members = members(ledger)
 
     chain = BraidChainController(_members, ledger, spec, _generator, tree, commit)
@@ -133,7 +130,6 @@ a local disk or when final root hash is validated with a trusted source.
 """
 function Base.push!(chain::BraidChainController, t::Transaction)
     push!(chain.ledger, t)
-    #push!(chain.tree, digest(t, crypto(chain)))
     push!(chain.tree, digest(t, hasher(chain.spec)))
     return
 end
@@ -312,7 +308,6 @@ function record!(chain::BraidChainController, m::Membership)
     N = findfirst(==(m), ledger(chain))
     !isnothing(N) && return N
 
-    
     @assert generator(chain) == generator(m)
     @assert !(pseudonym(m) in members(chain))
     @assert pseudonym(m.admission.seal) == chain.spec.registrar

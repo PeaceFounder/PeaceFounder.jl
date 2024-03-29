@@ -153,28 +153,5 @@ ballotbox = Mapper.get_ballotbox(proposal.uuid)
 sleep(2)
 @test istallied(ballotbox) == true
 
-# auditing phase
-
-chain_commit = Mapper.get_chain_commit();
-# chain_archive = Mapper.get_chain_archive() # could have a seperate direcotry for braids
-
-
-
-
-# AuditTools.audit_tree(chain_archive, chain_commit) 
-# AuditTools.audit_members(chain_archive)
-# AuditTools.audit_proposals(chain_archive)
-# AuditTools.audit_lots(chain_archive)
-
-# ballotbox_commit = Mapper.get_ballotbox_commit(proposal.uuid)
-# ballotbox_archive = Mapper.get_ballotbox_archive(proposal.uuid) # contains a proposal, seed and ledger
-
-# @test isbinding(ballotbox_archive, chain_archive) # tests proposal and the seed, teh coresponding lot
-
-# AuditTools.audit_tree(ballotbox_archive, ballotbox_commit)
-# AuditTools.audit_votes(ballotbox_archive, ballotbox_commit)
-# AuditTools.tally(ballotbox_archive, ballotbox_commit) 
-
-
 
 Mapper.DATA_DIR = "" # For other tests to proceed without issues
