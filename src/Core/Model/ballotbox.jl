@@ -45,6 +45,8 @@ struct Tally
     data::Vector{Int}
 end
 
+@batteries Tally
+
 # This one could be used for parametrization
 selection_type(::Type{Ballot}) = Selection
 tally_type(::Type{Ballot}) = Tally
@@ -113,6 +115,16 @@ struct Proposal <: Transaction
 end
 
 @batteries Proposal
+
+function Base.in(proposal::Proposal, chain::BraidChainLedger)
+    
+    braid_index = proposal.anchor.index
+    N = findfirst(==(proposal), view(chain, braid_index:length(chain)))
+
+    return !isnothing(N)
+end
+
+
 """
     state(proposal::Proposal)::ChainState
 
@@ -205,6 +217,7 @@ Vote(proposal::Digest, seed::Digest, selection::Selection, seq::Int) = Vote(prop
 
 Base.:(==)(x::Vote, y::Vote) = x.proposal == y.proposal && x.selection == y.selection && x.seq == y.seq && x.seal == y.seal
 
+seed(vote::Vote) = vote.seed
 
 function Base.show(io::IO, vote::Vote)
 
@@ -254,7 +267,9 @@ isbinding(record, spine::Vector{Digest}, spec::HashSpec) = isbinding(record, spi
 
 Return a pseudonym with which vote is sealed.
 """
-pseudonym(vote::Vote) = isnothing(vote.seal) ? nothing : pseudonym(vote.seal)
+pseudonym(vote::Vote) = isnothing(vote.seal) ? nothing : pseudonym(vote.seal) 
+
+issuer(vote::Vote) = isnothing(vote.seal) ? nothing : issuer(vote.seal)
 
 
 """
@@ -305,11 +320,9 @@ tally(commit::Commit{BallotBoxState}) = tally(state(commit))
 istallied(state::BallotBoxState) = !isnothing(state.tally)
 istallied(commit::Commit{BallotBoxState}) = istallied(state(commit))
 
-
 isbinding(state::BallotBoxState, proposal::Proposal, hasher::HashSpec) = state.proposal == digest(proposal, hasher)
 
 isbinding(commit::Commit{BallotBoxState}, proposal::Proposal, hasher::HashSpec) = issuer(commit) == proposal.collector && isbinding(state(commit), proposal, hasher)
-
 
 
 function Base.show(io::IO, state::BallotBoxState)
@@ -341,6 +354,8 @@ struct CastRecord
 end
 
 Base.:(==)(x::CastRecord, y::CastRecord) = x.vote == y.vote && x.timestamp == y.timestamp
+
+seed(record::CastRecord) = seed(record.vote)
 
 function Base.show(io::IO, receipt::CastRecord)
 
@@ -394,6 +409,7 @@ receipt(record::CastRecord, spec) = receipt(record, hasher(spec))
 isbinding(receipt::CastReceipt, spine::Vector{Digest}, hasher::HashSpec) = digest(receipt, hasher) in spine
 isbinding(record::CastRecord, spine::Vector{Digest}, hasher::HashSpec) = isbinding(receipt(record, hasher), spine, hasher)
 
+issuer(record::CastRecord) = issuer(record.vote)
 
 """
     isbinding(receipt::CastReceipt, vote::Vote, hasher::HashSpec)::Bool
@@ -420,24 +436,36 @@ Base.findfirst(f::Function, ledger::BallotBoxLedger) = findfirst(f, ledger.recor
 Base.iterate(ledger::BallotBoxLedger) = iterate(ledger.records)
 Base.iterate(ledger::BallotBoxLedger, index) = iterate(ledger.records, index)
 
+Base.view(ledger::BallotBoxLedger, args) = BallotBoxLedger(view(ledger.records, args), ledger.proposal, ledger.spec)
 
 generator(ledger::BallotBoxLedger) = generator(ledger.proposal)
 uuid(ledger::BallotBoxLedger) = uuid(ledger.proposal)
 
 
-#selections(votes::Vector{CastRecord}) = (i.vote.selection for i in votes) # Note that dublicates are removed at this stage
+function root(ledger::BallotBoxLedger, N::Int)
 
-
-function selections(bbox::BallotBoxLedger)
-
-    bitmask = tallyview(bbox)
+    (; spec) = ledger
     
-    return (i.vote.selection for i in bbox.records[bitmask]) # perhaps view also suppoerts bitmask
+    leafs = Digest[]
+
+    for record in view(ledger, 1:N)
+        push!(leafs, digest(record, hasher(spec)))
+    end
+
+    tree = HistoryTree(leafs, hasher(spec)) # this executes tree hash directly
+    return HistoryTrees.root(tree)
 end
 
-function tallyview(votes::Vector{CastRecord}, ballot::Ballot) # tally_bitmask or counting_bitmask, counted_votes
-    
 
+function selections(bbox::BallotBoxLedger, N::Int = length(bbox))
+
+    bitmask = tally_bitmask(bbox, N)
+    
+    return (i.vote.selection for i in view(view(bbox.records, 1:N), bitmask)) # perhaps view also suppoerts bitmask
+end
+
+function tally_bitmask(votes::AbstractVector{CastRecord}, ballot::Ballot) # tally_bitmask or counting_bitmask, counted_votes
+    
     function lt(x::CastRecord, y::CastRecord)
 
         if x.vote.seal.pbkey != y.vote.seal.pbkey
@@ -451,7 +479,6 @@ function tallyview(votes::Vector{CastRecord}, ballot::Ballot) # tally_bitmask or
             x.timestamp > y.timestamp 
         end
     end
-
 
     valid_votes = BitVector(false for i in 1:length(votes))    
 
@@ -476,7 +503,7 @@ function tallyview(votes::Vector{CastRecord}, ballot::Ballot) # tally_bitmask or
     return valid_votes
 end
 
-tallyview(bbox::BallotBoxLedger) = tallyview(bbox.records, bbox.proposal.ballot)
+tally_bitmask(bbox::BallotBoxLedger, N::Int) = tally_bitmask(view(bbox.records, 1:N), bbox.proposal.ballot)
 
 
 """
@@ -484,8 +511,7 @@ tallyview(bbox::BallotBoxLedger) = tallyview(bbox.records, bbox.proposal.ballot)
 
 Compute a tally for a ballotbox ledger. 
 """
-tally(ledger::BallotBoxLedger) = tally(ledger.proposal.ballot, selections(ledger))
-
+tally(ledger::BallotBoxLedger, N::Int = length(ledger)) = tally(ledger.proposal.ballot, selections(ledger, N))
 
 
 """
@@ -493,11 +519,11 @@ tally(ledger::BallotBoxLedger) = tally(ledger.proposal.ballot, selections(ledger
 
 Return a state metadata for ballotbox ledger. 
 """
-function state(ledger::BallotBoxLedger; seed::Digest, root::Union{Digest, Nothing} = root(ledger), with_tally::Bool = false)
+function state(ledger::BallotBoxLedger, N = length(ledger); seed::Digest, root::Union{Digest, Nothing} = root(ledger, N), with_tally::Bool = false)
     
     if with_tally
-        _tally = tally(ledger)
-        _view = tallyview(ledger)
+        _tally = tally(ledger, N)
+        _view = tally_bitmask(ledger, N)
     else
         _tally = nothing
         _view = nothing
@@ -508,5 +534,7 @@ function state(ledger::BallotBoxLedger; seed::Digest, root::Union{Digest, Nothin
     return BallotBoxState(proposal, seed, length(ledger), root, _tally, _view)
 end
 
+
+# N = length(ledger)
 # TODO: Implement state for arbitrary index
 # function state(ledger::BallotBoxLedger, N::Int; seed::Digest, root::Digest, with_tally::Union{Nothing, Bool} = nothing) end

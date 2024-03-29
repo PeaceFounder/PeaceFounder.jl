@@ -221,25 +221,14 @@ reloaded_bbox = BallotBoxController(ledger(bbox), _voters)
 
 @test root(ledger(BRAID_CHAIN)) == root(BRAID_CHAIN)
 @test audit(ledger(BRAID_CHAIN))
+@test isbinding(ledger(BRAID_CHAIN), BRAID_CHAIN.commit)
 
+@test isbinding(ledger(BRAID_CHAIN), ledger(bbox))
+@test isbinding(ledger(bbox), bbox.commit)
 
+@test audit(ledger(bbox))
 
-
-# chain_commit = Mapper.get_chain_commit();
-# chain_archive = Mapper.get_chain_archive() # could have a seperate direcotry for braids
-
-# AuditTools.audit_tree(chain_archive, chain_commit) 
-# AuditTools.audit_members(chain_archive)
-# AuditTools.audit_proposals(chain_archive)
-# AuditTools.audit_lots(chain_archive)
-
-# ballotbox_commit = Mapper.get_ballotbox_commit(proposal.uuid)
-# ballotbox_archive = Mapper.get_ballotbox_archive(proposal.uuid) # contains a proposal, seed and ledger
-
-# @test isbinding(ballotbox_archive, chain_archive) # tests proposal and the seed, teh coresponding lot
-
-# AuditTools.audit_tree(ballotbox_archive, ballotbox_commit)
-# AuditTools.audit_votes(ballotbox_archive, ballotbox_commit)
-# AuditTools.tally(ballotbox_archive, ballotbox_commit) 
+@test audit(ledger(BRAID_CHAIN), ledger(bbox), bbox.commit)
+@test audit(ledger(BRAID_CHAIN), ledger(bbox), bbox.commit.state.root)
 
 

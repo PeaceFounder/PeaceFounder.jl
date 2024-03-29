@@ -108,6 +108,8 @@ function verify(vote::Vote, generator::Generator, crypto::CryptoSpec)
 end
 
 
+verify(record::CastRecord, generator::Generator, crypto::CryptoSpec) = verify(record.vote, generator, crypto)
+
 
 function verify(admission::Admission, crypto::CryptoSpec)
 
@@ -164,16 +166,6 @@ function seal(braidwork::BraidReceipt, signer::Signer)
 end
 
 
-# function verify(braidwork::BraidReceipt, crypto::CryptoSpec)
-    
-#     _digest = digest(braidwork, signer.crypto)
-
-#     #bytes = canonicalize(body(braidwork))
-    
-#     return verify(_digest, braidwork.approval, crypto)
-# end
-
-# verify(braidwork::BraidReceipt) = verify(braidwork, braidwork.producer.crypto)
 
 
 function digest(data::Transaction, hasher::HashSpec)

@@ -366,7 +366,10 @@ end
 
 Base.:(==)(x::Seal, y::Seal) = x.pbkey == y.pbkey && x.sig == y.sig
 
-pseudonym(seal::Seal) = seal.pbkey
+# May be deprecated in the future in favour of `issuer`. pseudonym would still be relevant for Signer
+pseudonym(seal::Seal) = seal.pbkey 
+
+issuer(seal::Seal) = seal.pbkey
 
 
 function epoch(timestamp::DateTime)

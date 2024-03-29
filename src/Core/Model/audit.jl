@@ -5,28 +5,41 @@ function state(ledger::BraidChainLedger, N::Int)
 
     _root = root(ledger, N)
 
-    local members_count = 0
+    local member_count = 0
     local g::Generator = generator(spec) # Thus if a braidreceipt is not present it is set to original
     
     for record in view(ledger, N:-1:1)
         
         if record isa Membership
 
-            members_count += 1
+            member_count += 1
 
         elseif record isa BraidReceipt
 
-            members_count += length(output_members(record))
+            member_count += length(output_members(record))
             g = output_generator(record)
             break
         end
     end
 
-    return ChainState(index, _root, g, member_count)
+    return ChainState(N, _root, g, member_count)
 end
 
 state(ledger::BraidChainLedger) = state(ledger, length(ledger))
 
+
+function isbinding(ledger::BraidChainLedger, commit::Commit{ChainState})
+
+    state(commit) == state(ledger, index(commit)) || return false
+
+    # findlast does not have specilaization with view
+    spec_index = index(commit) - findfirst(x -> x isa DemeSpec, view(ledger, index(commit):-1:1)) + 1 
+    spec = ledger[spec_index]
+
+    issuer(commit) == spec.recorder || return false
+
+    return true
+end
 
 
 function audit_seals(ledger::BraidChainLedger)
@@ -78,7 +91,6 @@ function audit_roles(ledger::BraidChainLedger)
             record.collector == spec.collector || return false
 
         end
-
     end
     
     return true
@@ -192,3 +204,96 @@ function audit(ledger::BraidChainLedger)
 
     return true
 end
+
+
+# audit(ledger::BallotBoxLedger)
+# audit_seals
+# audit_eligibility # that ballotbox comes from a given braidchain and that only valid voters had cast their vote
+
+function audit_seals(ledger::BallotBoxLedger)
+
+    (; crypto) = ledger.spec
+    g = generator(ledger.proposal)
+
+    for record in ledger
+        verify(record, g, crypto) || return false
+    end
+
+    return true
+end
+
+
+function audit_seeds(ledger::BallotBoxLedger)
+
+    length(ledger) == 0 && return true
+
+    _seed = seed(ledger[1])
+    
+    for record in ledger
+        _seed == seed(record) || return false
+    end
+    
+    return true
+end
+
+function audit(ledger::BallotBoxLedger)
+
+    audit_seals(ledger) || return false
+    audit_seeds(ledger) || return false
+
+    return true
+end
+
+
+function isbinding(chain::BraidChainLedger, bbox::BallotBoxLedger)
+
+    # records must be part of the chain
+    bbox.proposal in chain || return false # Proposal does not exist
+    bbox.spec in chain || return false # DemeSpec does not exist
+    
+    braid_index = bbox.proposal.anchor.index
+    braid_receipt = chain[braid_index]::BraidReceipt
+
+    voters = Set(output_members(braid_receipt))
+    
+    for record in bbox
+        issuer(record) in voters || return false
+    end
+
+    return true
+end
+
+function isbinding(chain::BallotBoxLedger, commit::Commit{BallotBoxState})
+    
+    issuer(commit) == chain.proposal.collector || return false
+
+    with_tally = isnothing(state(commit).tally) ? false : true
+    state(chain, index(commit); with_tally, seed=seed(commit)) == state(commit) || return false
+
+    return true
+end
+
+function audit(chain::BraidChainLedger, bbox::BallotBoxLedger, commit::Commit) 
+
+    isbinding(bbox, commit) || return false
+    audit(bbox) || return false
+
+    isbinding(chain, bbox) || return false
+
+    audit(chain) || return false
+    
+    return true
+end
+
+function audit(chain::BraidChainLedger, bbox::BallotBoxLedger, checksum::Digest, N::Int = length(bbox)) 
+
+    root(bbox, N) == checksum || return false
+    audit(bbox) || return false
+
+    isbinding(chain, bbox) || return false
+
+    audit(chain) || return false
+    
+    return true
+end
+

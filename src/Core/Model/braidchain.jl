@@ -26,6 +26,9 @@ Base.iterate(ledger::BraidChainLedger, index) = iterate(ledger.records, index)
 
 Base.view(ledger::BraidChainLedger, args) = BraidChainLedger(view(ledger.records, args))
 
+Base.in(record::Transaction, ledger::BraidChainLedger) = record in ledger.records
+
+
 
 """
     members(ledger::BraidChainLedger[, index::Int])::Set{Pseudonym}
@@ -72,7 +75,6 @@ function root(ledger::BraidChainLedger, N::Int)
         push!(leafs, digest(record, hasher(spec)))
     end
 
-    # 
     tree = HistoryTree(leafs, hasher(spec)) # this executes tree hash directly
     return HistoryTrees.root(tree)
 end

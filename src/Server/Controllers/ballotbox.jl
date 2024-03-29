@@ -7,7 +7,7 @@ using ..StaticSets: StaticSet, findindex
 
 using ..Core.Model: Proposal, Pseudonym, Digest, CryptoSpec, DemeSpec, Vote, CastRecord, BallotBoxState, Signer, Commit, BallotBoxLedger, selections
 using ..Core.ProtocolSchema: AckInclusion, AckConsistency, CastAck
-import ..Core.Model: uuid, voters, seed, receipt, tally, tallyview, istallied, isbinding
+import ..Core.Model: uuid, voters, seed, receipt, tally, tally_bitmask, istallied, isbinding
 
 
 """
@@ -179,7 +179,7 @@ commit(ballotbox::BallotBoxController) = !isnothing(ballotbox.commit) ? ballotbo
 
 tally(ballotbox::BallotBoxController) = tally(ledger(ballotbox))
 
-tallyview(ballotbox::BallotBoxController) = tallyview(ballotbox.ledger)
+tally_bitmask(ballotbox::BallotBoxController) = tally_bitmask(ballotbox.ledger)
 
 istallied(ballotbox::BallotBoxController) = istallied(ballotbox.commit)
 
