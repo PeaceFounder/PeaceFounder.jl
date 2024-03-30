@@ -259,6 +259,12 @@ function generator(chain::BraidChainController, n::Int)
     return generator(chain.spec)
 end
 
+
+"""
+    members(chain::BraidChainController, [n::Int])::Set
+
+Return a set of member pseudonyms which at given anchor index can participate in voting or braiding.
+"""
 members(chain::BraidChainController, n::Int) = members(chain.ledger, n)
 members(chain::BraidChainController, state::ChainState) = members(chain, state.index)
 members(chain::BraidChainController) = chain.members

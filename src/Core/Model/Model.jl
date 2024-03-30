@@ -77,10 +77,6 @@ function pseudonym end
 
 # Theese functions will be defined on the archive eventually 
 function select end 
-function members end 
-function state end
-
-function voters end # this is somewhat not part of the model either. perhaps I could provide a method for alias
 
 # alias(votes, chain)::Vector{Int} # returns integers representing every vote
 # alias(vote, chain)::Union{Int, Nothing}

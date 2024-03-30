@@ -25,7 +25,7 @@ PeaceFounder.Core.Model.verify
 ```@autodocs
 Modules = [PeaceFounder.Core.Model]
 Order = [:type, :function]
-Pages = ["Core/Model/braidchains.jl", "Core/Model/braids.jl"]
+Pages = ["Core/Model/braidchain.jl", "Core/Model/braids.jl"]
 ```
 
 ## Ballot Box
@@ -33,7 +33,14 @@ Pages = ["Core/Model/braidchains.jl", "Core/Model/braids.jl"]
 ```@autodocs
 Modules = [PeaceFounder.Core.Model]
 Order = [:type, :function]
-Pages = ["Core/Model/proposals.jl"]
+Pages = ["Core/Model/ballotbox.jl"]
+```
+
+## Auditing
+```@autodocs
+Modules = [PeaceFounder.Core.Model]
+Order = [:type, :function]
+Pages = ["Core/Model/audit.jl"]
 ```
 
 # PeaceFounder.Core.ProtocolSchema

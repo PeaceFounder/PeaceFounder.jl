@@ -206,10 +206,6 @@ function audit(ledger::BraidChainLedger)
 end
 
 
-# audit(ledger::BallotBoxLedger)
-# audit_seals
-# audit_eligibility # that ballotbox comes from a given braidchain and that only valid voters had cast their vote
-
 function audit_seals(ledger::BallotBoxLedger)
 
     (; crypto) = ledger.spec
