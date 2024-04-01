@@ -5,6 +5,7 @@ using Dates: Dates, Date
 import PeaceFounder.Core.Model: Model, CryptoSpec, pseudonym, TicketID, Membership, Admission, Proposal, Ballot, Selection, generator, state, id, vote, seed, tally, approve, istallied, DemeSpec, hasher, HMAC, isbinding, Generator, generate, Signer
 import PeaceFounder.Core.ProtocolSchema: tokenid, Invite, TicketStatus
 import PeaceFounder.Server.Mapper
+import PeaceFounder.Core.AuditTools
 
 function reboot()
 
@@ -153,5 +154,25 @@ ballotbox = Mapper.get_ballotbox(proposal.uuid)
 sleep(2)
 @test istallied(ballotbox) == true
 
+# Test For AuditTools
+
+
+braidchain_dir = joinpath(Mapper.DATA_DIR, "public", "braidchain")
+ballotbox_dir = joinpath(Mapper.DATA_DIR, "public", "ballotboxes", string(proposal.uuid))
+
+@test AuditTools.audit_root_braidchain(braidchain_dir) == 0 
+@test AuditTools.audit_root_ballotbox(ballotbox_dir) == 0
+
+@test AuditTools.audit_commit_braidchain(braidchain_dir) == 0
+@test AuditTools.audit_commit_ballotbox(ballotbox_dir) == 0
+
+@test AuditTools.audit_tally(ballotbox_dir) == 0
+@test AuditTools.audit_state(braidchain_dir) == 0
+
+@test AuditTools.audit_eligiability(braidchain_dir, ballotbox_dir) == 0
+@test AuditTools.audit_all(joinpath(Mapper.DATA_DIR, "public"), verbose=false) == 0
+
+@test AuditTools.get_ledger_type(braidchain_dir) == "braidchain"
+@test AuditTools.get_ledger_type(ballotbox_dir) == "ballotbox"
 
 Mapper.DATA_DIR = "" # For other tests to proceed without issues

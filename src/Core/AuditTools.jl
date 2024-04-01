@@ -38,15 +38,18 @@ checksum and so demespec record is also tied to `ledger_root`.
 
 For convinience an `audit` method is provided which audits both archives at the same time:
 
-    braidchain_archive = get_ballotbox_archive(uuid)
-    ballotbox_archive = get_ballotbox_archive(uuid, proposal_index)[1:ledger_length]
+    audit(ledger::BraidChainLedger)
+    audit(ledger::BallotBoxLedger)
 
-    @test checksum(ballotbox_archive, hasher) == ledger_root
-    @test audit(braidchain_archive, ballotbox_archive, hasher)
-    
-    @show tally(ballotbox_archive)    
+    isbinding(bbox::BallotBoxLedger, commit::Commit{BallotBoxState})
+    isbinding(ledger::BraidChainLedger, commit::Commit{ChainState})
 
-Note that this audit does not check honesty of the `registrar` that it have not admitted fake
+    isbinding(chain::BraidChainLedger, bbox::BraidChainLedger)
+
+    audit(chain::BraidChainLedger, bbox::BallotBoxLedger, commit::Commit{BallotBoxState})
+    audit(chain::BraidChainLedger, bbox::BallotBoxLedger, root::Digest, N::Int = length(bbox))
+
+Note that this audit does not check honesty of the `registrar` that it have admitted fake
 users to gain more influence in the ellection result. Properties being verified by the audit:
 
 - Legitimacy: only and all eligiable voters cast their votes;
@@ -64,133 +67,344 @@ The immutability is ensured from voter's clients updating their consistency proo
 """
 module AuditTools
 
-using ..Model: Transaction, Pseudonym, Proposal, Digest, Vote, CastRecord
+using ArgParse
+
+# TODO: consider DRY
+
+using ..Model: Model, Digest, BallotBoxLedger, BraidChainLedger, Commit, BallotBoxState, ChainState, DemeSpec
+
+using ..Store: Store
+using ..Parser: Parser
 
 
-# BraidChainController and BallotBox methods must be designed in a way to keep invariants for auditing.
+function parse_commandline()
+    settings = ArgParseSettings()
 
-"""
-    struct BraidChainArchive
-        ledger::Vector{Transaction}
+    @add_arg_table! settings begin
+        "root"
+            help = "Calculates a tree root for ballotbox or braidchain ledger"
+            action = :command
+        "commit"
+            help = "Performs an audit and checks that the commit state and it's issuer is binding; Shows a warning if commit index is smaller than that of ledger index"
+            action = :command
+        "tally"
+            help = "Performs an audit of the ballotbox ledger and returns a tally;"
+            action = :command
+        "state"
+            help = "Performs an audit of the braidchain ledger and returns audit summary; It is also possible to perform an audit up until a given chain index passed with -N;"
+            action = :command
+        "eligiability"
+            help = "Checks if ballotbox have collected votes from eligiable voters as specified in proposal anchor; also checks that proposal and demespec is part of the braidchain;"
+            action = :command
+        "all"
+            help = "Executes audit commit for braidchain and every ballotbox ledger and checks eligiability of every ballotbox"
+            action = :command
     end
 
-Represents a braidchain ledger archive. 
-"""
-struct BraidChainArchive
-    ledger::Vector{Transaction}
-#    guardian::Pseudonym
-end
-
-Base.length(archive::BraidChainArchive) = length(archive.ledger)
-
-"""
-    struct BallotBoxArchive
-        proposal::Proposal
-        seed::Digest
-        ledger::Vector{CastRecord}
+    @add_arg_table! settings["root"] begin
+        "ledger"
+            help = "Location of either braidchain or ballotbox ledger"
+            required = true
+        "--type"
+            help = "Sets the ledger type; allowed values {automatic|braidchain|ballotbox}"
+            default = "automatic"
+        "--index"
+            help = "Sets the index at which the root is calculated;"
+            arg_type = Int
+            default = 0 
     end
 
-Represents a ballotbox ledger archive. Contains a `proposal` for which votes have been collected; 
-`seed` initialized by collector and `ledger` containing all cast records.
-"""
-struct BallotBoxArchive
-    proposal::Proposal
-    seed::Digest
-    ledger::Vector{CastRecord}
-    #groupSize::Int # This is already within an anchor state
-end
-
-
-Base.length(archive::BallotBoxArchive) = length(archive.ledger)
-
-"""
-    archive(ledger::BraidChainController)::BraidChainArchive
-    archive(ledger::BallotBox)::BallotBoxArchive
-
-Form an archive of braidchain or ballotbox which can be sent over wire to be audited. 
-"""
-function archive end 
-
-
-
-# Single ballotbox checksum should be enough
-
-
-"""
-    checksum(ledger::Union{BraidChainArchive, BallotBoxArchive}, hasher)::Digest
-
-Calculate a history tree root from a given ledger records. Meant to be used to check integrity
-of the received data. 
-"""
-function checksum end
-
-
-"""
-    audit_braids(ledger::BraidChainArchive)
-
-Individually check every braid and it's zero knowledge proof and it's consistency with the chain. 
-For the latter, that input pseudonyms and relative generator to a braid come from a previous output 
-braiding output and newly registered members. 
-"""
-function audit_braids end
-
-"""
-    audit_members(ledger::BraidChainArchive)
-
-Check every member registration certificate consistency with the ledger. In particular:
-    - Admission approved by a trusted entity at that time;
-    - Membership approved by a admitted identity only once;
-    - Every member psuedonym is generated with the current relative generator in the braidchain ledger;
-"""
-function audit_members end
-
-
-
-"""
-    audit_roster(ledger::BraidChainArchive)
-
-Check that every `DemeSpec` transaction in the ledger is correctly signed by the guardian.  
-"""
-function audit_roster end
-
-
-"""
-    audit_proposals(ledger::BraidChainArchive)
-
-Check every proposal for it's consistency with the chain. In particular:
-    - Every proposal is signed by a valid proposer at the time of inclusion in the ledger;
-    - Anchor in within the proposal is consistent with the ledger; 
-    - Every proposal has a unique UUID as well as it's title is 
-      sufficiently different from previous ones;
-"""
-function audit_proposals end
-
-
-"""
-    audit(archive::BallotBoxArchive, spec::CryptoSpec)
-
-Check that recorded votes are consistent with proposal ballot and that cryptographic signature 
-of every recorded vote is correct. 
----
-
-    audit(archive::BraidChainArchive)
-
-Check that the braidchain ledger is consistent. Runs through 
-
-    - [`audit_members`](@ref)
-    - [`audit_braids`](@ref) 
-    - [`audit_proposals`](@ref)
-    - [`audit_roster`](@ref)
-    - [`audit_lots`](@ref)
-
----
-
-    audit(ballotbox_archive::BraidChainArchive, ballotbox_archive::BallotBoxArchive, hasher)
-
-Audits each ledger seperatelly and then checks consistency between themselves: such as that only valid
-member pseudonyms have cast their votes, that proposal is available in the braidchain ledger.
+    @add_arg_table! settings["commit"] begin
+        "ledger"
+            help = "Location of either braidchain or ballotbox ledger"
+            required = true
+        "commit"
+            help = "Location of ledger commit;"
+            default = nothing
+        "--type"
+            help = "Sets the ledger type; allowed values {automatic|braidchain|ballotbox}"
+            default = "automatic"
+        "--trust-ledger"
+            help = "Audits only the commit while assumes integrity of the ledger; Useful in monitoring scenarios when client forwards two inconsistent commits as a blame proof and thus auditing is not needed as that is done previously"
+            action = :store_false
+    end
     
-"""
-function audit end 
+    @add_arg_table! settings["tally"] begin
+        "ballotbox"
+            help = "Location of ballotbox ledger"
+            required = true
+        "--trust-ledger"
+            help = "Only counts the votes without checking seals of the votes"
+            action = :store_false
+        "--index"
+            help = "Sets the index at which the root is calculated;"
+            arg_type = Int
+            default = 0 
+    end
+
+    @add_arg_table! settings["state"] begin
+        "braidchain"
+            help = "Location of braidchain ledger"
+            required = true
+        "--index"
+            help = "Sets the index at which the root is calculated;"
+            arg_type = Int
+            default = 0 
+        "--trust-ledger"
+            help = "Only produces the current state"
+            action = :store_false
+    end
+
+    @add_arg_table! settings["eligiability"] begin
+        "braidchain"
+            help = "Location of braidchain ledger"
+            required = true
+        "ballotbox"
+            help = "Location of ballotbox ledger"
+            required = true
+    end
+
+    @add_arg_table! settings["all"] begin
+        "buletinboard"
+            help = "Location of braidchain ledger and ballotbox ledgers as generated by PeaceFounder in the public folder"
+            required = true
+        "--verbose"
+            help = "Whether audit needs to be verbose"
+            action = :store_true
+    end
+
+    return parse_args(settings)
+end
+
+
+function main()
+
+    parsed_args = parse_commandline()
+
+    cmd = parsed_args["%COMMAND%"]
+    args = parsed_args[cmd]
+
+    if cmd == "root"
+        
+        type = args["type"] == "automatic" ? get_ledger_type(args["ledger"]) : args["type"]
+        index = args["index"] == 0 ? nothing : args["index"]
+
+        if type == "ballotbox"
+            return audit_root_ballotbox(args["ledger"]; index) |> exit
+        elseif type == "braidchain"
+            return audit_root_braidchain(args["ledger"]; index) |> exit
+        else
+            error("Unrecognized ledger type $type. Possible values {automatic|braidchain|ballotbox}")
+        end
+
+    elseif cmd == "commit"
+
+        type = args["type"] == "automatic" ? get_ledger_type(args["ledger"]) : args["type"]
+
+        if type == "ballotbox"
+            return audit_commit_ballotbox(args["ledger"]; trust_ledger = args["trust-ledger"], commit = args["commit"]) |> exit
+        elseif type == "braidchain"
+            return audit_commit_braidchain(args["ledger"]; trust_ledger = args["trust-ledger"], commit = args["commit"]) |> exit
+        else
+            error("Unrecognized ledger type $type. Possible values {automatic|braidchain|ballotbox}")
+        end
+
+    elseif cmd == "tally"
+
+        index = args["index"] == 0 ? nothing : args["index"]
+        return audit_tally(args["ballotbox"]; trust_ledger = args["trust-ledger"], index) |> exit
+
+    elseif cmd == "state"
+
+        index = args["index"] == 0 ? nothing : args["index"]
+        return audit_state(args["braidchain"]; index) |> exit
+
+    elseif cmd == "eligiability"
+        return audit_eligiability(args["braidchain"], args["ballotbox"]) |> exit
+    elseif cmd == "all"
+        return audit_all(args["buletinboard"]; verbose = args["verbose"]) |> exit
+    else
+        error("$cmd is not implemented although specified")
+    end
+end
+
+# This module perhaps better to have it's own namespace
+
+function chunk_string(s::String, chunk_size::Int)
+    return join([s[i:min(i+chunk_size-1, end)] for i in 1:chunk_size:length(s)], "-")
+end
+
+
+function audit_root_braidchain(ledger::String; index=nothing) 
+
+    ledger = Store.load_braidchain(ledger)
+    
+    N = isnothing(index) ? length(ledger) : index
+    root = chunk_string(Model.root(ledger, N) |> string |> uppercase, 8)
+    hasher = Model.hasher(ledger[1]) |> string 
+    println("#$N:$hasher:$root")
+
+    return 0
+end
+
+
+function audit_root_ballotbox(ledger::String; index=nothing) 
+
+    ledger = Store.load_ballotbox(ledger)
+
+    N = isnothing(index) ? length(ledger) : index
+    root = chunk_string(Model.root(ledger, N) |> string |> uppercase, 8)
+    hasher = Model.hasher(ledger.spec) |> string 
+    println("⌘$N:$hasher:$root")
+
+    return 0
+end
+
+# The main thing is just to load in the ledger
+
+function audit_commit_braidchain(ledger::String; commit=nothing, trust_ledger=false) 
+
+    _ledger = Store.load_braidchain(ledger)
+
+    commit_path = isnothing(commit) ? joinpath(ledger, "commit.json") : commit
+    
+    _commit = Parser.unmarshal(read(commit_path), Commit{ChainState})
+
+    @assert length(_ledger) >= Model.index(_commit) "Ledger too short with $(length(_ledger)) records to audit commit with index $(index(_commit))"
+
+    if !trust_ledger && length(_ledger) > Model.index(_commit)
+        
+        @warn "Commit index smaller than ledger; Ledger with $(length(_ledger)) records will be cut at $(index(_commit)) for the audit. If only commit is audited use `trust_ledger=true` argument"
+
+    end
+
+    Model.isbinding(_ledger, _commit) || return 1
+
+    if !trust_ledger
+        Model.audit(view(_ledger, 1:Model.index(_commit))) || return 1
+    end
+
+    return 0
+end 
+
+
+function audit_commit_ballotbox(ledger::String; commit=nothing, trust_ledger=false) 
+
+    _ledger = Store.load_ballotbox(ledger)
+
+    commit_path = isnothing(commit) ? joinpath(ledger, "commit.json") : commit
+
+    _commit = Parser.unmarshal(read(commit_path), Commit{BallotBoxState}) 
+
+    @assert length(_ledger) >= Model.index(_commit) "Ledger too short with $(length(_ledger)) records to audit commit with index $(index(_commit))"
+    
+    if !trust_ledger && length(_ledger) > Model.index(_commit)
+        
+        @warn "Commit index smaller than ledger; Ledger with $(length(_ledger)) records will be cut at $(index(_commit)) for the audit. If only commit is audited use `trust_ledger=true` argument"
+
+    end
+
+    Model.isbinding(_ledger, _commit) || return 1
+    
+    if !trust_ledger
+        Model.audit(view(_ledger, 1:Model.index(_commit))) || return 1
+    end
+    
+    return 0
+end
+
+
+function audit_tally(bbox::String; trust_ledger=false, index=nothing) 
+    
+    ledger = Store.load_ballotbox(bbox)
+
+    index = isnothing(index) ? length(ledger) : index
+    
+    @assert length(ledger) >= index "Out of bounds: Ledger is of length $(length(_ledger)) wheras the index is $index"
+
+    if !trust_ledger 
+        Model.audit(view(ledger, 1:index)) || return 1
+    end
+
+    tally = Model.tally(view(ledger, 1:index))
+
+    println(string(tally))
+    
+    return 0
+end
+
+
+function audit_state(chain::String; trust_ledger=false, index=nothing) 
+
+    ledger = Store.load_braidchain(chain)
+
+    index = isnothing(index) ? length(ledger) : index
+
+    @assert length(ledger) >= index "Out of bounds: Ledger is of length $(length(_ledger)) wheras the index is $index"
+
+    if !trust_ledger 
+        Model.audit(view(ledger, 1:index)) || return 1
+    end
+    
+    state = Model.state(ledger, index)
+
+    println(string(state))
+    
+    return 0
+end
+
+function audit_eligiability(chain::String, bbox::String) 
+
+    chain_ledger = Store.load_braidchain(chain)
+    bbox_ledger = Store.load_ballotbox(bbox)
+
+    Model.isbinding(chain_ledger, bbox_ledger) || return 1
+
+    return 0
+end
+
+
+function audit_all(bboard::String; verbose=true) 
+
+    status = 0
+
+    chain_ledger = joinpath(bboard, "braidchain")
+    bbox_dir = joinpath(bboard, "ballotboxes")
+
+    verbose && println("Auditing BraidChain")
+
+    audit_commit_braidchain(chain_ledger) == 0 || (status += 1)
+
+    for bbox in readdir(bbox_dir)
+
+        verbose && println("Processing ballotbox: $bbox")
+
+        audit_commit_ballotbox(joinpath(bbox_dir, bbox)) == 0 || (status += 1)
+        audit_eligiability(chain_ledger, joinpath(bbox_dir, bbox)) == 0 || (status += 1)
+
+    end
+    
+    if status == 0
+        verbose && println("Summary: Audit Sucesfull")
+    else
+        verbose && println("Summary: Audit had $status errrors")
+    end
+        
+    return status
+end
+
+
+function get_ledger_type(dir::String) 
+
+    if Store.is_braidchain_path(dir)
+        return "braidchain"
+    elseif Store.is_ballotbox_path(dir)
+        return "ballotbox"
+    else
+        error("$dir is not either braidchain or ballotbox ledger")
+    end
+
+end
+
 
 end

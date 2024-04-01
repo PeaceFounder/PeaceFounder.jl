@@ -269,7 +269,7 @@ function isbinding(chain::BallotBoxLedger, commit::Commit{BallotBoxState})
     return true
 end
 
-function audit(chain::BraidChainLedger, bbox::BallotBoxLedger, commit::Commit) 
+function audit(chain::BraidChainLedger, bbox::BallotBoxLedger, commit::Commit{BallotBoxState}) 
 
     isbinding(bbox, commit) || return false
     audit(bbox) || return false

@@ -46,7 +46,6 @@ function save(record::Union{DemeSpec, Membership, Proposal}, path::String; force
     return
 end
 
-
 function save(record::Union{DemeSpec, Membership, Proposal}, dir::String, index::Int; force=false)
     
     path = joinpath(dir, directory(record), index2name(index)) * ".json"
@@ -232,11 +231,16 @@ function readkeys(path)
 end
 
 
+is_braidchain_path(dir) = isdir(joinpath(dir, DEMESPEC_DIR)) && isdir(joinpath(dir, MEMBERSHIP_DIR)) && isdir(joinpath(dir, BRAIDRECEIPT_DIR)) && isdir(joinpath(dir, PROPOSAL_DIR))
+
+is_ballotbox_path(dir) = isdir(joinpath(dir, CASTRECORD_DIR)) && isfile(joinpath(dir, "demespec.json")) && isfile(joinpath(dir, "proposal.json"))
+
+
 function load(dir::String)
     
-    if isdir(joinpath(dir, DEMESPEC_DIR)) && isdir(joinpath(dir, MEMBERSHIP_DIR)) && isdir(joinpath(dir, BRAIDRECEIPT_DIR)) && isdir(joinpath(dir, PROPOSAL_DIR))
+    if is_braidchain_path(dir)
         return load_braidchain(dir)
-    elseif isdir(joinpath(dir, CASTRECORD_DIR)) && isfile(joinpath(dir, "demespec.json")) && isfile(joinpath(dir, "proposal.json"))
+    elseif is_ballotbox_path(dir)
         return load_ballotbox(dir)
     else
         #@infiltrate
