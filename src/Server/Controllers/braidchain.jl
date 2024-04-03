@@ -278,7 +278,7 @@ Return a current braidchain ledger state metadata.
 """
 state(chain::BraidChainController) = ChainState(length(chain), root(chain), generator(chain), length(members(chain)))
 
-state(chain::BraidChainController, n::Int) = error("Not Implemented")
+state(chain::BraidChainController, n::Int) = state(chain.ledger, n)
 
 
 Base.findlast(::Type{T}, ledger::Vector{Transaction}) where T <: Transaction = findlast(x -> x isa T, ledger)
@@ -376,7 +376,7 @@ function record!(chain::BraidChainController, p::Proposal)
             end
         end
     end
-
+    
     @assert isbinding(chain, state(p))
     @assert pseudonym(p.approval) == chain.spec.proposer
     @assert verify(p, crypto(chain.spec))

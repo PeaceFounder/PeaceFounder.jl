@@ -503,7 +503,7 @@ function tally_bitmask(votes::AbstractVector{CastRecord}, ballot::Ballot) # tall
     return valid_votes
 end
 
-tally_bitmask(bbox::BallotBoxLedger, N::Int) = tally_bitmask(view(bbox.records, 1:N), bbox.proposal.ballot)
+tally_bitmask(bbox::BallotBoxLedger, N::Int = length(bbox)) = tally_bitmask(view(bbox.records, 1:N), bbox.proposal.ballot)
 
 
 """
