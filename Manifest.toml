@@ -298,11 +298,9 @@ version = "1.6.3"
 
 [[deps.Oxygen]]
 deps = ["DataStructures", "Dates", "HTTP", "JSON3", "MIMEs", "Reexport", "RelocatableFolders", "Requires", "Sockets", "Statistics"]
-git-tree-sha1 = "34f81e5e25589af5442e3a0981a2ffebad03d845"
-repo-rev = "bugfix/relocatability-fix"
-repo-url = "https://github.com/OxygenFramework/Oxygen.jl"
+git-tree-sha1 = "d58b409bf44de000aeff1ea1a4ed867ac257c9aa"
 uuid = "df9a0d86-3283-4920-82dc-4555fc0d1d8b"
-version = "1.5.4"
+version = "1.5.5"
 
 [[deps.Parsers]]
 deps = ["Dates", "PrecompileTools", "UUIDs"]

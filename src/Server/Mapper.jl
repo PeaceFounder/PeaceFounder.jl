@@ -238,17 +238,8 @@ function tally_process_loop()
     
     uuid = wait(TALLY_SCHEDULER)
     
-    _ispublic = ispublic(uuid)
 
     tally_votes!(uuid)
-
-    if !_ispublic
-        try
-            make_bbox_store_public(uuid)
-        catch err
-            @warn "Failing to make balltobox with $uuid public"
-        end
-    end
 
     return
 end
@@ -445,7 +436,6 @@ function setup(demefunc::Function, groupspec::GroupSpec, generator::Generator)
     return authorized_roles(demespec) # I may deprecate this in favour of a method.
 end
 
-
 function authorized_roles(demespec::DemeSpec)
 
     roles = []
@@ -473,10 +463,24 @@ function authorized_roles(demespec::DemeSpec)
     return roles
 end
 
+function tally_votes!(uuid::UUID)
 
-# Need to decide on whether this would be more appropriate
-#system_roles() = (; recorder = id(RECORDER[]), registrar = id(REGISTRAR[]), braider = id(BRAIDER[]), collector = id(COLLECTOR[]))
-tally_votes!(uuid::UUID) = Controllers.commit!(POLLING_STATION[], uuid, COLLECTOR[]; with_tally = true);
+    _ispublic = ispublic(uuid)
+
+    if !_ispublic
+        try
+            make_bbox_store_public(uuid)
+        catch err
+            @warn "Failing to make balltobox with $uuid public"
+        end
+    end
+
+    bbox = get(POLLING_STATION[], uuid)
+    Controllers.commit!(bbox, COLLECTOR[]; with_tally = true)
+    store(Model.commit(bbox), uuid)
+
+    return
+end
 
 set_demehash(spec::DemeSpec) = Controllers.set_demehash!(REGISTRAR[], spec)
 set_route(route::Union{URI, String}) = Controllers.set_route!(REGISTRAR[], route)
