@@ -180,18 +180,19 @@ where attempt is a counter for which token is issued.
 Note: the token generation from key is made in order to support it's local computation on a remote server where QR code
 for registration is shown within organization website.
 """
-function token(ticketid::TicketID, attempt::UInt8, hash::HashSpec, key::Vector{UInt8}; nlen=16) 
-
-
-    token_key = hash(UInt8[0, key...]) # 0 is prepended as hash(key(hmac)) is often used as keyid
+function token(ticketid::TicketID, attempt::UInt8, hash::HashSpec, token_key::Vector{UInt8}; nlen=16) 
     _token = hash(UInt8[token_key..., attempt, bytes(ticketid)...])
-
-    #return bytes(_token)[1:nlen] 
     return _token[1:nlen]
 end
 
-token(ticketid::TicketID, attempt::UInt8, hmac::HMAC; nlen=16) = token(ticketid, attempt, hasher(hmac), key(hmac); nlen)
+function token_key(hmac::HMAC) 
+    hash = hasher(hmac)
+    return hash(UInt8[0, key(hmac)...])
+end    
 
+token_key(registrar::Registrar) = token_key(registrar.hmac)
+
+token(ticketid::TicketID, attempt::UInt8, hmac::HMAC; nlen=16) = token(ticketid, attempt, hasher(hmac), token_key(hmac); nlen)
 
 
 """
@@ -204,8 +205,6 @@ set_demehash!(registrar::Registrar, spec::DemeSpec) = set_demehash!(registrar, d
 
 set_route!(registrar::Registrar, route::URI) = registrar.route = route
 set_route!(registrar::Registrar, route::String) = set_route!(registrar, URI(route))
-
-
 
 
 """

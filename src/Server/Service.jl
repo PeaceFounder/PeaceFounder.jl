@@ -12,9 +12,9 @@ using Dates: DateTime, Second, now
 using Base: UUID
 using SwaggerMarkdown
 
-using Oxygen: json
+using Oxygen: json, Request, Response
 module OxygenInstance using Oxygen; @oxidise end
-import .OxygenInstance: @get, @put, @post, mergeschema, serve, Request, Response
+import .OxygenInstance: @get, @put, @post, @delete, mergeschema, serve
 
 #const ROUTER = OxygenInstance.CONTEXT[].router
 const ROUTER = OxygenInstance.CONTEXT[].service.router

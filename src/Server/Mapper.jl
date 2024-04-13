@@ -518,6 +518,9 @@ function delete_ticket(ticketid::TicketID)
     return
 end
 
+token_key() = Controllers.token_key(REGISTRAR[])
+token_nlen() = REGISTRAR[].nlen
+
 
 # The benfit of refering to a single ticketid is that it is long lasting
 seek_admission(id::Pseudonym, ticketid::TicketID) = Controllers.admit!(REGISTRAR[], id, ticketid) 
