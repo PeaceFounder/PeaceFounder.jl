@@ -323,14 +323,14 @@ end
 
 struct CastGuard
     proposal::Proposal
-    ack_proposal::AckInclusion{ChainState}
+    #ack_proposal::AckInclusion{ChainState}
     vote::Vote
     ack_cast::CastAck # this also would contain a seed
     ack_integrity::Vector{AckConsistency{BallotBoxState}}
     blame::Vector{Blame}
 end
 
-CastGuard(proposal::Proposal, ack_proposal::AckInclusion, vote::Vote, ack_cast::CastAck) = CastGuard(proposal, ack_proposal, vote, ack_cast, AckConsistency[], Blame[])
+CastGuard(proposal::Proposal, vote::Vote, ack_cast::CastAck) = CastGuard(proposal, vote, ack_cast, AckConsistency[], Blame[])
 
 Model.commit(guard::CastGuard) = isempty(guard.ack_integrity) ? commit(guard.ack_cast) : commit(guard.ack_integrity[end])
 
@@ -368,11 +368,13 @@ EnrollGuard(admission::Admission) = EnrollGuard(admission, nothing, nothing)
 mutable struct ProposalInstance # ProposalArea, BallotBoxClient?
     const index::Int
     const proposal::Proposal
+    const ack_leaf::AckInclusion{ChainState}
     commit::Union{Nothing, Commit{BallotBoxState}}
     guard::Union{Nothing, CastGuard} 
+    seq::Int
 end
 
-ProposalInstance(index::Int, proposal::Proposal) = ProposalInstance(index, proposal, nothing, nothing)
+ProposalInstance(index::Int, proposal::Proposal, ack_leaf::AckInclusion{ChainState}) = ProposalInstance(index, proposal, ack_leaf, nothing, nothing, 1)
 
 #Model.istallied(instance::ProposalInstance) = isnothing(instance.commit) ? false : istallied(instance.commit)
 
@@ -578,13 +580,21 @@ function update_proposal_cache!(voter::DemeAccount, route::Route)
 
         if isnothing(location)
 
-            push!(voter.proposals, ProposalInstance(index, proposal))
+            # In future ack_leafs would be retrieved together with proposal_list
+            # as asking them seperatelly gives away local state to the server
+            ack_leaf = get_chain_leaf(route, index)
+
+            @assert isbinding(proposal, ack_leaf, voter.deme)
+            @assert verify(ack_leaf, voter.deme.crypto)
+
+            voter.commit = ack_leaf.commit
+
+            push!(voter.proposals, ProposalInstance(index, proposal, ack_leaf))
 
         else
 
             @assert voter.proposals[location].proposal == proposal "Invalid local cache for proposal. Something have gone horibly wrong..."
         end
-
 
     end
 
@@ -649,28 +659,31 @@ list_proposal_instances(voter::DemeAccount) = voter.proposals
 
 function cast_vote!(instance::ProposalInstance, deme::DemeSpec, selection, signer::Signer; server::Route, force = false)
 
-    (; index, proposal) = instance
+    (; index, proposal, seq) = instance
 
-    ack_leaf = get_chain_leaf(server, index)
+    # Checking the vote selection before proceeding with the vote
+    force || @assert isconsistent(selection, proposal.ballot)
 
-    #@infiltrate
-    @assert isbinding(proposal, ack_leaf, deme)
-    @assert verify(ack_leaf, deme.crypto)
+    # This would be better done when creating ProposalInstance!
+    # ack_leaf = get_chain_leaf(server, index)
+
+    # @assert isbinding(proposal, ack_leaf, deme)
+    # @assert verify(ack_leaf, deme.crypto)
     
     commit = get_ballotbox_commit(server, proposal.uuid)
 
-
     @assert isbinding(commit, proposal, hasher(deme))
     @assert verify(commit, Model.crypto(deme))
-    
-    vote = Model.vote(proposal, Model.seed(commit), selection, signer; force)
+
+    instance.seq += 1 
+    vote = Model.vote(proposal, Model.seed(commit), selection, signer; force = true, seq)
     ack = cast_vote(server, proposal.uuid, vote)
 
     @assert isbinding(ack, proposal, hasher(deme))
     @assert isbinding(ack, vote, hasher(deme))
     @assert verify(ack, crypto(deme))
 
-    guard = CastGuard(proposal, ack_leaf, vote, ack)
+    guard = CastGuard(proposal, vote, ack)
     instance.guard = guard
 
     return
