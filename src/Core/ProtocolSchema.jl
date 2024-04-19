@@ -1,6 +1,5 @@
 module ProtocolSchema
 
-#using StructEquality
 using StructHelpers
 
 using Base64: base64encode
@@ -43,10 +42,7 @@ index(proof::InclusionProof) = proof.index
 
 #@batteries InclusionProof
 #@batteries ConsistencyProof
-
 # Note that admission is within a member as it's necessary to 
-
-
 
 """
     struct AckInclusion{T}

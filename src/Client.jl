@@ -657,18 +657,13 @@ end
 list_proposal_instances(voter::DemeAccount) = voter.proposals
 
 
-function cast_vote!(instance::ProposalInstance, deme::DemeSpec, selection, signer::Signer; server::Route, force = false)
+function cast_vote!(instance::ProposalInstance, deme::DemeSpec, selection, signer::Signer; server::Route, force = false, seq = nothing)
 
-    (; index, proposal, seq) = instance
+    (; index, proposal) = instance
+    seq = isnothing(seq) ? instance.seq : seq
 
     # Checking the vote selection before proceeding with the vote
     force || @assert isconsistent(selection, proposal.ballot)
-
-    # This would be better done when creating ProposalInstance!
-    # ack_leaf = get_chain_leaf(server, index)
-
-    # @assert isbinding(proposal, ack_leaf, deme)
-    # @assert verify(ack_leaf, deme.crypto)
     
     commit = get_ballotbox_commit(server, proposal.uuid)
 
@@ -690,13 +685,13 @@ function cast_vote!(instance::ProposalInstance, deme::DemeSpec, selection, signe
 end
 
 
-function cast_vote!(voter::DemeAccount, identifier::Union{UUID, Int}, selection; force = false)
+function cast_vote!(voter::DemeAccount, identifier::Union{UUID, Int}, selection; force = false, seq = nothing)
 
     instance = get_proposal_instance(voter, identifier)
 
     #@warn "Imagine a TOR circuit being created..."
     
-    cast_vote!(instance, voter.deme, selection, voter.signer; server = voter.route, force)
+    cast_vote!(instance, voter.deme, selection, voter.signer; server = voter.route, force, seq)
 
     return
 end
@@ -822,7 +817,7 @@ update_deme!(client::DemeClient, uuid::UUID) = update_deme!(select(client, uuid)
 
 list_proposal_instances(client::DemeClient, uuid::UUID) = list_proposal_instances(select(client, uuid))
 
-cast_vote!(client::DemeClient, uuid::UUID, index::Int, selection; force=false) = cast_vote!(select(client, uuid), index, selection; force)
+cast_vote!(client::DemeClient, uuid::UUID, index::Int, selection; force=false, seq=nothing) = cast_vote!(select(client, uuid), index, selection; force, seq)
 
 check_vote!(client::DemeClient, uuid::UUID, index::Int) = check_vote!(select(client, uuid), index)
 
