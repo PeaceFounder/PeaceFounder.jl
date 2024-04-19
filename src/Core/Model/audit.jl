@@ -240,7 +240,6 @@ function audit(ledger::BallotBoxLedger)
     return true
 end
 
-
 function isbinding(chain::BraidChainLedger, bbox::BallotBoxLedger)
 
     # records must be part of the chain
@@ -250,10 +249,17 @@ function isbinding(chain::BraidChainLedger, bbox::BallotBoxLedger)
     braid_index = bbox.proposal.anchor.index
     braid_receipt = chain[braid_index]::BraidReceipt
 
-    voters = Set(output_members(braid_receipt))
-    
+    # voters = Set(output_members(braid_receipt))
+    # for record in bbox
+    #     issuer(record) in voters || return false
+    # end
+
+    # Checking aliases. This also checks membership
+    members = output_members(braid_receipt)
+
     for record in bbox
-        issuer(record) in voters || return false
+        1 <= record.alias <= length(members) || return false
+        members[record.alias] == issuer(record.vote) || return false
     end
 
     return true

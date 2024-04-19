@@ -350,6 +350,7 @@ that they had cast their vote without revealing the link to the vote.
 """
 struct CastRecord
     vote::Vote
+    alias::Int
     timestamp::DateTime
 end
 
@@ -386,6 +387,7 @@ and that could be a good thing!
 """
 struct CastReceipt
     vote::Digest
+    alias::Digest # H(alias|vote)
     timestamp::DateTime
 end
 
@@ -402,7 +404,17 @@ end
 
 Construct a CastReceipt from a CastRecord with a provided hasher function.
 """
-receipt(record::CastRecord, hasher::HashSpec) = CastReceipt(digest(record.vote, hasher), record.timestamp)
+function receipt(record::CastRecord, hasher::HashSpec)
+
+    vote_hash = digest(record.vote, hasher)
+
+    vote_bytes = canonicalize(record.vote)
+    alias_bytes = reinterpret(UInt8, [UInt32(record.alias)])
+    alias_commit = digest(UInt8[alias_bytes..., vote_bytes...], hasher)
+
+    return CastReceipt(vote_hash, alias_commit, record.timestamp)
+end
+
 receipt(record::CastRecord, spec) = receipt(record, hasher(spec))
 
 

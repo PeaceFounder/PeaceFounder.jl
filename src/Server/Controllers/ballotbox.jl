@@ -236,9 +236,10 @@ Compute an acknowledgment for record inclusion at `index`.
 function ack_cast(ballotbox::BallotBoxController, N::Int)
     
     ack = ack_leaf(ballotbox, N)
-    _receipt = receipt(ballotbox, N)
+    record = ballotbox[N] 
+    _receipt = receipt(record, ballotbox.ledger.spec)
 
-    return CastAck(_receipt, ack)    
+    return CastAck(_receipt, record.alias, ack) 
 end
 
 """
@@ -375,8 +376,9 @@ function commit!(ballotbox::BallotBoxController, timestamp::DateTime, signer::Si
 
     for vote in ballotbox.queue
 
+        alias = findindex(issuer(vote), ballotbox.voters)
         # an ideal place to form a blind signature on the user's request.
-        record = CastRecord(vote, timestamp)
+        record = CastRecord(vote, alias, timestamp)
         push!(ballotbox, record)
         
     end

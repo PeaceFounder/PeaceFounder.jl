@@ -225,6 +225,7 @@ revoting would be as hard as monitoring the submitted votes.
 """
 struct CastAck
     receipt::CastReceipt
+    alias::Int
     ack::AckInclusion{BallotBoxState}
 end
 
