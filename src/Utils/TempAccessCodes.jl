@@ -44,7 +44,6 @@ function Base.get(access_list::AccessList, credential::AbstractString; ctime = n
     end
 end
 
-
 function create!(auth::AccessList{T}, credential::String, code::Vector{UInt8}, permit::T; ctime = now(UTC), show_warn = true) where T
 
     cleanup!(auth; ctime)
@@ -67,6 +66,10 @@ end
 # credential is derived from code. We are currently fixated on sha256 to make easy interoperability with JavaScript
 # (fixation here reduces the number of dependecies on would need to manage on JS)
 # Optional argument can be provided for a hasher here in the future if necessary
+
+# A table to construct maping between crddential and key for 4 byte code is around 16GB which is somewhat insuficient
+# - Use proposal UUID as additional info added to the key thus it would need to be generated on the spot
+# - 
 
 sha256(data) = Nettle.digest("sha256", data)
 

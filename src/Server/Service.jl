@@ -266,7 +266,6 @@ end
     return ack |> json
 end
 
-
 @get "/poolingstation/{uuid_hex}/track" function(req::Request, uuid_hex::String)
 
     if now(UTC) - Authorization.timestamp(req) > Second(60)
@@ -283,24 +282,27 @@ end
     #     @parent return Response(401, "No tracking number with credential $credential found")
     # end
 
+
     value = get(bbox.access, credential, nothing) 
     isnothing(value) && return Response(401, "No tracking number with credential $credential found")
     (key, permit) = value
-
 
     handler = AuthServerMiddleware(credential, key) do req
 
         cast_record = bbox[permit]
 
-        alias = cast_record.alias
-        timestamp = cast_record.vote.seal.timestamp
+        anchor_index = bbox.ledger.proposal.anchor.index
+        alias = "#$anchor_index.$(cast_record.alias)" 
+
+        index = permit
+        timestamp = cast_record.timestamp
         selection = cast_record.vote.selection
         seq = cast_record.vote.seq
 
         status = Mapper.get_cast_record_status(uuid, permit)
 
         # For web browser it would be necessary to add CORS headers to the response
-        (; alias, timestamp, selection, seq, status) |> json 
+        (; index, alias, timestamp, selection, seq, status) |> json 
     end
     
     return handler(req)
