@@ -163,7 +163,7 @@ index(proposal::Proposal) = index(proposal.anchor)
 
 function status(proposal::Proposal)
     
-    time = Dates.now()
+    time = Dates.now(UTC)
     (; open, closed) = proposal
 
     if time < open
@@ -270,6 +270,10 @@ Return a pseudonym with which vote is sealed.
 pseudonym(vote::Vote) = isnothing(vote.seal) ? nothing : pseudonym(vote.seal) 
 
 issuer(vote::Vote) = isnothing(vote.seal) ? nothing : issuer(vote.seal)
+
+
+tracking_code(vote::Vote, hasher::HashSpec; nlen = 4) = hasher(UInt8[0, canonicalize(vote)...])[1:nlen]
+tracking_code(vote::Vote, spec; nlen = 4) = tracking_code(vote, hasher(spec); nlen)
 
 
 """
@@ -545,6 +549,35 @@ function state(ledger::BallotBoxLedger, N = length(ledger); seed::Digest, root::
 
     return BallotBoxState(proposal, seed, length(ledger), root, _tally, _view)
 end
+
+
+# I may use enum here
+function cast_record_status(bbox::BallotBoxLedger, N::Int)
+
+    cast_record = bbox[N]
+    (; alias) = cast_record
+    (; seq) = cast_record.vote
+
+    if isconsistent(cast_record.vote.selection, bbox.proposal.ballot)
+
+        for (i, record) in enumerate(bbox)
+            i == N && continue
+            if record.alias == alias && record.vote.seq >= seq && isconsistent(record.vote.selection, bbox.proposal.ballot)
+
+                if record.vote.seq == seq && N < i
+                    continue
+                end
+                
+                return :overriden
+            end
+        end
+
+        return :valid
+    else
+        return :malformed
+    end    
+end
+
 
 
 # N = length(ledger)

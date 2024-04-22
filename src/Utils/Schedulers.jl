@@ -70,9 +70,9 @@ Base.unlock(scheduler::Scheduler) = unlock(scheduler.condition)
 
 Waits until given `time` is reached. 
 """
-function waituntil(time::DateTime)
+function waituntil(time::DateTime; ctime = now(UTC))
 
-    interval = time - now()
+    interval = time - ctime
     
     if interval > Dates.Second(0)
 
@@ -91,13 +91,13 @@ end
 Return the next event in seconds and coresponding event value. Return nothing if 
 no events are scheduled.
 """
-function next_event(scheduler::Scheduler)
+function next_event(scheduler::Scheduler; ctime = now(UTC))
 
     length(scheduler.schedule) == 0 && return nothing
 
     timestamp, value = scheduler.schedule[1]
 
-    _interval = timestamp - Dates.now()
+    _interval = timestamp - ctime
     seconds = _interval.value/1000
 
     return seconds, value

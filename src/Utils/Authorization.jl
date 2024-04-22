@@ -69,11 +69,11 @@ signRequest(host, method, url, body, credential, secret::String) = signRequest(h
 
 
 # This one is direct implementation of the JS version
-function signRequest(host, method, url, body, credential, secret::Vector{UInt8}; now = () -> Dates.now())
+function signRequest(host, method, url, body, credential, secret::Vector{UInt8}; ctime = Dates.now(UTC))
 
     contentHash = Base64.base64encode(sha256(body))
 
-    utcNow = Dates.format(now(), "E, dd u yyyy HH:MM:SS") * " GMT"
+    utcNow = Dates.format(ctime, "E, dd u yyyy HH:MM:SS") * " GMT"
 
     signedHeaders = "x-ms-date;host;x-ms-content-sha256"
     
@@ -195,7 +195,7 @@ function AuthServerMiddleware(handler, credential::AbstractString, secret::Union
             host = get_header(req.headers, "Host")
             isnothing(host) && @warn "Host is not specified"
 
-            auth_headers = signRequest(host, "REPLY", req.target, response.body, credential, secret; now = () -> timestamp(req))
+            auth_headers = signRequest(host, "REPLY", req.target, response.body, credential, secret; ctime = timestamp(req))
             
             append!(response.headers, auth_headers)
             push!(response.headers, "Host" => string(host))

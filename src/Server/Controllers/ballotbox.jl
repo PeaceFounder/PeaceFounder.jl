@@ -1,13 +1,14 @@
 #module BallotBoxController
 
-using Dates: Dates, DateTime
+using Dates: Dates, DateTime, UTC
 using Base: UUID
 using HistoryTrees: HistoryTree
 using ..StaticSets: StaticSet, findindex
+import ..TempAccessCodes: TempAccessCodes, AccessList
 
-using ..Core.Model: Proposal, Pseudonym, Digest, CryptoSpec, DemeSpec, Vote, CastRecord, BallotBoxState, Signer, Commit, BallotBoxLedger, selections
+using ..Core.Model: Proposal, Pseudonym, Digest, CryptoSpec, DemeSpec, Vote, CastRecord, BallotBoxState, Signer, Commit, BallotBoxLedger, selections, tracking_code
 using ..Core.ProtocolSchema: AckInclusion, AckConsistency, CastAck
-import ..Core.Model: uuid, voters, seed, receipt, tally, tally_bitmask, istallied, isbinding
+import ..Core.Model: uuid, voters, seed, receipt, tally, tally_bitmask, istallied, isbinding, cast_record_status
 
 
 """
@@ -33,17 +34,20 @@ mutable struct BallotBoxController
     queue::Vector{Vote}
     tree::HistoryTree
     commit::Union{Commit{BallotBoxState}, Nothing}
+    #clearances::Clearances
+    #auth::TempAuth
+    access::AccessList{Int} # Only gets populated when new votes are recorded
 end
 
 
-BallotBoxController(proposal::Proposal, voters::Vector{Pseudonym}, spec::DemeSpec, collector::Pseudonym) = BallotBoxController(BallotBoxLedger(CastRecord[], proposal, spec), StaticSet(voters), collector, nothing, Vote[], HistoryTree(Digest, hasher(spec)), nothing)
+BallotBoxController(proposal::Proposal, voters::Vector{Pseudonym}, spec::DemeSpec, collector::Pseudonym) = BallotBoxController(BallotBoxLedger(CastRecord[], proposal, spec), StaticSet(voters), collector, nothing, Vote[], HistoryTree(Digest, hasher(spec)), nothing, AccessList{Int}())
 
 BallotBoxController(proposal::Proposal, voters::Vector{Pseudonym}, spec::DemeSpec) = BallotBoxController(proposal, voters, spec, spec.collector)
 
 
 function BallotBoxController(ledger::BallotBoxLedger, voters::AbstractVector{Pseudonym}; collector=ledger.spec.collector, commit=nothing, seed = !isnothing(commit) ? commit.state.seed : nothing)
 
-    bbox = BallotBoxController(ledger, StaticSet(voters), collector, seed, Vote[], HistoryTree(Digest, hasher(ledger.spec)), commit)
+    bbox = BallotBoxController(ledger, StaticSet(voters), collector, seed, Vote[], HistoryTree(Digest, hasher(ledger.spec)), commit, AccessList{Int}())
     reset_tree!(bbox)
 
     return bbox
@@ -180,6 +184,8 @@ commit(ballotbox::BallotBoxController) = !isnothing(ballotbox.commit) ? ballotbo
 tally(ballotbox::BallotBoxController) = tally(ledger(ballotbox))
 
 tally_bitmask(ballotbox::BallotBoxController) = tally_bitmask(ballotbox.ledger)
+
+cast_record_status(ballotbox::BallotBoxController, N::Int) = cast_record_status(ballotbox.ledger, N)
 
 istallied(ballotbox::BallotBoxController) = istallied(ballotbox.commit)
 
@@ -380,7 +386,10 @@ function commit!(ballotbox::BallotBoxController, timestamp::DateTime, signer::Si
         # an ideal place to form a blind signature on the user's request.
         record = CastRecord(vote, alias, timestamp)
         push!(ballotbox, record)
-        
+
+        N = length(ballotbox.ledger)
+        code = tracking_code(vote, hasher(ballotbox.ledger.spec))
+        TempAccessCodes.create!(ballotbox.access, code, N)
     end
 
     resize!(ballotbox.queue, 0)
@@ -391,7 +400,7 @@ function commit!(ballotbox::BallotBoxController, timestamp::DateTime, signer::Si
     return
 end
 
-commit!(ballotbox::BallotBoxController, signer::Signer; with_tally::Union{Nothing, Bool} = nothing) = commit!(ballotbox, Dates.now(), signer; with_tally)
+commit!(ballotbox::BallotBoxController, signer::Signer; with_tally::Union{Nothing, Bool} = nothing) = commit!(ballotbox, Dates.now(UTC), signer; with_tally)
 
 
 """

@@ -1,6 +1,6 @@
 using Test
 
-import Dates
+import Dates: Dates, UTC
 
 import PeaceFounder.Server: Service, Mapper
 import PeaceFounder: Client, Schedulers
@@ -70,8 +70,8 @@ try
  A very long description
     """,
         ballot = Model.Ballot(["yes", "no"]),
-        open = Dates.now() + Dates.Millisecond(200),
-        closed = Dates.now() + Dates.Second(10)
+        open = Dates.now(UTC) + Dates.Millisecond(200),
+        closed = Dates.now(UTC) + Dates.Second(10)
     ) |> Client.configure(SERVER) |> approve(PROPOSER)
 
 

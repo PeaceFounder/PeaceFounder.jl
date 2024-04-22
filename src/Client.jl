@@ -5,18 +5,18 @@ using Base: UUID
 using URIs: URI
 using HTTP: Router, Request, Response, Handler, HTTP, iserror, StatusError
 
-using JSON3 # shouldn't be necessary
 using Dates
 using Setfield
 
 import StructTypes
 
-using ..Core.Model: Model, Membership, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, HashSpec, DemeSpec, Signer,  Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen, digest, commit
-using ..Core.Model: id, hasher, pseudonym, isbinding, generator, state, verify, crypto, index, root, isconsistent, istallied, issuer
+using ..Core.Model: Model, Membership, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, HashSpec, DemeSpec, Signer,  Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen, digest, commit, tracking_code
+using ..Core.Model: id, hasher, pseudonym, generator, state, verify, crypto, index, root, isconsistent, istallied, issuer
 using ..Core.ProtocolSchema: TicketStatus, tokenid, Invite, AckConsistency, AckInclusion, CastAck
 using ..Core.Parser: marshal, unmarshal
 using ..Core.Store: Store
 using ..Authorization: AuthClientMiddleware
+using ..TempAccessCodes: TempAccessCodes # Needed for track_vote. 
 
 import ..Core.Model
 #using ..Core.Model: base16encode, base16decode # Perhaps I can move this function in Parser instead
@@ -51,9 +51,7 @@ route(str::String) = route(URI(str))
 route(url::URI) = url == URI() ? error("Empty url not allowed") : RemoteRoute(url)
 route(router::Router) = LocalRoute(router)
 
-
 Route(x) = route(x) # For simplicity
-
 
 function request(server::Route, method::String, target::String, body::Vector{UInt8})::Response
 
@@ -339,7 +337,7 @@ Model.index(guard::CastGuard) = index(guard.ack_cast)
 
 Model.isbinding(guard::CastGuard, ack::AckConsistency{BallotBoxState}) = isbinding(commit(guard), ack)
 Model.isconsistent(guard::CastGuard, ack::AckConsistency{BallotBoxState}) = isconsistent(commit(guard), ack)
-
+Model.tracking_code(guard::CastGuard, spec::DemeSpec) = tracking_code(guard.vote, spec)
 
 struct EnrollGuard
     admission::Union{Admission, Nothing}
@@ -364,7 +362,6 @@ end
 EnrollGuard() = EnrollGuard(nothing, nothing, nothing)
 EnrollGuard(admission::Admission) = EnrollGuard(admission, nothing, nothing)
 
-
 mutable struct ProposalInstance # ProposalArea, BallotBoxClient?
     const index::Int
     const proposal::Proposal
@@ -382,9 +379,8 @@ Model.istallied(instance::ProposalInstance) = isnothing(Model.commit(instance)) 
 
 iscast(instance::ProposalInstance) = !isnothing(instance.guard)
 
-Model.isopen(instance::ProposalInstance) = Model.isopen(instance.proposal; time = Dates.now())
+Model.isopen(instance::ProposalInstance) = Model.isopen(instance.proposal; time = Dates.now(UTC))
 Model.status(instance::ProposalInstance) = Model.status(instance.proposal)
-
 
 # This logic would be unnecessary if commit would only be available in the guard
 function Model.commit(instance::ProposalInstance)
@@ -737,6 +733,23 @@ end
 check_vote!(voter::DemeAccount, uuid::UUID) = check_vote!(get_proposal_instance(voter, uuid); deme = voter.deme, server = voter.route)
 check_vote!(voter::DemeAccount, index::Int) = check_vote!(get_proposal_instance(voter, index); deme = voter.deme, server = voter.route)
 
+function track_vote(server::Route, proposal::UUID, code::Vector{UInt8})
+
+    host = destination(server) |> string
+    request = Request("GET", "/poolingstation/$proposal/track", ["Host" => host])
+
+    credential = TempAccessCodes.credential(code)
+
+    response = request |> AuthClientMiddleware(server, credential, code)
+
+    if response.status == 200
+        #return json(response) 
+        return unmarshal(response.body)
+    else
+        error("Request failure $(response.status): $(String(response.body))")
+    end
+end
+
 
 function Model.istallied(voter::DemeAccount, identifier::Union{UUID, Int})
 
@@ -824,6 +837,9 @@ check_vote!(client::DemeClient, uuid::UUID, index::Int) = check_vote!(select(cli
 Model.istallied(client::DemeClient, uuid::UUID, index::Int) = istallied(select(client, uuid), index)
 
 get_ballotbox_commit!(client::DemeClient, uuid::UUID, index::Int) = get_ballotbox_commit!(select(client, uuid), index)
+
+get_proposal_instance(client::DemeClient, uuid::UUID, index::Int) = get_ballotbox_commit!(select(client, uuid), index)
+get_proposal_instance(client::DemeClient, uuid::UUID, proposal::UUID) = get_ballotbox_commit!(select(client, uuid), proposal)
 
 
 reset!(client::DemeClient) = empty!(client.accounts)

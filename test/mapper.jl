@@ -1,6 +1,6 @@
 using Test
 
-using Dates: Dates, Date
+using Dates: Dates, Date, UTC
 
 import PeaceFounder.Core.Model: Model, CryptoSpec, pseudonym, TicketID, Membership, Admission, Proposal, Ballot, Selection, generator, state, id, vote, seed, tally, approve, istallied, DemeSpec, hasher, HMAC, isbinding, Generator, generate, Signer
 import PeaceFounder.Core.ProtocolSchema: tokenid, Invite, TicketStatus
@@ -104,8 +104,8 @@ proposal = Proposal(
     summary = "Should the city ban all personal vehicle usage and invest in alternative forms of transportation such as public transit, biking and walking infrastructure?",
     description = "",
     ballot = Ballot(["yes", "no"]),
-    open = Dates.now(),
-    closed = Dates.now() + Dates.Second(2),
+    open = Dates.now(UTC),
+    closed = Dates.now(UTC) + Dates.Second(2),
     # this supports a need to support also termination of proposal record to issue new one
     # in situations where server key needs to be reset the proposal records could be reissued.
     collector = id(Mapper.COLLECTOR[]), 

@@ -1,6 +1,6 @@
 module Mapper
 
-import Dates: Dates, DateTime
+import Dates: Dates, DateTime, UTC
 using Base: UUID
 using URIs: URI
 
@@ -83,7 +83,7 @@ function store(commit::Commit{BallotBoxState}, uuid::UUID)
         commit_path = joinpath(DATA_DIR, "private", "ballotboxes", string(uuid), "commit.json")
     end
 
-    mkpath(dirname(commit_path))
+    #_ispublic || mkpath(dirname(commit_path)) # Perhaps this will block operations
     rm(commit_path, force=true)
     write(commit_path, Parser.marshal(commit))
 
@@ -165,6 +165,10 @@ function make_bbox_store_public(uuid::UUID)
     public_bbox_dir = joinpath(DATA_DIR, "public", "ballotboxes", string(uuid)) # when votes are released
     private_bbox_dir = joinpath(DATA_DIR, "private", "ballotboxes", string(uuid)) # before the release
 
+    if isfile(joinpath(public_bbox_dir, "commit.json"))
+        @warn "A commit shall not be within a public ballotbox before it is made public. Perhaps "
+    end
+
     if isdir(private_bbox_dir)
 
         mkpath(dirname(public_bbox_dir))
@@ -201,10 +205,12 @@ function entropy_process_loop()
         _seed = Model.digest(rand(UInt8, 16), Model.hasher(spec))
         Controllers.set_seed!(bbox, _seed)
         Controllers.commit!(bbox, COLLECTOR[]; with_tally = false)
+        store(Model.commit(bbox), uuid) # how did it work without this
 
     end
 
-    #init_bbox_store(Controllers.ledger(bbox)) # 
+    # It is initialized with recording of proposal
+    #init_bbox_store(Controllers.ledger(bbox))
 
     return
 end
@@ -237,7 +243,6 @@ end
 function tally_process_loop()
     
     uuid = wait(TALLY_SCHEDULER)
-    
 
     tally_votes!(uuid)
 
@@ -472,6 +477,7 @@ function tally_votes!(uuid::UUID)
             make_bbox_store_public(uuid)
         catch err
             @warn "Failing to make balltobox with $uuid public"
+            @error "ERROR: " exception=(err, catch_backtrace())
         end
     end
 
@@ -492,7 +498,7 @@ get_recruit_key() = Model.key(REGISTRAR[])
 get_demespec() = BRAID_CHAIN[].spec
 
 enlist_ticket(ticketid::TicketID, timestamp::DateTime; expiration_time = nothing, reset=false) = Controllers.enlist!(REGISTRAR[], ticketid, timestamp; reset)
-enlist_ticket(ticketid::TicketID; expiration_time = nothing, reset=false) = enlist_ticket(ticketid, Dates.now(); expiration_time, reset)
+enlist_ticket(ticketid::TicketID; expiration_time = nothing, reset=false) = enlist_ticket(ticketid, Dates.now(UTC); expiration_time, reset)
 
 # Useful for an admin
 #delete_ticket!(ticketid::TicketID) = Model.remove!(REGISTRAR[], ticketid) # 
@@ -606,11 +612,11 @@ end
 
 function cast_vote(uuid::UUID, vote::Vote; late_votes = false)
 
-    if !(Model.isstarted(get_proposal(uuid); time = Dates.now()))
+    if !(Model.isstarted(get_proposal(uuid); time = Dates.now(UTC)))
 
         error("Voting have not yet started")
 
-    elseif !late_votes && Model.isdone(get_proposal(uuid); time = Dates.now())
+    elseif !late_votes && Model.isdone(get_proposal(uuid); time = Dates.now(UTC))
 
         error("Vote received for proposal too late")
         
@@ -675,6 +681,9 @@ function get_ballotbox_record(uuid::UUID, N::Int; fairness::Bool = true)
 end
 
 get_ballotbox_receipt(uuid::UUID, N::Int) = Model.receipt(POOLING_STATION[], uuid, N)
+
+
+get_cast_record_status(uuid::UUID, N::Int) = Model.cast_record_status(get_ballotbox(uuid), N)
 
 
 # The access seems better to be dealt at the topmost level

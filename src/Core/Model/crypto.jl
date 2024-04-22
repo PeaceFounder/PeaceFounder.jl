@@ -390,7 +390,7 @@ a base for the signature. See also [`sign`](@ref).
 function seal(message::Vector{UInt8}, signer::Signer; timestamp::Union{DateTime, Nothing} = nothing) 
 
     if isnothing(timestamp) 
-        timestamp = Dates.now()
+        timestamp = Dates.now(UTC)
     end
 
     return Seal(signer.pbkey, timestamp, sign([epoch(timestamp)..., message...], signer))
@@ -400,7 +400,7 @@ end
 function seal(message::Vector{UInt8}, generator::Generator, signer::Signer; timestamp::Union{DateTime, Nothing} = nothing)
 
     if isnothing(timestamp) 
-        timestamp = Dates.now()
+        timestamp = Dates.now(UTC)
     end
     
     return Seal(pseudonym(signer, generator), timestamp, sign([epoch(timestamp)..., message...], generator, signer))

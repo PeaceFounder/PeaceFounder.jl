@@ -2,6 +2,10 @@ module StaticSetTest
 include("staticset.jl")
 end
 
+module TempAccessCodesTest
+include("tempcodes.jl")
+end
+
 module ModelTest
 include("model.jl")
 end

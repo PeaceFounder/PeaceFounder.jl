@@ -5,10 +5,10 @@ module Service
 using ..Core.Parser: marshal, unmarshal
 using ..Core.Store: tar
 using ..Core.Model: TicketID, Digest, Pseudonym, Digest, Membership, Proposal, Vote, bytes, BraidReceipt
-using ..Authorization: AuthServerMiddleware, timestamp, credential
+using ..Authorization: Authorization, AuthServerMiddleware, timestamp, credential
 using ..Mapper
 
-using Dates: DateTime, Second, now
+using Dates: DateTime, Second, now, UTC
 using Base: UUID
 using SwaggerMarkdown
 
@@ -83,9 +83,7 @@ end
 """
 @put "/tickets" function(request::Request)
 
-    tstamp = timestamp(request)
-
-    if now() - tstamp > Second(60)
+    if now(UTC) - timestamp(request) > Second(60)
         return Response(401, "Old request")
     end
     
@@ -222,7 +220,7 @@ end
 end
 
 
-@post "/poolingstation/{uuid_hex}/votes" function cast_vote(req::Request, uuid_hex::String)
+@post "/poolingstation/{uuid_hex}/votes" function(req::Request, uuid_hex::String)
     
     uuid = UUID(uuid_hex)
 
@@ -242,7 +240,7 @@ end
 end
 
 
-@get "/poolingstation/{uuid_hex}/votes/{N}/receipt" function get_ballotbox_receipt(req::Request, uuid_hex::String, N::Int)
+@get "/poolingstation/{uuid_hex}/votes/{N}/receipt" function(req::Request, uuid_hex::String, N::Int)
 
     uuid = UUID(uuid_hex)
     receipt = Mapper.get_ballotbox_receipt(uuid, N)
@@ -251,7 +249,7 @@ end
 end
 
 
-@get "/poolingstation/{uuid_hex}/votes/{N}/leaf" function get_ballotbox_leaf(req::Request, uuid_hex::String, N::Int)
+@get "/poolingstation/{uuid_hex}/votes/{N}/leaf" function(req::Request, uuid_hex::String, N::Int)
 
     uuid = UUID(uuid_hex)
     ack = Mapper.get_ballotbox_ack_leaf(uuid, N)
@@ -260,12 +258,52 @@ end
 end
 
 
-@get "/poolingstation/{uuid_hex}/votes/{N}/root" function get_ballotbox_root(req::Request, uuid_hex::String, N::Int)
+@get "/poolingstation/{uuid_hex}/votes/{N}/root" function(req::Request, uuid_hex::String, N::Int)
 
     uuid = UUID(uuid_hex)
     ack = Mapper.get_ballotbox_ack_root(uuid, N)
 
     return ack |> json
+end
+
+
+@get "/poolingstation/{uuid_hex}/track" function(req::Request, uuid_hex::String)
+
+    if now(UTC) - Authorization.timestamp(req) > Second(60)
+        return Response(401, "Request Rejected: The timestamp associated with this request is outdated and cannot be processed. Please ensure your device's clock is correctly set and resend your request.")
+    end
+
+    uuid = UUID(uuid_hex)
+    bbox = Mapper.get_ballotbox(uuid)
+
+    credential = Authorization.credential(req)
+    
+    # (key, permit) = get(bbox.access, credential) do
+    #     # the return is unfortunatelly for this scope only; perhaps there is an macro for that
+    #     @parent return Response(401, "No tracking number with credential $credential found")
+    # end
+
+    value = get(bbox.access, credential, nothing) 
+    isnothing(value) && return Response(401, "No tracking number with credential $credential found")
+    (key, permit) = value
+
+
+    handler = AuthServerMiddleware(credential, key) do req
+
+        cast_record = bbox[permit]
+
+        alias = cast_record.alias
+        timestamp = cast_record.vote.seal.timestamp
+        selection = cast_record.vote.selection
+        seq = cast_record.vote.seq
+
+        status = Mapper.get_cast_record_status(uuid, permit)
+
+        # For web browser it would be necessary to add CORS headers to the response
+        (; alias, timestamp, selection, seq, status) |> json 
+    end
+    
+    return handler(req)
 end
 
 
@@ -276,6 +314,8 @@ swagger_document = build(openApi)
   
 # # merge the SwaggerMarkdown schema with the internal schema
 OxygenInstance.mergeschema(swagger_document)
+
+
 
 
 end

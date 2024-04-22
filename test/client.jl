@@ -1,6 +1,6 @@
 using Test
 
-import Dates
+import Dates: Dates, UTC
 
 import PeaceFounder.Server: Service, Mapper
 import PeaceFounder: Client, Schedulers
@@ -67,8 +67,8 @@ proposal = Model.Proposal(
     summary = "Should the city ban all personal vehicle usage and invest in alternative forms of transportation such as public transit, biking and walking infrastructure?",
     description = "",
     ballot = Model.Ballot(["yes", "no"]),
-    open = Dates.now() + Dates.Millisecond(100),
-    closed = Dates.now() + Dates.Second(5)
+    open = Dates.now(UTC) + Dates.Millisecond(100),
+    closed = Dates.now(UTC) + Dates.Second(5)
 ) |> Client.configure(SERVER) |> approve(PROPOSER)
 
 

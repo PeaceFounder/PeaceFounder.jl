@@ -1,5 +1,5 @@
 using Test
-import Dates
+import Dates: Dates, UTC
 
 import PeaceFounder.Server: Service, Mapper, Controllers
 import PeaceFounder: Client, Schedulers
@@ -77,8 +77,8 @@ proposal = Model.Proposal(
     summary = "Should the city ban all personal vehicle usage and invest in alternative forms of transportation such as public transit, biking and walking infrastructure?",
     description = "",
     ballot = Model.Ballot(["yes", "no"]),
-    open = Dates.now() + Dates.Millisecond(100),
-    closed = Dates.now() + Dates.Second(7)
+    open = Dates.now(UTC) + Dates.Millisecond(100),
+    closed = Dates.now(UTC) + Dates.Second(7)
 ) |> Client.configure(SERVER) |> approve(PROPOSER)
 
 
@@ -99,7 +99,6 @@ Client.cast_vote!(eve, proposal.uuid, Model.Selection(2))
 
 Client.check_vote!(alice, proposal.uuid) 
 
-
 Client.get_ballotbox_commit!(alice, proposal.uuid)
 @test !Client.istallied(alice, proposal.uuid)
 
@@ -108,10 +107,16 @@ Schedulers.waituntil(proposal.closed + Dates.Millisecond(1500))
 Client.get_ballotbox_commit!(alice, proposal.uuid)
 @test Client.istallied(alice, proposal.uuid)
 
-
 Client.check_vote!(eve, proposal.uuid) 
 
 @test typeof(Client.get_ballotbox_spine(SERVER, proposal.uuid)) == Vector{Model.Digest}
+
+# Checking proposal status through endpoint
+(; guard) = Client.get_proposal_instance(eve, proposal.uuid)
+cast_record = Client.track_vote(SERVER, proposal.uuid, Model.tracking_code(guard, DEMESPEC))
+@test cast_record.selection.option == 2
+@test cast_record.seq == 1
+@test cast_record.status == "valid"
 
 # ------------- collector maliciously drops Alice's vote --------------
 

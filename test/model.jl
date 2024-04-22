@@ -72,7 +72,7 @@ function enroll(signer, invite)
 end
 
 
-enlist(ticketid) = enlist!(REGISTRAR, ticketid, Dates.now())
+enlist(ticketid) = enlist!(REGISTRAR, ticketid, Dates.now(UTC))
 
 
 ticketid_alice = TicketID("Alice")
@@ -149,8 +149,8 @@ proposal = Proposal(
     summary = "Should the city ban all personal vehicle usage and invest in alternative forms of transportation such as public transit, biking and walking infrastructure?",
     description = "",
     ballot = Ballot(["yes", "no"]),
-    open = now(),
-    closed = now() + Second(5),
+    open = now(UTC),
+    closed = now(UTC) + Second(5),
     collector = demespec.collector,
     state = state(c)
 ) |> approve(PROPOSER)

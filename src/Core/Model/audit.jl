@@ -249,11 +249,6 @@ function isbinding(chain::BraidChainLedger, bbox::BallotBoxLedger)
     braid_index = bbox.proposal.anchor.index
     braid_receipt = chain[braid_index]::BraidReceipt
 
-    # voters = Set(output_members(braid_receipt))
-    # for record in bbox
-    #     issuer(record) in voters || return false
-    # end
-
     # Checking aliases. This also checks membership
     members = output_members(braid_receipt)
 
