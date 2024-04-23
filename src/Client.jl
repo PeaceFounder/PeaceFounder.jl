@@ -12,11 +12,12 @@ import StructTypes
 
 using ..Core.Model: Model, Membership, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, HashSpec, DemeSpec, Signer,  Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen, digest, commit
 using ..Core.Model: id, hasher, pseudonym, generator, state, verify, crypto, index, root, isconsistent, istallied, issuer
-using ..Core.ProtocolSchema: ProtocolSchema, TicketStatus, tokenid, Invite, AckConsistency, AckInclusion, CastAck, tracking_code
+using ..Core.ProtocolSchema: ProtocolSchema, TicketStatus, tokenid, Invite, AckConsistency, AckInclusion, CastAck
 using ..Core.Parser: marshal, unmarshal
 using ..Core.Store: Store
 using ..Authorization: AuthClientMiddleware
 using ..TempAccessCodes: TempAccessCodes # Needed for track_vote. 
+using ..Base32: encode_crockford_base32, decode_crockford_base32
 
 import ..Core.Model
 
@@ -335,7 +336,9 @@ Model.index(guard::CastGuard) = index(guard.ack_cast)
 
 Model.isbinding(guard::CastGuard, ack::AckConsistency{BallotBoxState}) = isbinding(commit(guard), ack)
 Model.isconsistent(guard::CastGuard, ack::AckConsistency{BallotBoxState}) = isconsistent(commit(guard), ack)
-ProtocolSchema.tracking_code(guard::CastGuard, spec::DemeSpec) = tracking_code(guard.vote, spec)
+#ProtocolSchema.tracking_code(guard::CastGuard, spec::DemeSpec) = tracking_code(guard.vote, spec)
+
+tracking_code(guard::CastGuard, spec::DemeSpec) = ProtocolSchema.tracking_code(guard.vote, spec) |> encode_crockford_base32
 
 struct EnrollGuard
     admission::Union{Admission, Nothing}
@@ -747,6 +750,8 @@ function track_vote(server::Route, proposal::UUID, code::Vector{UInt8})
         error("Request failure $(response.status): $(String(response.body))")
     end
 end
+
+track_vote(server::Route, proposal::UUID, code::String) = track_vote(server, proposal, decode_crockford_base32(replace(code, "-"=>"")))
 
 function Model.istallied(voter::DemeAccount, identifier::Union{UUID, Int})
 
