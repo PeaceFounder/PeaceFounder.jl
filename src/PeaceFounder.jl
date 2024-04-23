@@ -23,6 +23,9 @@ import .Authorization
 include("Utils/TempAccessCodes.jl") # Server
 import .TempAccessCodes
 
+include("Utils/Base32.jl") # Server
+import .Base32
+
 include("Server/Server.jl")
 import .Server
 

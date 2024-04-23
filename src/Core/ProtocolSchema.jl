@@ -7,7 +7,7 @@ using URIs: URI
 using Dates: DateTime
 using HistoryTrees: HistoryTrees, InclusionProof, ConsistencyProof
 
-using ..Model: Commit, ChainState, BallotBoxState, Transaction, CryptoSpec, HashSpec, Pseudonym, DemeSpec, CastReceipt, Proposal, Vote, TicketID, Digest, Admission, seed, bytes, digest
+using ..Model: Commit, ChainState, BallotBoxState, Transaction, CryptoSpec, HashSpec, Pseudonym, DemeSpec, CastReceipt, Proposal, Vote, TicketID, Digest, Admission, seed, bytes, digest, canonicalize
 import ..Model: index, leaf, root, id, issuer, state, isbinding, verify, isconsistent, commit, hasher
 
 using ..Model: show_string # I may need to make an Utils.jl and Components folder
@@ -267,6 +267,11 @@ function Base.show(io::IO, ack::CastAck)
     println(io, show_string(ack.ack))
 
 end
+
+# The tracking_code could be delivered asymmetrically encrypted to the voter after cast so the observer of communication could 
+# not derive it themselves. Thus, it needs to stand within this module for such feature
+tracking_code(vote::Vote, hasher::HashSpec; nlen = 5) = hasher(UInt8[0, canonicalize(vote)...])[1:nlen]
+tracking_code(vote::Vote, spec; nlen = 5) = tracking_code(vote, hasher(spec); nlen)
 
 
 # Could also contain a BlameProof type definition which client constructs in case of inconsistency

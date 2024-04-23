@@ -272,10 +272,6 @@ pseudonym(vote::Vote) = isnothing(vote.seal) ? nothing : pseudonym(vote.seal)
 issuer(vote::Vote) = isnothing(vote.seal) ? nothing : issuer(vote.seal)
 
 
-tracking_code(vote::Vote, hasher::HashSpec; nlen = 4) = hasher(UInt8[0, canonicalize(vote)...])[1:nlen]
-tracking_code(vote::Vote, spec; nlen = 4) = tracking_code(vote, hasher(spec); nlen)
-
-
 """
     struct BallotBoxState
         proposal::Digest

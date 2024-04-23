@@ -113,7 +113,7 @@ Client.check_vote!(eve, proposal.uuid)
 
 # Checking proposal status through endpoint
 (; guard) = Client.get_proposal_instance(eve, proposal.uuid)
-cast_record = Client.track_vote(SERVER, proposal.uuid, Model.tracking_code(guard, DEMESPEC))
+cast_record = Client.track_vote(SERVER, proposal.uuid, ProtocolSchema.tracking_code(guard, DEMESPEC))
 @test cast_record.selection.option == 2
 @test cast_record.seq == 1
 @test cast_record.status == "valid"

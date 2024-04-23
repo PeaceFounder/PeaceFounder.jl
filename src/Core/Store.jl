@@ -243,7 +243,6 @@ function load(dir::String)
     elseif is_ballotbox_path(dir)
         return load_ballotbox(dir)
     else
-        #@infiltrate
         error("Direcotry $dir does not point to either BraidChainLedger or BallotBoxLedger.")
     end
     

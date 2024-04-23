@@ -6,8 +6,8 @@ using HistoryTrees: HistoryTree
 using ..StaticSets: StaticSet, findindex
 import ..TempAccessCodes: TempAccessCodes, AccessList
 
-using ..Core.Model: Proposal, Pseudonym, Digest, CryptoSpec, DemeSpec, Vote, CastRecord, BallotBoxState, Signer, Commit, BallotBoxLedger, selections, tracking_code
-using ..Core.ProtocolSchema: AckInclusion, AckConsistency, CastAck
+using ..Core.Model: Proposal, Pseudonym, Digest, CryptoSpec, DemeSpec, Vote, CastRecord, BallotBoxState, Signer, Commit, BallotBoxLedger, selections
+using ..Core.ProtocolSchema: AckInclusion, AckConsistency, CastAck, tracking_code
 import ..Core.Model: uuid, voters, seed, receipt, tally, tally_bitmask, istallied, isbinding, cast_record_status
 
 

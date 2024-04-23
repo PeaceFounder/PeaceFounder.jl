@@ -10,17 +10,15 @@ using Setfield
 
 import StructTypes
 
-using ..Core.Model: Model, Membership, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, HashSpec, DemeSpec, Signer,  Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen, digest, commit, tracking_code
+using ..Core.Model: Model, Membership, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, HashSpec, DemeSpec, Signer,  Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen, digest, commit
 using ..Core.Model: id, hasher, pseudonym, generator, state, verify, crypto, index, root, isconsistent, istallied, issuer
-using ..Core.ProtocolSchema: TicketStatus, tokenid, Invite, AckConsistency, AckInclusion, CastAck
+using ..Core.ProtocolSchema: ProtocolSchema, TicketStatus, tokenid, Invite, AckConsistency, AckInclusion, CastAck, tracking_code
 using ..Core.Parser: marshal, unmarshal
 using ..Core.Store: Store
 using ..Authorization: AuthClientMiddleware
 using ..TempAccessCodes: TempAccessCodes # Needed for track_vote. 
 
 import ..Core.Model
-#using ..Core.Model: base16encode, base16decode # Perhaps I can move this function in Parser instead
-
 
 abstract type Route end
 
@@ -337,7 +335,7 @@ Model.index(guard::CastGuard) = index(guard.ack_cast)
 
 Model.isbinding(guard::CastGuard, ack::AckConsistency{BallotBoxState}) = isbinding(commit(guard), ack)
 Model.isconsistent(guard::CastGuard, ack::AckConsistency{BallotBoxState}) = isconsistent(commit(guard), ack)
-Model.tracking_code(guard::CastGuard, spec::DemeSpec) = tracking_code(guard.vote, spec)
+ProtocolSchema.tracking_code(guard::CastGuard, spec::DemeSpec) = tracking_code(guard.vote, spec)
 
 struct EnrollGuard
     admission::Union{Admission, Nothing}
@@ -749,7 +747,6 @@ function track_vote(server::Route, proposal::UUID, code::Vector{UInt8})
         error("Request failure $(response.status): $(String(response.body))")
     end
 end
-
 
 function Model.istallied(voter::DemeAccount, identifier::Union{UUID, Int})
 

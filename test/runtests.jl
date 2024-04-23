@@ -6,6 +6,10 @@ module TempAccessCodesTest
 include("tempcodes.jl")
 end
 
+module Base32Test
+include("base32.jl")
+end
+
 module ModelTest
 include("model.jl")
 end
