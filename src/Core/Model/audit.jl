@@ -34,8 +34,6 @@ end
 
 state(ledger::BraidChainLedger) = state(ledger, length(ledger))
 
-using Infiltrator
-
 function isbinding(ledger::BraidChainLedger, commit::Commit{ChainState})
 
     state(commit) == state(ledger, index(commit)) || return false
