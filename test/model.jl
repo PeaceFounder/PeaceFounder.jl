@@ -8,7 +8,7 @@ import .Model: CryptoSpec, pseudonym, TicketID, id, commit, verify, generator, M
 
 import .Controllers: Registrar, admit!, enlist!, set_demehash!, Ticket, tokenid
 import .Controllers: record!, commit!, ack_leaf
-import .Controllers: BraidChainController, roll, constituents, state, ledger
+import .Controllers: BraidChainController, roll, state, ledger
 import .Controllers: BallotBoxController, PollingStation, init!, ack_cast, set_seed!, spine
 
 
@@ -98,8 +98,9 @@ access, ack = enroll(alice, invite_alice)
 @test verify(access, crypto)
 
 # That hash of ack coreponds to one of access
-@test access in roll(BRAID_CHAIN)
-@test id(access) in constituents(BRAID_CHAIN)
+#@test access in roll(BRAID_CHAIN)
+#@test id(access) in constituents(BRAID_CHAIN)
+@test id(access) in roll(BRAID_CHAIN)
 @test pseudonym(access) in members(BRAID_CHAIN)
 
 #bob = generate(Signer, crypto)
@@ -112,10 +113,10 @@ access, ack = enroll(eve, invite_eve)
 
 ### Now I have a three members
 
-@test access in roll(BRAID_CHAIN) # coresponds to enroll!
-@test id(access) in constituents(BRAID_CHAIN)
+#@test access in roll(BRAID_CHAIN) # coresponds to enroll!
+#@test id(access) in constituents(BRAID_CHAIN)
+@test id(access) in roll(BRAID_CHAIN)
 @test pseudonym(access) in members(BRAID_CHAIN)
-
 
 # Here now can a braiding happen
 
@@ -137,7 +138,6 @@ commit!(BRAID_CHAIN, BRAID_CHAIN_RECORDER)
 
 @test generator(BRAID_CHAIN, length(BRAID_CHAIN) - 1) == Model.input_generator(braidwork)
 @test generator(BRAID_CHAIN, length(BRAID_CHAIN)) == Model.output_generator(braidwork)
-
 
 # A proposal can be constructed as
 

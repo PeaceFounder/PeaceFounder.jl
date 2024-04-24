@@ -375,18 +375,12 @@ function setup(demefunc::Function, groupspec::GroupSpec, generator::Generator)
     end
 
     if !isempty(DATA_DIR)
-        
-        mkpath(joinpath(DATA_DIR, "public",  "braidchain", "memberships"))
-        mkpath(joinpath(DATA_DIR, "public", "braidchain", "demespecs"))
-        mkpath(joinpath(DATA_DIR, "public", "braidchain", "braidreceipts"))
-        mkpath(joinpath(DATA_DIR, "public", "braidchain", "proposals"))
-
+        Store.save(BRAID_CHAIN[].ledger, joinpath(DATA_DIR, "public",  "braidchain"))
     end
 
     if isnothing(POLLING_STATION[])
         POLLING_STATION[] = PollingStation()
     end
-
 
     N = findfirst(x->x==demespec.recorder, pseudonym_list)
     if !isnothing(N)
@@ -587,7 +581,6 @@ get_chain_proposal_list() = collect(Controllers.list(Proposal, BRAID_CHAIN[]))
 #     return
 # end
 
-
 function submit_chain_record!(proposal::Proposal)
 
     N = Controllers.record!(BRAID_CHAIN[], proposal)
@@ -596,7 +589,6 @@ function submit_chain_record!(proposal::Proposal)
     store(Model.commit(BRAID_CHAIN[]))
 
     spec = get_demespec()
-    #anchored_members = Model.members(BRAID_CHAIN[], proposal)
     anchored_members = Model.voters(BRAID_CHAIN[], proposal) # I could get a braid output_members
     Controllers.init!(POLLING_STATION[], spec, proposal, anchored_members)
 
@@ -643,22 +635,12 @@ function cast_vote(uuid::UUID, vote::Vote; late_votes = false)
     end
 end
 
-#@deprecate cast_vote! cast_vote
 
-#ballotbox(uuid::UUID) = get(POLLING_STATION[], uuid)
 get_ballotbox(uuid::UUID) = get(POLLING_STATION[], uuid)
 
-#@deprecate ballotbox get_ballotbox
-
-#proposal(uuid::UUID) = get_ballotbox(uuid).ledger.proposal
 get_proposal(uuid::UUID) = get_ballotbox(uuid).ledger.proposal 
 
-#@deprecate proposal get_proposal
-
-#tally(uuid::UUID) = ballotbox(uuid).tally
 get_tally(uuid::UUID) = ballotbox(uuid).tally
-
-#@deprecate tally get_tally
 
 get_ballotbox_commit(uuid::UUID) = Model.commit(POLLING_STATION[], uuid)
 
@@ -682,9 +664,7 @@ end
 
 get_ballotbox_receipt(uuid::UUID, N::Int) = Model.receipt(POOLING_STATION[], uuid, N)
 
-
 get_cast_record_status(uuid::UUID, N::Int) = Model.cast_record_status(get_ballotbox(uuid), N)
-
 
 # The access seems better to be dealt at the topmost level
 function get_ballotbox_ledger(uuid::UUID; fairness::Bool = true, tally_trigger_delay::Union{Nothing, Int} = nothing)

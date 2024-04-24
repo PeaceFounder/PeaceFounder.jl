@@ -260,8 +260,6 @@ function audit_root_ballotbox(ledger::String; index=nothing)
     return 0
 end
 
-# The main thing is just to load in the ledger
-
 function audit_commit_braidchain(ledger::String; commit=nothing, trust_ledger=false) 
 
     _ledger = Store.load_braidchain(ledger)

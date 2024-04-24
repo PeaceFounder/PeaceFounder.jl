@@ -2,7 +2,7 @@ module Store
 
 using Tar
 using ShuffleProofs: ShuffleProofs
-using ..Model: BraidChainLedger, DemeSpec, Membership, BraidReceipt, Proposal, Transaction, BallotBoxLedger, CastRecord, Seal
+using ..Model: BraidChainLedger, DemeSpec, Membership, BraidReceipt, Proposal, Transaction, BallotBoxLedger, CastRecord, Seal, Termination
 using ..Parser: marshal, unmarshal
 
 index2name(i::UInt16) = reinterpret(UInt8, [i]) |> reverse |> bytes2hex |> uppercase
@@ -12,24 +12,25 @@ index2name(i::Int) = index2name(UInt16(i))
 
 name2index(name::String) = reinterpret(UInt16, reverse(name |> hex2bytes))[1]
 
-
 # I could simply use constants here
 
 const DEMESPEC_DIR = "demespecs"
 const MEMBERSHIP_DIR = "memberships"
 const BRAIDRECEIPT_DIR = "braidreceipts"
 const PROPOSAL_DIR = "proposals"
+const TERMINATION_DIR = "terminations"
 const CASTRECORD_DIR = "votes"
 
 directory(::Type{DemeSpec}) = DEMESPEC_DIR
 directory(::Type{Membership}) = MEMBERSHIP_DIR
 direcotry(::Type{BraidReceipt}) = BRAIDRECEIPT_DIR
 directory(::Type{Proposal}) = PROPOSAL_DIR
+directory(::Type{Termination}) = PROPOSAL_DIR
 
 directory(::T) where T <: Transaction = directory(T)
 
 
-function save(record::Union{DemeSpec, Membership, Proposal}, path::String; force=false)
+function save(record::Union{DemeSpec, Membership, Proposal, Termination}, path::String; force=false)
 
     if isfile(path) 
         if force
@@ -46,7 +47,7 @@ function save(record::Union{DemeSpec, Membership, Proposal}, path::String; force
     return
 end
 
-function save(record::Union{DemeSpec, Membership, Proposal}, dir::String, index::Int; force=false)
+function save(record::Union{DemeSpec, Membership, Proposal, Termination}, dir::String, index::Int; force=false)
     
     path = joinpath(dir, directory(record), index2name(index)) * ".json"
     mkpath(dirname(path))
@@ -54,7 +55,6 @@ function save(record::Union{DemeSpec, Membership, Proposal}, dir::String, index:
    
     return
 end
-
 
 function save(record::BraidReceipt, dir::String; force=false)
 
@@ -188,6 +188,7 @@ function save(ledger::BraidChainLedger, dest::String; force=false)
     mkdir(joinpath(dest, MEMBERSHIP_DIR))
     mkdir(joinpath(dest, BRAIDRECEIPT_DIR))
     mkdir(joinpath(dest, PROPOSAL_DIR))
+    mkdir(joinpath(dest, TERMINATION_DIR))
 
     for (index, record) in enumerate(ledger)
         save(record, dest, index)
@@ -256,9 +257,9 @@ function load_braidchain(dir::String)
     membership_keys = readkeys(joinpath(dir, MEMBERSHIP_DIR))
     braidreceipt_keys = readkeys(joinpath(dir, BRAIDRECEIPT_DIR))
     proposal_keys = readkeys(joinpath(dir, PROPOSAL_DIR))
+    termination_keys = readkeys(joinpath(dir, TERMINATION_DIR))
 
-    _keys = [demespec_keys..., membership_keys..., braidreceipt_keys..., proposal_keys...]
-
+    _keys = [demespec_keys..., membership_keys..., braidreceipt_keys..., proposal_keys..., termination_keys...]
 
     ledger = BraidChainLedger(Transaction[])
 
@@ -284,6 +285,9 @@ function load_braidchain(dir::String)
         elseif i in proposal_keys
             bytes = read(joinpath(dir, PROPOSAL_DIR, index2name(i)) * ".json")
             record = unmarshal(bytes, Proposal)
+        elseif i in termination_keys
+            bytes = read(joinpath(dir, TERMINATION_DIR, index2name(i)) * ".json")
+            record = unmarshal(bytes, Termination)            
         else
             error("Entry $(Int(i)) not found in ledger with length $N")
         end

@@ -7,7 +7,7 @@ function state(ledger::BraidChainLedger, N::Int)
 
     local member_count = 0
     local g::Generator = generator(spec) # Thus if a braidreceipt is not present it is set to original
-    
+
     for record in view(ledger, N:-1:1)
         
         if record isa Membership
@@ -17,16 +17,24 @@ function state(ledger::BraidChainLedger, N::Int)
         elseif record isa BraidReceipt
 
             member_count += length(output_members(record))
-            g = output_generator(record)
+            record.reset || (g = output_generator(record)) # if reset original generator is taken
             break
+
+        elseif record isa Termination
+
+            member_count -= 1
+
         end
     end
 
-    return ChainState(N, _root, g, member_count)
+    _termination_bitmask = termination_bitmask(ledger, N)
+
+    return ChainState(N, _root, g, member_count, _termination_bitmask)
 end
 
 state(ledger::BraidChainLedger) = state(ledger, length(ledger))
 
+using Infiltrator
 
 function isbinding(ledger::BraidChainLedger, commit::Commit{ChainState})
 
@@ -90,6 +98,18 @@ function audit_roles(ledger::BraidChainLedger)
             issuer(record) == spec.proposer || return false
             record.collector == spec.collector || return false
 
+        elseif record isa Termination
+            
+            issuer(record) == spec.registrar || return false
+
+        elseif record isa BraidReceipt
+
+            if record.reset # only a braider can reset braiding from the start
+
+                crypto(record.producer) == crypto(spec) || return false
+                issuer(record.approval) == spec.braider || return false
+                
+            end
         end
     end
     
@@ -106,28 +126,53 @@ function audit_members(ledger::BraidChainLedger)
     
     tickets = Set{TicketID}()
     identities = Set{Pseudonym}() # Will be necessary for a reset
+    blacklist = Set{Pseudonym}() # ensures that membership record can't be put back 
 
     local members::Set{Pseudonym} = Set{Pseudonym}()
 
-    for record in ledger
+    for (index, record) in enumerate(ledger)
         if record isa Membership
 
             record.admission.ticketid in tickets && return false
             record.admission.id in identities && return false
             record.pseudonym in members && return false
+            id(record) in blacklist && return false # to prevent reissuing of membership
 
             push!(tickets, record.admission.ticketid)
-            push!(identities, record.admission.id)
+            push!(identities, id(record))
             push!(members, record.pseudonym)
             
         elseif record isa BraidReceipt
-
-            g == input_generator(record) || return false
-            members == Set(input_members(record)) || return false
             
+            if record.reset
+                input_generator(record) == generator(spec) || return false
+                Set(input_members(record)) == identities || return false
+            else
+                input_generator(record) == g || return false
+                Set(input_members(record)) == members || return false
+            end
+
             g = output_generator(record)
             members = Set(output_members(record))
 
+        elseif record isa Termination
+
+            record.identity in blacklist && return false # can't have two termination records for the same identity
+            push!(blacklist, record.identity)
+
+            if record.index == 0 
+
+                record.identity in identities && return false # membership is not registered
+
+            else
+
+                1 < record.index < index || return false  # can't point to future records
+                member_cert = ledger[record.index]
+                member_cert isa Membership || return false # must point to a Membership record
+                issuer(member_cert) == record.identity || return false # must be consistent
+                pop!(identities, issuer(member_cert))
+
+            end
         end
     end
 
@@ -143,6 +188,8 @@ function audit_proposal_anchors(ledger::BraidChainLedger)
     tree = HistoryTree(Digest, hasher(spec))
     anchor_states = ChainState[]
 
+    termination_bitmask = BitVector(false for i in 1:length(ledger))
+
     for (index, record) in enumerate(ledger)
 
         push!(tree, digest(record, hasher(spec)))
@@ -153,8 +200,10 @@ function audit_proposal_anchors(ledger::BraidChainLedger)
             member_count = length(output_members(record))
             _root = HistoryTrees.root(tree)
             
-            push!(anchor_states, ChainState(index, _root, generator, member_count))
+            push!(anchor_states, ChainState(index, _root, generator, member_count, termination_bitmask[1:index]))
 
+        elseif record isa Termination
+            termination_bitmask[record.index] = true
         end
     end
 

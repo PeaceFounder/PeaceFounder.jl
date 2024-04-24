@@ -6,6 +6,7 @@ import PeaceFounder.Core.Model: Model, CryptoSpec, pseudonym, TicketID, Membersh
 import PeaceFounder.Core.ProtocolSchema: tokenid, Invite, TicketStatus
 import PeaceFounder.Server.Mapper
 import PeaceFounder.Core.AuditTools
+import PeaceFounder.Schedulers
 
 function reboot()
 
@@ -42,7 +43,6 @@ end
 
 PROPOSER = Mapper.PROPOSER[]
 DEMESPEC = Mapper.get_demespec() #Mapper.BRAID_CHAIN[].spec
-
 
 function enroll(signer, invite::Invite)
 
@@ -112,15 +112,14 @@ proposal = Proposal(
     state = state(commit)
 ) |> approve(PROPOSER)
 
-
 ack = Mapper.submit_chain_record!(proposal) # I could integrate ack 
+
 # A lot of stuff going behind the scenes here regarding the dealer and etc
 member_list = Mapper.get_chain_roll()
 
 record = Mapper.get_chain_record(2)
 ack_leaf = Mapper.get_chain_ack_leaf(2)
 ack_root = Mapper.get_chain_ack_root(2)
-
 
 proposal_list = Mapper.get_chain_proposal_list()
 N, proposal = proposal_list[1]
@@ -151,11 +150,10 @@ spine = Mapper.get_ballotbox_spine(proposal.uuid)
 
 ballotbox = Mapper.get_ballotbox(proposal.uuid)
 @test istallied(ballotbox) == false
-sleep(2)
+Schedulers.waituntil(proposal.closed + Dates.Millisecond(1000))
 @test istallied(ballotbox) == true
 
 # Test For AuditTools
-
 
 braidchain_dir = joinpath(Mapper.DATA_DIR, "public", "braidchain")
 ballotbox_dir = joinpath(Mapper.DATA_DIR, "public", "ballotboxes", string(proposal.uuid))

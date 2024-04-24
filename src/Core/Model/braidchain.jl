@@ -36,22 +36,22 @@ Base.in(record::Transaction, ledger::BraidChainLedger) = record in ledger.record
 Return a set of member pseudonyms at relative generator at braidchain ledger row index.
 If `index` is omitted return a current state value.
 """
-function members(ledger::BraidChainLedger, n::Int)
-    
-    mset = Set{Pseudonym}()
+function members(ledger::BraidChainLedger, n::Int)     
+
+    mset = Set{Pseudonym}() # note that termination does not affect
     for i in view(ledger, n:-1:1)
 
         if i isa Membership
-            push!(mset, pseudonym(i))
-        end
         
-        if i isa BraidReceipt
+            push!(mset, pseudonym(i))
+        
+        elseif i isa BraidReceipt
 
             for j in output_members(i)
                 push!(mset, j)
             end
 
-            return mset
+            return mset 
         end
 
     end
@@ -61,6 +61,7 @@ end
 
 members(ledger::BraidChainLedger) = members(ledger, length(ledger))
 
+# Could be dropeed as alias solves the issue and output_members is more explicit.
 voters(ledger::BraidChainLedger, index::Int) = output_members(ledger[index]::BraidReceipt)
 voters(ledger::BraidChainLedger, state) = voters(ledger, index(state)::Int)
 
@@ -187,10 +188,12 @@ struct ChainState
     root::Digest
     generator::Generator
     member_count::Int
+    termination_bitmask::BitVector # there is genrally no issue on running through the whoole array
     #proot::Digest # Noinvasive way to make sure that every member get's the latest set of proposals.
 end
 
-ChainState(index::Int, root::Nothing, generator::Generator) = ChainState(index, Digest(), generator)
+# Seems unused
+#ChainState(index::Int, root::Nothing, generator::Generator) = ChainState(index, Digest(), generator)
 
 @batteries ChainState
 
@@ -287,7 +290,6 @@ Return a TicketID which is admitted.
 """
 ticket(admission::Admission) = admission.ticketid
 
-
 function Base.show(io::IO, admission::Admission)
     
     println(io, "Admission:")
@@ -297,8 +299,6 @@ function Base.show(io::IO, admission::Admission)
     print(io, "  issuer : $(string(issuer(admission)))")
 
 end
-
-
 
 """
     struct Membership <: Transaction
@@ -377,4 +377,65 @@ function Base.show(io::IO, member::Membership)
     println(io, "  generator : $(string(generator(member)))")
     print(io, "  pseudonym : $(string(pseudonym(member)))")
 
+end
+
+
+struct Termination <: Transaction
+    index::Int # record index of the member
+    identity::Pseudonym # ensures that record can't be created before; 
+    approval::Union{Seal, Nothing} # issued by registrar
+end
+
+
+function roll(ledger::BraidChainLedger, N::Int = length(ledger))
+
+    identities = Set{Pseudonym}()
+
+    for record in view(ledger, 1:N)
+        if record isa Membership
+
+            push!(identities, id(record))
+
+        elseif record isa Termination
+
+            if record.index == 0
+
+                continue
+
+            else
+                
+                pop!(identities, record.identity)
+
+            end
+        end
+    end
+
+    return identities
+end
+
+function termination_bitmask(ledger::BraidChainLedger, N::Int = length(ledger))
+
+    bitmask = BitVector(false for i in 1:N)
+
+    for (i, record) in enumerate(view(ledger, 1:N))
+        if record isa Termination
+            record.index == 0 || continue # 
+            bitmask[record.index] = true
+        end
+    end
+
+    return bitmask
+end
+
+function blacklist(ledger::BraidChainLedger, N::Int = length(ledger))
+
+    list = Set{Pseudonym}()
+    
+    for record in view(ledger, 1:N)
+        if record isa Termination
+            push!(list, record.identity)
+        end
+    end
+    
+    return list
 end

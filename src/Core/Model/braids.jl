@@ -13,6 +13,7 @@ group(spec::MODP) = CryptoGroups.specialize(PGroup, spec)
 """
     struct BraidReceipt <: Transaction
         braid::Simulator
+        reset::Bool
         producer::DemeSpec
         approval::Union{Seal, Nothing}
     end
@@ -25,21 +26,22 @@ braidwork and stores that in the `aproval` field. See a [`braid`](@ref) method.
 """
 struct BraidReceipt <: Transaction 
     braid::Simulator
+    reset::Bool
     producer::Union{DemeSpec, Nothing}
     approval::Union{Seal, Nothing}
 
     #function BraidReceipt(braid::Simulator, consumer::DemeSpec, producer::DemeSpec)
-    function BraidReceipt(braid::Simulator)
+    function BraidReceipt(braid::Simulator; reset = false)
         
         @assert braid.proposition isa Braid
 
-        return new(braid, nothing, nothing)
+        return new(braid, reset, nothing, nothing)
     end
 
-    BraidReceipt(braidwork::BraidReceipt, producer::DemeSpec, approval::Seal) = new(braidwork.braid, producer, approval)
+    BraidReceipt(braidwork::BraidReceipt, producer::DemeSpec, approval::Seal; reset = false) = new(braidwork.braid, reset, producer, approval)
 
     # Necessary for deserialization
-    BraidReceipt(braid::Simulator, producer::DemeSpec, approval::Seal) = new(braid, producer, approval)
+    BraidReceipt(braid::Simulator, producer::DemeSpec, approval::Seal; reset = false) = new(braid, reset, producer, approval)
 end 
 
 @batteries BraidReceipt
@@ -56,7 +58,7 @@ By default a Verificatum compatable verifier is used for performing reencryption
 
 A verifier can be configured with a keyword argument. By default a Verificatum compatable verifier for a proof of shuffle is used.
 """
-function braid(generator::Generator, members::Union{Vector{Pseudonym}, Set{Pseudonym}}, crypto::CryptoSpec; verifier = (g) -> ProtocolSpec(; g))
+function braid(generator::Generator, members::Union{Vector{Pseudonym}, Set{Pseudonym}}, crypto::CryptoSpec; verifier = (g) -> ProtocolSpec(; g), reset = false)
 
     G = group(crypto.group)
 
@@ -66,7 +68,7 @@ function braid(generator::Generator, members::Union{Vector{Pseudonym}, Set{Pseud
     spec_g = G(crypto.generator.data)
     braid = ShuffleProofs.braid(g, m, verifier(spec_g))
 
-    return BraidReceipt(braid)#, consumer, producer)
+    return BraidReceipt(braid; reset)#, consumer, producer)
 end
 
 """
@@ -83,9 +85,9 @@ function approve(braidwork::BraidReceipt, spec::DemeSpec, braider::Signer)
 end
 
 
-function braid(generator::Generator, members::Union{Vector{Pseudonym}, Set{Pseudonym}}, crypto::CryptoSpec, origin::DemeSpec, braider::Signer)
+function braid(generator::Generator, members::Union{Vector{Pseudonym}, Set{Pseudonym}}, crypto::CryptoSpec, origin::DemeSpec, braider::Signer; reset = false)
 
-    _braid = braid(generator, members, crypto)
+    _braid = braid(generator, members, crypto; reset)
     _braid = approve(_braid, origin, braider)
 
     return _braid

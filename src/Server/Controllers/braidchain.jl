@@ -2,17 +2,15 @@
 
 # This module defines BraidChainController with the focus of exposing it to the Mapper layer and offering it's incremental state updates
 # with the record! function. For the sake of simplicity all controllers may be combined under a single module Controllers.
+# struct BraidBroker end # ToDo
 
 using Base: UUID
 using HistoryTrees: HistoryTree, InclusionProof, ConsistencyProof
 using Dates: DateTime
-using ..Core.Model: Pseudonym, Transaction, DemeSpec, Generator, Commit, ChainState, Signer, Membership, Proposal, BraidReceipt, Digest, hasher, digest, id, seal, pseudonym, crypto, verify, input_generator, input_members, output_generator, output_members, BraidChainLedger, issuer, show_string
+using ..Core.Model: Pseudonym, Transaction, DemeSpec, Generator, Commit, ChainState, Signer, Membership, Termination, Proposal, BraidReceipt, Digest, hasher, digest, id, seal, pseudonym, crypto, verify, input_generator, input_members, output_generator, output_members, BraidChainLedger, issuer, show_string
 using ..Core.ProtocolSchema: AckInclusion, AckConsistency
 
-import ..Core.Model: isbinding, generator, members, voters
-
-# struct BraidBroker end # ToDo
-
+import ..Core.Model: isbinding, generator, members, voters, roll, blacklist, termination_bitmask
 
 """
     struct BraidChain
@@ -27,13 +25,16 @@ import ..Core.Model: isbinding, generator, members, voters
 Represents a braidchain ledger with it's associated state. Can be instantitated with a demespec file using
 `BraidChain(::DemeSpec)` method.
 
-**Interface:**  [`push!`](@ref), [`record!`](@ref), [`state`](@ref), [`length`](@ref), [`list`](@ref), [`select`](@ref), [`roll`](@ref), [`constituents`](@ref), [`generator`](@ref), [`commit`](@ref), [`commit_index`](@ref), [`ledger`](@ref), [`leaf`](@ref), [`root`](@ref), [`ack_leaf`](@ref), [`ack_root`](@ref), [`members`](@ref), [`commit!`](@ref)
+**Interface:**  [`push!`](@ref), [`record!`](@ref), [`state`](@ref), [`length`](@ref), [`list`](@ref), [`select`](@ref), [`generator`](@ref), [`commit`](@ref), [`commit_index`](@ref), [`ledger`](@ref), [`leaf`](@ref), [`root`](@ref), [`ack_leaf`](@ref), [`ack_root`](@ref), [`members`](@ref), [`commit!`](@ref)
 """
 mutable struct BraidChainController
     members::Set{Pseudonym}
     ledger::BraidChainLedger
     spec::DemeSpec
     generator::Generator
+    roll::Set{Pseudonym} # new (member count is evaluated from identities)
+    blacklist::Set{Pseudonym} # new
+    termination_bitmask::BitVector # new
     tree::HistoryTree
     commit::Union{Commit{ChainState}, Nothing}
 end
@@ -41,7 +42,7 @@ end
 
 function BraidChainController(spec::DemeSpec) 
     
-    chain = BraidChainController(Set{Pseudonym}(), BraidChainLedger(Transaction[]), spec, generator(spec), HistoryTree(Digest, hasher(spec)), nothing)
+    chain = BraidChainController(Set{Pseudonym}(), BraidChainLedger(Transaction[]), spec, generator(spec), Set{Pseudonym}(), Set{Pseudonym}(), BitVector(), HistoryTree(Digest, hasher(spec)), nothing)
 
     return chain
 end
@@ -60,9 +61,13 @@ function BraidChainController(ledger::BraidChainLedger; commit = nothing)
         record isa BraidReceipt ? output_generator(record) : nothing
 
     tree = HistoryTree(Digest, hasher(spec))
-    _members = members(ledger)
 
-    chain = BraidChainController(_members, ledger, spec, _generator, tree, commit)
+    _members = members(ledger) 
+    _identities = roll(ledger)
+    _blacklist = blacklist(ledger)
+    _termination_bitmask = termination_bitmask(ledger)
+
+    chain = BraidChainController(_members, ledger, spec, _generator, _identities, _blacklist, _termination_bitmask, tree, commit)
     
     reset_tree!(chain)
 
@@ -121,6 +126,17 @@ function reset_tree!(chain::BraidChainController)
     return
 end
 
+# Internal method. Shall never be used outside this file; used in four places justifying DRY
+function unsafe_push!(chain::BraidChainController, record::Transaction)
+
+    push!(chain.ledger, record)
+    push!(chain.tree, digest(record, hasher(chain.spec)))
+    push!(chain.termination_bitmask, false)
+
+    return
+end
+
+
 """
     push!(ledger::BraidChainController, t::Transaction)
 
@@ -128,11 +144,7 @@ Add an element to the BraidChainController bypassing transaction verification wi
 This should only be used when the ledger is loaded from a trusted source like
 a local disk or when final root hash is validated with a trusted source.
 """
-function Base.push!(chain::BraidChainController, t::Transaction)
-    push!(chain.ledger, t)
-    push!(chain.tree, digest(t, hasher(chain.spec)))
-    return
-end
+Base.push!(chain::BraidChainController, t::Transaction) = unsafe_push!(chain, t) # used by proposal
 
 Base.length(chain::BraidChainController) = length(chain.ledger)
 
@@ -161,19 +173,25 @@ function select(::Type{T}, f::Function, chain::BraidChainController) where T <: 
 end
 
 
-"""
-    roll(ledger::BraidChainController)::Vector{Membership}
+roll(chain::BraidChainController) = chain.roll
 
-Return all member certificates from a braidchain ledger.
-"""
-roll(chain::BraidChainController) = (m for m in chain.ledger if m isa Membership)
+blacklist(chain::BraidChainController) = chain.blacklist
 
-"""
-    constituents(ledger::BraidChainController)::Set{Pseudonym}
+termination_bitmask(chain::BraidChainController) = copy(chain.termination_bitmask) 
 
-Return all member identity pseudonyms. 
-"""
-constituents(chain::BraidChainController) = Set(id(i) for i in roll(chain))
+# """
+#     roll(ledger::BraidChainController)::Vector{Membership}
+
+# Return all member certificates from a braidchain ledger.
+# """
+# roll(chain::BraidChainController) = (m for m in chain.ledger if m isa Membership)
+
+# """
+#     constituents(ledger::BraidChainController)::Set{Pseudonym}
+
+# Return all member identity pseudonyms. 
+# """
+# constituents(chain::BraidChainController) = Set(id(i) for i in roll(chain))
 
 """
     generator(ledger::BraidChainController)
@@ -276,8 +294,8 @@ voters(chain::BraidChainController, anchor) = voters(ledger(chain), anchor)
 
 Return a current braidchain ledger state metadata.
 """
-state(chain::BraidChainController) = ChainState(length(chain), root(chain), generator(chain), length(members(chain)))
-
+#state(chain::BraidChainController) = ChainState(length(chain), root(chain), generator(chain), length(members(chain)))
+state(chain::BraidChainController) = ChainState(length(chain), root(chain), generator(chain), length(roll(chain)), termination_bitmask(chain))
 state(chain::BraidChainController, n::Int) = state(chain.ledger, n)
 
 
@@ -300,12 +318,14 @@ function commit!(chain::BraidChainController, signer::Signer)
     return
 end
 
+
 function Base.push!(chain::BraidChainController, m::Membership)
 
-    push!(chain.ledger, m)
     push!(chain.members, pseudonym(m))
-    push!(chain.tree, digest(m, hasher(chain.spec)))
-    
+    #push!(chain.roll, issuer(m))
+    push!(chain.roll, id(m))
+    unsafe_push!(chain, m)
+
     return
 end
 
@@ -315,6 +335,8 @@ function record!(chain::BraidChainController, m::Membership)
     !isnothing(N) && return N
 
     @assert generator(chain) == generator(m)
+    @assert !(issuer(m) in roll(chain)) "Identity pseudonym is already registered"
+    @assert !(issuer(m) in blacklist(chain)) "The pseudonym is blacklisted"
     @assert !(pseudonym(m) in members(chain))
     @assert pseudonym(m.admission.seal) == chain.spec.registrar
 
@@ -328,18 +350,29 @@ end
 
 function Base.push!(chain::BraidChainController, braidwork::BraidReceipt)
 
-    push!(chain.ledger, braidwork)
-    push!(chain.tree, digest(braidwork, hasher(chain.spec)))
     chain.generator = output_generator(braidwork)
     chain.members = Set(output_members(braidwork))
+    unsafe_push!(chain, braidwork)
 
     return
 end
 
 function record!(chain::BraidChainController, braidwork::BraidReceipt)
 
-    @assert generator(chain) == input_generator(braidwork)
-    @assert members(chain) == Set(input_members(braidwork))
+    if braidwork.reset
+        
+        @assert input_generator(braidwork) == generator(chain.spec)
+        @assert Set(input_members(braidwork)) == roll(chain)
+        
+        @assert issuer(braidwork) == chain.spec.braider
+        @assert crypto(braidwork.producer) == crypto(chain.spec) 
+
+    else
+
+        @assert generator(chain) == input_generator(braidwork)
+        @assert members(chain) == Set(input_members(braidwork))
+
+    end
 
     @assert verify(braidwork, crypto(chain.spec)) "Braid is invalid"
 
@@ -355,13 +388,6 @@ end
 Check that chain state is consistent with braidchain ledger.
 """
 isbinding(chain::BraidChainController, state::ChainState) = root(chain, index(state)) == root(state) && generator(chain, index(state)) == generator(state)
-
-
-function Base.push!(chain::BraidChainController, p::Proposal)
-    push!(chain.ledger, p)
-    push!(chain.tree, digest(p, hasher(chain.spec)))
-    return
-end
 
 
 function record!(chain::BraidChainController, p::Proposal)
@@ -390,7 +416,40 @@ function record!(chain::BraidChainController, p::Proposal)
     return N
 end
 
-
 select(::Type{Proposal}, uuid::UUID, chain::BraidChainController) = select(Proposal, x -> x.uuid == uuid, chain)
+
+
+function Base.push!(chain::BraidChainController, termination::Termination)
+    
+    push!(chain.blacklist, termination.identity)
+
+    if termination.index != 0
+          chain.termination_bitmask[termination.index] = true
+          pop!(chain.roll, termination.identity)
+    end
+
+    unsafe_push!(chain, termination)
+
+    return
+end
+
+
+function record!(chain::BraidChainController, termination::Termination)
+
+    if termination.index == 0
+        @assert !(termination.identity in chain.roll) "Termination index can't be zero; Membership with termination identity already recorded;"
+    else
+        @assert chain.termination_bitmask[termination.index] == false 
+        @assert termination.identity in chain.roll "Identity not in ledger" 
+        @assert issuer(chain.ledger[termination.index]) == termination.identity
+    end
+
+    @assert !(termination.identity in blacklist) "identity already blacklisted" # delisted
+
+    push!(chain, termination)
+    
+    return
+end
+
 
 #end

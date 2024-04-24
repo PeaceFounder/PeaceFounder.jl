@@ -1,6 +1,6 @@
 module Parser
 
-using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Membership, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Commit, Generator, CryptoSpec, DemeSpec, HashSpec, parse_groupspec, lower_groupspec, Signer
+using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Membership, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Commit, Generator, CryptoSpec, DemeSpec, HashSpec, parse_groupspec, lower_groupspec, Signer, Termination
 
 using ..ProtocolSchema: TicketStatus, Invite, AckInclusion #, AckConsistency 
 using HistoryTrees: InclusionProof, ConsistencyProof
@@ -63,6 +63,9 @@ StructTypes.construct(::Type{Generator}, s::AbstractString) = Generator(hex2byte
 StructTypes.StructType(::Type{Admission}) = StructTypes.Struct()
 StructTypes.omitempties(::Type{Admission}) = (:approval,)
 
+StructTypes.StructType(::Type{Termination}) = StructTypes.Struct()
+StructTypes.omitempties(::Type{Termination}) = (:approval,)
+
 
 function marshal(x) 
     io = IOBuffer()
@@ -75,7 +78,6 @@ marshal(io::IO, x) = JSON3.write(io, x)
 
 unmarshal(bytes) = JSON3.read(bytes)
 unmarshal(bytes, T::DataType) = JSON3.read(bytes, T)
-
 
 StructTypes.StructType(::Type{Seal}) = StructTypes.CustomStruct()
 #StructTypes.lower(seal::Seal) = Dict(:id => seal.pbkey, :r => seal.sig.r, :s => seal.sig.s)
