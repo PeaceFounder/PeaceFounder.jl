@@ -4,11 +4,11 @@ using Dates
 using PeaceFounder.Core: Model
 using PeaceFounder.Server: Controllers
 
-import .Model: CryptoSpec, pseudonym, TicketID, id, commit, verify, generator, Membership, approve, isbinding, Proposal, vote, Ballot, Selection, uuid, tally, seed, hasher, HMAC, DemeSpec, generate, Signer, key, braid, Model, select, digest, voters, members, root, audit
+import .Model: CryptoSpec, pseudonym, TicketID, id, commit, verify, generator, Membership, Termination, approve, isbinding, Proposal, vote, Ballot, Selection, uuid, tally, seed, hasher, HMAC, DemeSpec, generate, Signer, key, braid, Model, select, digest, voters, members, root, audit, roll, blacklist, termination_bitmask
 
 import .Controllers: Registrar, admit!, enlist!, set_demehash!, Ticket, tokenid
 import .Controllers: record!, commit!, ack_leaf
-import .Controllers: BraidChainController, roll, state, ledger
+import .Controllers: BraidChainController, state, ledger
 import .Controllers: BallotBoxController, PollingStation, init!, ack_cast, set_seed!, spine
 
 
@@ -71,15 +71,16 @@ function enroll(signer, invite)
     return access, ack
 end
 
-
 enlist(ticketid) = enlist!(REGISTRAR, ticketid, Dates.now(UTC))
-
 
 ticketid_alice = TicketID("Alice")
 invite_alice = enlist(ticketid_alice)
 
 ticketid_bob = TicketID("Bob")
 invite_bob = enlist(ticketid_bob)
+
+ticketid_david = TicketID("Dilan")
+invite_david = enlist(ticketid_david)
 
 ticketid_eve = TicketID("Eve")
 invite_eve = enlist(ticketid_eve)
@@ -98,23 +99,20 @@ access, ack = enroll(alice, invite_alice)
 @test verify(access, crypto)
 
 # That hash of ack coreponds to one of access
-#@test access in roll(BRAID_CHAIN)
-#@test id(access) in constituents(BRAID_CHAIN)
-@test id(access) in roll(BRAID_CHAIN)
+@test id(access) in roll(BRAID_CHAIN) 
 @test pseudonym(access) in members(BRAID_CHAIN)
 
-#bob = generate(Signer, crypto)
 bob = Signer(crypto, 3)
 access, ack = enroll(bob, invite_bob)
 
-#eve = generate(Signer, crypto)
+david = Signer(crypto, 5)
+david_access, david_ack = enroll(david, invite_david)
+
 eve = Signer(crypto, 4)
 access, ack = enroll(eve, invite_eve)
 
 ### Now I have a three members
 
-#@test access in roll(BRAID_CHAIN) # coresponds to enroll!
-#@test id(access) in constituents(BRAID_CHAIN)
 @test id(access) in roll(BRAID_CHAIN)
 @test pseudonym(access) in members(BRAID_CHAIN)
 
@@ -138,6 +136,53 @@ commit!(BRAID_CHAIN, BRAID_CHAIN_RECORDER)
 
 @test generator(BRAID_CHAIN, length(BRAID_CHAIN) - 1) == Model.input_generator(braidwork)
 @test generator(BRAID_CHAIN, length(BRAID_CHAIN)) == Model.output_generator(braidwork)
+
+# Termination of registration process after issued admission
+
+ticketid_fiona = TicketID("Fiona")
+invite_fiona = enlist(ticketid_fiona)
+fiona = Signer(crypto, 6)
+
+ticket = select(Ticket, tokenid(invite_fiona.token, invite_fiona.hasher), REGISTRAR)
+admission = admit!(REGISTRAR, id(fiona), ticket.ticketid)
+
+termination = Termination(id(admission)) |> approve(REGISTRAR.signer)
+record!(BRAID_CHAIN, termination)
+commit!(BRAID_CHAIN, BRAID_CHAIN_RECORDER)
+
+g = generator(BRAID_CHAIN)
+access = Membership(admission, g, pseudonym(fiona, g)) |> approve(fiona)
+@test_throws AssertionError record!(BRAID_CHAIN, access)
+
+# Termination with braid reset
+
+N = Model.index(david_ack)
+david_id = id(david_access)
+david_pseudonym = pseudonym(david, BRAID_CHAIN.generator)
+
+@test david_id in roll(BRAID_CHAIN)
+
+@test state(BRAID_CHAIN).member_count == 4
+
+termination = Termination(david_id) |> approve(REGISTRAR.signer)
+@test_throws AssertionError record!(BRAID_CHAIN, termination)
+
+termination = Termination(N, david_id) |> approve(REGISTRAR.signer)
+record!(BRAID_CHAIN, termination)
+
+@test_throws AssertionError record!(BRAID_CHAIN, termination)
+
+@test state(BRAID_CHAIN).member_count == 3
+@test !(david_id in roll(BRAID_CHAIN))
+@test david_id in blacklist(BRAID_CHAIN)
+@test termination_bitmask(BRAID_CHAIN)[N]
+@test pseudonym(david, BRAID_CHAIN.generator) in members(BRAID_CHAIN)
+
+braidwork = braid(generator(BRAID_CHAIN.spec), roll(BRAID_CHAIN), demespec.crypto, demespec, BRAIDER; reset = true) 
+record!(BRAID_CHAIN, braidwork)
+commit!(BRAID_CHAIN, BRAID_CHAIN_RECORDER)
+
+@test !(pseudonym(david, BRAID_CHAIN.generator) in members(BRAID_CHAIN))
 
 # A proposal can be constructed as
 
@@ -164,7 +209,6 @@ ack = ack_leaf(BRAID_CHAIN, N)
 @test id(ack) == id(BRAID_CHAIN_RECORDER)
 @test verify(ack, crypto)
 
-#add!(POLLING_STATION, proposal, members(BRAID_CHAIN, proposal))
 init!(POLLING_STATION, demespec, proposal, voters(BRAID_CHAIN, proposal))
 
 # Ideally the seed would be a Pulse from the League of Entropy
@@ -230,5 +274,3 @@ reloaded_bbox = BallotBoxController(ledger(bbox), _voters)
 
 @test audit(ledger(BRAID_CHAIN), ledger(bbox), bbox.commit)
 @test audit(ledger(BRAID_CHAIN), ledger(bbox), bbox.commit.state.root)
-
-

@@ -7,7 +7,7 @@
 using Base: UUID
 using HistoryTrees: HistoryTree, InclusionProof, ConsistencyProof
 using Dates: DateTime
-using ..Core.Model: Pseudonym, Transaction, DemeSpec, Generator, Commit, ChainState, Signer, Membership, Termination, Proposal, BraidReceipt, Digest, hasher, digest, id, seal, pseudonym, crypto, verify, input_generator, input_members, output_generator, output_members, BraidChainLedger, issuer, show_string
+using ..Core.Model: Pseudonym, Transaction, DemeSpec, Generator, Commit, ChainState, Signer, Membership, Termination, Proposal, BraidReceipt, Digest, hasher, digest, id, seal, pseudonym, crypto, verify, input_generator, input_members, output_generator, output_members, BraidChainLedger, issuer, show_string, ticket
 using ..Core.ProtocolSchema: AckInclusion, AckConsistency
 
 import ..Core.Model: isbinding, generator, members, voters, roll, blacklist, termination_bitmask
@@ -32,6 +32,7 @@ mutable struct BraidChainController
     ledger::BraidChainLedger
     spec::DemeSpec
     generator::Generator
+    tickets::Set{TicketID} # new
     roll::Set{Pseudonym} # new (member count is evaluated from identities)
     blacklist::Set{Pseudonym} # new
     termination_bitmask::BitVector # new
@@ -42,7 +43,7 @@ end
 
 function BraidChainController(spec::DemeSpec) 
     
-    chain = BraidChainController(Set{Pseudonym}(), BraidChainLedger(Transaction[]), spec, generator(spec), Set{Pseudonym}(), Set{Pseudonym}(), BitVector(), HistoryTree(Digest, hasher(spec)), nothing)
+    chain = BraidChainController(Set{Pseudonym}(), BraidChainLedger(Transaction[]), spec, generator(spec), Set{TicketID}(), Set{Pseudonym}(), Set{Pseudonym}(), BitVector(), HistoryTree(Digest, hasher(spec)), nothing)
 
     return chain
 end
@@ -66,8 +67,9 @@ function BraidChainController(ledger::BraidChainLedger; commit = nothing)
     _identities = roll(ledger)
     _blacklist = blacklist(ledger)
     _termination_bitmask = termination_bitmask(ledger)
+    tickets = Set{TicketID}(ticket(record) for record in ledger if record isa Membership)
 
-    chain = BraidChainController(_members, ledger, spec, _generator, _identities, _blacklist, _termination_bitmask, tree, commit)
+    chain = BraidChainController(_members, ledger, spec, _generator, tickets, _identities, _blacklist, _termination_bitmask, tree, commit)
     
     reset_tree!(chain)
 
@@ -177,21 +179,7 @@ roll(chain::BraidChainController) = chain.roll
 
 blacklist(chain::BraidChainController) = chain.blacklist
 
-termination_bitmask(chain::BraidChainController) = copy(chain.termination_bitmask) 
-
-# """
-#     roll(ledger::BraidChainController)::Vector{Membership}
-
-# Return all member certificates from a braidchain ledger.
-# """
-# roll(chain::BraidChainController) = (m for m in chain.ledger if m isa Membership)
-
-# """
-#     constituents(ledger::BraidChainController)::Set{Pseudonym}
-
-# Return all member identity pseudonyms. 
-# """
-# constituents(chain::BraidChainController) = Set(id(i) for i in roll(chain))
+termination_bitmask(chain::BraidChainController) = copy(chain.termination_bitmask) # An alternative is to copy it at push which may be better
 
 """
     generator(ledger::BraidChainController)
@@ -323,6 +311,7 @@ function Base.push!(chain::BraidChainController, m::Membership)
 
     push!(chain.members, pseudonym(m))
     #push!(chain.roll, issuer(m))
+    push!(chain.tickets, ticket(m))
     push!(chain.roll, id(m))
     unsafe_push!(chain, m)
 
@@ -335,17 +324,17 @@ function record!(chain::BraidChainController, m::Membership)
     !isnothing(N) && return N
 
     @assert generator(chain) == generator(m)
-    @assert !(issuer(m) in roll(chain)) "Identity pseudonym is already registered"
-    @assert !(issuer(m) in blacklist(chain)) "The pseudonym is blacklisted"
+    @assert !(ticket(m) in chain.tickets) "Ticket already taken; Can't register a dublicate"
+    @assert !(id(m) in roll(chain)) "Identity pseudonym is already registered"
+    @assert !(id(m) in blacklist(chain)) "The pseudonym is blacklisted"
     @assert !(pseudonym(m) in members(chain))
-    @assert pseudonym(m.admission.seal) == chain.spec.registrar
+    @assert issuer(m.admission) == chain.spec.registrar
 
     @assert verify(m, crypto(chain.spec)) # verifies also admission 
 
     push!(chain, m)
-    N = length(chain)
 
-    return N
+    return length(chain)
 end
 
 function Base.push!(chain::BraidChainController, braidwork::BraidReceipt)
@@ -405,15 +394,12 @@ function record!(chain::BraidChainController, p::Proposal)
     
     @assert isbinding(chain, state(p))
     @assert pseudonym(p.approval) == chain.spec.proposer
+    @assert chain.ledger[state(p).index] isa BraidReceipt "Proposals can only be anchored on braids." 
     @assert verify(p, crypto(chain.spec))
     
-    @assert chain.ledger[state(p).index] isa BraidReceipt "Proposals can only be anchored on braids." 
-
     push!(chain, p)
 
-    N = length(chain)
-
-    return N
+    return length(chain)
 end
 
 select(::Type{Proposal}, uuid::UUID, chain::BraidChainController) = select(Proposal, x -> x.uuid == uuid, chain)
@@ -437,18 +423,20 @@ end
 function record!(chain::BraidChainController, termination::Termination)
 
     if termination.index == 0
-        @assert !(termination.identity in chain.roll) "Termination index can't be zero; Membership with termination identity already recorded;"
+        @assert !(id(termination) in chain.roll) "Termination index can't be zero; Membership with termination identity already recorded;"
     else
         @assert chain.termination_bitmask[termination.index] == false 
-        @assert termination.identity in chain.roll "Identity not in ledger" 
-        @assert issuer(chain.ledger[termination.index]) == termination.identity
+        @assert id(termination) in chain.roll "Identity not in ledger" 
+        @assert id(chain.ledger[termination.index]) == id(termination)
     end
 
-    @assert !(termination.identity in blacklist) "identity already blacklisted" # delisted
+    @assert !(id(termination) in chain.blacklist) "identity already blacklisted" # delisted
+    @assert issuer(termination) == chain.spec.registrar
+    @assert verify(termination, crypto(chain.spec))
 
     push!(chain, termination)
     
-    return
+    return length(chain)
 end
 
 

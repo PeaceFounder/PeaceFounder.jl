@@ -31,20 +31,21 @@ struct BraidReceipt <: Transaction
     approval::Union{Seal, Nothing}
 
     #function BraidReceipt(braid::Simulator, consumer::DemeSpec, producer::DemeSpec)
-    function BraidReceipt(braid::Simulator; reset = false)
+    function BraidReceipt(braid::Simulator, reset::Bool = false)
         
         @assert braid.proposition isa Braid
 
         return new(braid, reset, nothing, nothing)
     end
 
-    BraidReceipt(braidwork::BraidReceipt, producer::DemeSpec, approval::Seal; reset = false) = new(braidwork.braid, reset, producer, approval)
+    BraidReceipt(braidwork::BraidReceipt, producer::DemeSpec, approval::Seal) = new(braidwork.braid, braidwork.reset, producer, approval)
 
-    # Necessary for deserialization
-    BraidReceipt(braid::Simulator, producer::DemeSpec, approval::Seal; reset = false) = new(braid, reset, producer, approval)
+    BraidReceipt(braid::Simulator, reset::Bool, producer::DemeSpec, approval::Seal) = new(braid, reset, producer, approval)
 end 
 
 @batteries BraidReceipt
+
+issuer(braid::BraidReceipt) = issuer(braid.approval)
 
 @doc raw"""
     braid(generator::Generator, members::Union{Vector{Pseudonym}, Set{Pseudonym}}, consumer::DemeSpec, producer::DemeSpec; verifier = (g) -> ProtocolSpec(; g))
@@ -68,7 +69,7 @@ function braid(generator::Generator, members::Union{Vector{Pseudonym}, Set{Pseud
     spec_g = G(crypto.generator.data)
     braid = ShuffleProofs.braid(g, m, verifier(spec_g))
 
-    return BraidReceipt(braid; reset)#, consumer, producer)
+    return BraidReceipt(braid, reset)#, consumer, producer)
 end
 
 """
@@ -104,7 +105,7 @@ function verify(braidwork::BraidReceipt, crypto::CryptoSpec; skip_braid::Bool = 
 
     @assert !isnothing(braidwork.approval) "Only signed braids can be verified"
 
-    _digest = digest(braidwork.braid, crypto)
+    _digest = digest(body(braidwork), crypto)
     verify(bytes(_digest), braidwork.approval, braidwork.producer.crypto) || return false
 
     # Theese hings perhaps should be within a constructor of each type!

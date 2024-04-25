@@ -10,8 +10,8 @@ using Setfield
 
 import StructTypes
 
-using ..Core.Model: Model, Membership, Pseudonym, Proposal, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, HashSpec, DemeSpec, Signer,  Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen, digest, commit
-using ..Core.Model: id, hasher, pseudonym, generator, state, verify, crypto, index, root, isconsistent, istallied, issuer
+using ..Core.Model: Model, Membership, Pseudonym, Proposal, Generator, Vote, bytes, TicketID, HMAC, Admission, isbinding, verify, Digest, HashSpec, DemeSpec, Signer,  Commit, ChainState, Proposal, BallotBoxState, isbinding, isopen, digest, commit
+using ..Core.Model: id, hasher, pseudonym, generator, state, verify, crypto, index, root, isconsistent, istallied, issuer, termination_bitmask
 using ..Core.ProtocolSchema: ProtocolSchema, TicketStatus, tokenid, Invite, AckConsistency, AckInclusion, CastAck
 using ..Core.Parser: marshal, unmarshal
 using ..Core.Store: Store
@@ -35,7 +35,6 @@ struct RemoteRoute <: Route
     url::URI
 end
 
-
 (server::RemoteRoute)(req::Request)::Response = HTTP.request(req.method, URI(server.url; path = req.target), req.headers, req.body)
 
 destination(route::RemoteRoute) = route.url
@@ -44,7 +43,6 @@ struct OnionRoute <: Route
     url::URI
     # circuit
 end
-
 
 route(str::String) = route(URI(str))
 route(url::URI) = url == URI() ? error("Empty url not allowed") : RemoteRoute(url)
@@ -65,7 +63,7 @@ end
 post(server::Route, target, body)::Response = request(server, "POST", target, body)
 put(server::Route, target, body)::Response = request(server, "PUT", target, body)
 get(server::Route, target)::Response = request(server, "GET", target, UInt8[])
-
+get(args...) = Base.get(args...) # This way previous method  would not be registerd
 
 function get_deme(server::Route)
 
@@ -359,9 +357,10 @@ function Base.show(io::IO, guard::EnrollGuard)
     
 end
 
-
 EnrollGuard() = EnrollGuard(nothing, nothing, nothing)
 EnrollGuard(admission::Admission) = EnrollGuard(admission, nothing, nothing)
+
+Model.index(guard::EnrollGuard) = index(guard.ack)
 
 mutable struct ProposalInstance # ProposalArea, BallotBoxClient?
     const index::Int
@@ -418,9 +417,7 @@ function Model.commit(instance::ProposalInstance)
     else
 
         return nothing
-
     end
-
 end
 
 
@@ -448,9 +445,10 @@ end
 
 
 Model.id(voter::DemeAccount) = Model.id(voter.signer)
+Model.index(voter::DemeAccount) = index(voter.guard)
 
 Model.pseudonym(voter::DemeAccount) = pseudonym(voter.signer) # I could drop this method in favour of identity
-Model.pseudonym(voter::DemeAccount, g) = pseudonym(voter.signer, g)
+Model.pseudonym(voter::DemeAccount, g::Generator) = pseudonym(voter.signer, g)
 Model.pseudonym(voter::DemeAccount, proposal::Proposal) = pseudonym(voter.signer, Model.generator(proposal))
 Model.pseudonym(voter::DemeAccount, instance::ProposalInstance) = pseudonym(voter, instance.proposal)
 
@@ -460,6 +458,7 @@ isadmitted(voter::DemeAccount) = !isnothing(voter.guard.admission)
 
 Model.hasher(voter::DemeAccount) = hasher(voter.deme)
 
+iseligiable(voter::DemeAccount) = termination_bitmask(voter.commit)[index(voter)] == false
 
 function get_ballotbox_commit!(account::DemeAccount, identifier::Union{UUID, Int})
 
@@ -487,6 +486,12 @@ function get_proposal(account::DemeAccount, index::Int)
     error("Proposal with index $index not found")
 end
 
+iseligiable(account::DemeAccount, proposal::Proposal) = termination_bitmask(proposal.anchor)[index(account)] == false && index(proposal) > index(account)
+
+function iseligiable(account::DemeAccount, index::Int)
+    proposal = get_proposal(account, index)
+    return iseligiable(account, proposal)
+end
 
 function Base.show(io::IO, voter::DemeAccount)
 
@@ -686,8 +691,8 @@ function cast_vote!(voter::DemeAccount, identifier::Union{UUID, Int}, selection;
 
     instance = get_proposal_instance(voter, identifier)
 
-    #@warn "Imagine a TOR circuit being created..."
-    
+    @assert index(instance.proposal) > index(voter) "You are not eligiable to vote on this proposal as it is anchored to a state before your membership were registered"
+    @assert iseligiable(voter, instance.proposal) "You are not eligiable to vote on this proposal as your membership has been terminated"
     cast_vote!(instance, voter.deme, selection, voter.signer; server = voter.route, force, seq)
 
     return
@@ -700,7 +705,6 @@ function cast_guard(voter::DemeAccount, identifier::Union{UUID, Int})
 
     return instance.guard
 end
-
 
 
 function check_vote!(instance::ProposalInstance; deme::DemeSpec, server::Route)
@@ -773,7 +777,6 @@ function blame(voter::DemeAccount, uuid::UUID)
 end
 
 
-
 # Parser.marshal, Parser.unmarshal ; Client.enroll method seems like a good fit where to do parsing 
 
 
@@ -804,7 +807,7 @@ end
 DemeClient() = DemeClient(DemeAccount[])
 
 
-function enroll!(client::DemeClient, invite::Invite; server::Route = route(invite.route), key = nothing) #; server::Route = route(invite.route))
+function enroll!(client::DemeClient, invite::Invite; server::Route = route(invite.route), key = nothing) 
 
     account = enroll!(invite; server, key)
     push!(client.accounts, account)
@@ -814,6 +817,8 @@ end
 
 
 function select(client::DemeClient, uuid::UUID)
+
+    @warn "This function shall be deprecated in faavour of get"
 
     for a in client.accounts
 
@@ -827,21 +832,38 @@ function select(client::DemeClient, uuid::UUID)
 
 end
 
+function Base.get(null::Function, client::DemeClient, uuid::UUID)
 
-update_deme!(client::DemeClient, uuid::UUID) = update_deme!(select(client, uuid))
+    for a in client.accounts
+        if a.deme.uuid == uuid
+            return a
+        end
+    end
+    
+    return null()
+end
 
-list_proposal_instances(client::DemeClient, uuid::UUID) = list_proposal_instances(select(client, uuid))
+function Base.get(client::DemeClient, uuid::UUID)
+    get(client, uuid) do
+        error("Can't find the client with given uuid")
+    end
+end
 
-cast_vote!(client::DemeClient, uuid::UUID, index::Int, selection; force=false, seq=nothing) = cast_vote!(select(client, uuid), index, selection; force, seq)
 
-check_vote!(client::DemeClient, uuid::UUID, index::Int) = check_vote!(select(client, uuid), index)
+update_deme!(client::DemeClient, uuid::UUID) = update_deme!(get(client, uuid))
 
-Model.istallied(client::DemeClient, uuid::UUID, index::Int) = istallied(select(client, uuid), index)
+list_proposal_instances(client::DemeClient, uuid::UUID) = list_proposal_instances(get(client, uuid))
 
-get_ballotbox_commit!(client::DemeClient, uuid::UUID, index::Int) = get_ballotbox_commit!(select(client, uuid), index)
+cast_vote!(client::DemeClient, uuid::UUID, index::Int, selection; force=false, seq=nothing) = cast_vote!(get(client, uuid), index, selection; force, seq)
 
-get_proposal_instance(client::DemeClient, uuid::UUID, index::Int) = get_ballotbox_commit!(select(client, uuid), index)
-get_proposal_instance(client::DemeClient, uuid::UUID, proposal::UUID) = get_ballotbox_commit!(select(client, uuid), proposal)
+check_vote!(client::DemeClient, uuid::UUID, index::Int) = check_vote!(get(client, uuid), index)
+
+Model.istallied(client::DemeClient, uuid::UUID, index::Int) = istallied(get(client, uuid), index)
+
+get_ballotbox_commit!(client::DemeClient, uuid::UUID, index::Int) = get_ballotbox_commit!(get(client, uuid), index)
+
+get_proposal_instance(client::DemeClient, uuid::UUID, index::Int) = get_ballotbox_commit!(get(client, uuid), index)
+get_proposal_instance(client::DemeClient, uuid::UUID, proposal::UUID) = get_ballotbox_commit!(get(client, uuid), proposal)
 
 
 reset!(client::DemeClient) = empty!(client.accounts)

@@ -50,77 +50,61 @@ end
 
 approve(signer::Signer) = x -> approve(x, signer) # late evaluation
 
-
-#verify(spec::DemeSpec, crypto::CryptoSpec) = verify(canonicalize(@set spec.seal = nothing), spec.guardian, spec.signature, crypto)
 verify(spec::DemeSpec, crypto::CryptoSpec) = verify(canonicalize(@set spec.seal = nothing), spec.seal, crypto)
-
-
 
 # canonicalize, seal, verify shall be put in a serate file
 function seal(admission::Admission, signer::Signer)
-
     bytes = canonicalize(body(admission))
-    
     return seal(bytes, signer)
 end
-
 
 function seal(state::ChainState, signer::Signer)
-
     bytes = canonicalize(state)
-
     return seal(bytes, signer)
 end
-
 
 verify(state::ChainState, seal::Seal, crypto::CryptoSpec) = verify(canonicalize(state), seal, crypto)
 
-
 function seal(state::BallotBoxState, signer::Signer)
-
     bytes = canonicalize(state)
-
     return seal(bytes, signer)
 end
 
 verify(state::BallotBoxState, seal::Seal, crypto::CryptoSpec) = verify(canonicalize(state), seal, crypto)
 
-
 body(vote::Vote) = @set vote.seal = nothing
 
-
-# Should not use this approach
 function seal(vote::Vote, generator::Generator, signer::Signer; timestamp::Union{DateTime} = nothing)
-
-    #@assert vote.seq == seq(signer, vote.proposal) + 1
-
     bytes = canonicalize(body(vote))
-    
     return seal(bytes, generator, signer; timestamp)
 end
 
 
 function verify(vote::Vote, generator::Generator, crypto::CryptoSpec)
-    
     bytes = canonicalize(body(vote))
-
     return verify(bytes, vote.seal, generator, crypto)
 end
 
-
 verify(record::CastRecord, generator::Generator, crypto::CryptoSpec) = verify(record.vote, generator, crypto)
 
-
 function verify(admission::Admission, crypto::CryptoSpec)
-
     bytes = canonicalize(body(admission))
-    
     return verify(bytes, admission.seal, crypto)
 end
 
 
 function verify(member::Membership, crypto::CryptoSpec)
     return verify(member.admission, crypto) && verify(canonicalize(body(member)), id(member.admission), member.approval, crypto)
+end
+
+
+body(record::Termination) = Termination(record.index, record.identity)
+verify(record::Termination, crypto::CryptoSpec) = verify(canonicalize(body(record)), record.seal, crypto)
+
+function approve(record::Termination, signer::Signer)
+    bytes = canonicalize(body(record))
+    approval = seal(bytes, signer)
+    return Termination(record, approval)
 end
 
 
@@ -142,30 +126,26 @@ end
 
 function digest(record::BraidReceipt, hasher::HashSpec)
 
-    braid_hash = digest(record.braid, hasher)
-    spec_hash = digest(record.producer, hasher)
-    seal_hash = digest(record.approval, hasher)
+    braid_hash = digest(record.braid, hasher) |> bytes
+    spec_hash = isnothing(record.producer) ? [] : digest(record.producer, hasher) |> bytes
+    seal_hash = isnothing(record.approval) ? [] : digest(record.approval, hasher) |> bytes
 
-    return digest(UInt8[bytes(braid_hash)..., bytes(spec_hash)..., bytes(seal_hash)...], hasher)
+    return digest(UInt8[record.reset, braid_hash..., spec_hash..., seal_hash...], hasher)
 end
 
-body(record::BraidReceipt) = record.braid
+#body(record::BraidReceipt) = record.braid
 
 digest(braid::ShuffleProofs.Simulator, hasher::HashSpec) = Digest(ShuffleProofs.digest(braid, hasher))
 
 
-# body(braidwork::BraidReceipt) = @set braidwork.approval = nothing
+body(braidwork::BraidReceipt) = BraidReceipt(braidwork.braid, braidwork.reset)
+
+# Verify is specified in braids
 
 function seal(braidwork::BraidReceipt, signer::Signer)
-
-    _digest = digest(braidwork.braid, hasher(signer))
-
-    #bytes = canonicalize(body(braidwork))
-
+    _digest = digest(body(braidwork), hasher(signer))
     return seal(bytes(_digest), signer) # A timestamp is added in front thus it does not do a double hashing at all here.
 end
-
-
 
 
 function digest(data::Transaction, hasher::HashSpec)

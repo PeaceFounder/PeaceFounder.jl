@@ -25,7 +25,7 @@ directory(::Type{DemeSpec}) = DEMESPEC_DIR
 directory(::Type{Membership}) = MEMBERSHIP_DIR
 direcotry(::Type{BraidReceipt}) = BRAIDRECEIPT_DIR
 directory(::Type{Proposal}) = PROPOSAL_DIR
-directory(::Type{Termination}) = PROPOSAL_DIR
+directory(::Type{Termination}) = TERMINATION_DIR
 
 directory(::T) where T <: Transaction = directory(T)
 
@@ -73,8 +73,8 @@ function save(record::BraidReceipt, dir::String; force=false)
         marshal(file, record.producer)
     end
 
-    open(joinpath(dir, "seal.json"), "w") do file
-        marshal(file, record.approval)
+    open(joinpath(dir, "metadata.json"), "w") do file
+        marshal(file, (; seal = record.approval, reset = record.reset))
     end
     
     mkdir(joinpath(dir, "braid"))
@@ -96,9 +96,9 @@ function load(::Type{BraidReceipt}, dir::String)
 
     braid = ShuffleProofs.load(joinpath(dir, "braid"))
     spec = unmarshal(read(joinpath(dir, "demespec.json")), DemeSpec)
-    seal = unmarshal(read(joinpath(dir, "seal.json")), Seal)
+    (; seal, reset) = unmarshal(read(joinpath(dir, "metadata.json")), @NamedTuple{seal::Seal, reset::Bool})
 
-    return BraidReceipt(braid, spec, seal)
+    return BraidReceipt(braid, reset, spec, seal)
 end
 
 load(::Type{BraidReceipt}, dir::String, index::UInt16) = load(BraidReceipt, joinpath(dir, BRAIDRECEIPT_DIR, index2name(index)))
@@ -128,7 +128,7 @@ function tar(io::IO, record::BraidReceipt)
 
     ShuffleProofs.save(record.braid, TarPath(io, "braid"))    
     tar(io, "demespec.json", marshal(record.producer))
-    tar(io, "seal.json", marshal(record.approval))
+    tar(io, "metadata.json", marshal((; seal = record.approval, reset = record.reset)))
 
     return
 end

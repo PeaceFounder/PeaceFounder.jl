@@ -565,10 +565,10 @@ get_constituents() = Controllers.constituents(BRAID_CHAIN[])
 reset_tree() = Controllers.reset_tree!(BRAID_CHAIN[])
 
 get_members(N::Int) = Model.members(BRAID_CHAIN[], N)
-get_members() = Model.members(BRAID_CHAIN[])
+get_members(; reset=false) = reset ? Model.roll(BRAID_CHAIN[]) : Model.members(BRAID_CHAIN[])
 
 get_generator(N::Int) = Model.generator(BRAID_CHAIN[], N)
-get_generator() = Model.generator(BRAID_CHAIN[])
+get_generator(; reset=false) = reset ? Model.generator(BRAID_CHAIN[].spec) : Model.generator(BRAID_CHAIN[])
 
 get_chain_proposal_list() = collect(Controllers.list(Proposal, BRAID_CHAIN[]))
 

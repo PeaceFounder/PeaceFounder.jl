@@ -29,7 +29,6 @@ Base.view(ledger::BraidChainLedger, args) = BraidChainLedger(view(ledger.records
 Base.in(record::Transaction, ledger::BraidChainLedger) = record in ledger.records
 
 
-
 """
     members(ledger::BraidChainLedger[, index::Int])::Set{Pseudonym}
 
@@ -203,6 +202,8 @@ generator(commit::Commit{ChainState}) = generator(commit.state)
 index(state::ChainState) = state.index
 root(state::ChainState) = state.root
 
+termination_bitmask(state::ChainState) = state.termination_bitmask
+termination_bitmask(state::Commit{ChainState}) = termination_bitmask(commit.state)
 
 isbinding(commit::Commit{ChainState}, deme::DemeSpec) = issuer(commit) == deme.recorder
 
@@ -383,9 +384,17 @@ end
 struct Termination <: Transaction
     index::Int # record index of the member
     identity::Pseudonym # ensures that record can't be created before; 
-    approval::Union{Seal, Nothing} # issued by registrar
+    seal::Union{Seal, Nothing} # issued by registrar
+
+    Termination(index::Int, identity::Pseudonym) = new(index, identity, nothing)
+    Termination(identity::Pseudonym) = new(0, identity, nothing)
+    Termination(record::Termination, seal::Seal) = new(record.index, record.identity, seal)
+    Termination(index::Int, identity::Pseudonym, seal::Seal) = new(index, identity, seal)
 end
 
+id(termination::Termination) = termination.identity
+index(termination::Termination) = termination.index
+issuer(termination::Termination) = issuer(termination.seal)
 
 function roll(ledger::BraidChainLedger, N::Int = length(ledger))
 
@@ -396,17 +405,10 @@ function roll(ledger::BraidChainLedger, N::Int = length(ledger))
 
             push!(identities, id(record))
 
-        elseif record isa Termination
+        elseif record isa Termination && record.index != 0
 
-            if record.index == 0
+            pop!(identities, record.identity)
 
-                continue
-
-            else
-                
-                pop!(identities, record.identity)
-
-            end
         end
     end
 
@@ -419,7 +421,7 @@ function termination_bitmask(ledger::BraidChainLedger, N::Int = length(ledger))
 
     for (i, record) in enumerate(view(ledger, 1:N))
         if record isa Termination
-            record.index == 0 || continue # 
+            record.index == 0 && continue 
             bitmask[record.index] = true
         end
     end
@@ -439,3 +441,23 @@ function blacklist(ledger::BraidChainLedger, N::Int = length(ledger))
     
     return list
 end
+
+
+# function termination(ledger::BraidChainLedger, N::Int, registrar::Signer)
+
+#     record = ledger[N]
+
+#     @assert record isa Membership
+#     @assert termination_bitmask(ledger)[N] == false
+
+#     trecord = Termination(N, id(record))
+
+#     return approve(trecord, registrar)
+# end
+
+
+# function termination(ledger::BraidChainLedger, registrar::Signer)
+    
+    
+
+# end

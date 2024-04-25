@@ -17,7 +17,7 @@ function state(ledger::BraidChainLedger, N::Int)
         elseif record isa BraidReceipt
 
             member_count += length(output_members(record))
-            record.reset || (g = output_generator(record)) # if reset original generator is taken
+            g = output_generator(record) 
             break
 
         elseif record isa Termination
@@ -105,7 +105,7 @@ function audit_roles(ledger::BraidChainLedger)
             if record.reset # only a braider can reset braiding from the start
 
                 crypto(record.producer) == crypto(spec) || return false
-                issuer(record.approval) == spec.braider || return false
+                issuer(record) == spec.braider || return false
                 
             end
         end
@@ -113,7 +113,6 @@ function audit_roles(ledger::BraidChainLedger)
     
     return true
 end
-
 
 function audit_members(ledger::BraidChainLedger)
 
@@ -131,14 +130,14 @@ function audit_members(ledger::BraidChainLedger)
     for (index, record) in enumerate(ledger)
         if record isa Membership
 
-            record.admission.ticketid in tickets && return false
-            record.admission.id in identities && return false
-            record.pseudonym in members && return false
+            ticket(record) in tickets && return false
+            id(record) in identities && return false
             id(record) in blacklist && return false # to prevent reissuing of membership
-
-            push!(tickets, record.admission.ticketid)
+            pseudonym(record) in members && return false
+            
+            push!(tickets, ticket(record))
             push!(identities, id(record))
-            push!(members, record.pseudonym)
+            push!(members, pseudonym(record))
             
         elseif record isa BraidReceipt
             
@@ -155,20 +154,20 @@ function audit_members(ledger::BraidChainLedger)
 
         elseif record isa Termination
 
-            record.identity in blacklist && return false # can't have two termination records for the same identity
-            push!(blacklist, record.identity)
+            id(record) in blacklist && return false # can't have two termination records for the same identity
+            push!(blacklist, id(record))
 
             if record.index == 0 
 
-                record.identity in identities && return false # membership is not registered
+                id(record) in identities && return false # membership is not registered
 
             else
 
                 1 < record.index < index || return false  # can't point to future records
                 member_cert = ledger[record.index]
                 member_cert isa Membership || return false # must point to a Membership record
-                issuer(member_cert) == record.identity || return false # must be consistent
-                pop!(identities, issuer(member_cert))
+                id(member_cert) == id(record) || return false # must be consistent
+                pop!(identities, id(member_cert))
 
             end
         end
@@ -200,7 +199,7 @@ function audit_proposal_anchors(ledger::BraidChainLedger)
             
             push!(anchor_states, ChainState(index, _root, generator, member_count, termination_bitmask[1:index]))
 
-        elseif record isa Termination
+        elseif record isa Termination && record.index != 0
             termination_bitmask[record.index] = true
         end
     end
@@ -240,7 +239,6 @@ function audit_proposals(ledger::BraidChainLedger)
     return true
 end
 
-
 function audit(ledger::BraidChainLedger)
 
     audit_roles(ledger) || return false
@@ -251,7 +249,6 @@ function audit(ledger::BraidChainLedger)
 
     return true
 end
-
 
 function audit_seals(ledger::BallotBoxLedger)
 
@@ -264,7 +261,6 @@ function audit_seals(ledger::BallotBoxLedger)
 
     return true
 end
-
 
 function audit_seeds(ledger::BallotBoxLedger)
 

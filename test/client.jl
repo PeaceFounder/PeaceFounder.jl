@@ -4,7 +4,7 @@ import Dates: Dates, UTC
 
 import PeaceFounder.Server: Service, Mapper
 import PeaceFounder: Client, Schedulers
-import PeaceFounder.Core.Model: Model, CryptoSpec, DemeSpec, Selection, Signer, id, approve
+import PeaceFounder.Core.Model: Model, CryptoSpec, DemeSpec, Termination, Selection, Signer, id, approve
 import PeaceFounder.Core.Parser
 
 #crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
@@ -35,6 +35,7 @@ SERVER = Client.route(Service.ROUTER)
 alice_invite = Mapper.enlist_ticket(Model.TicketID("Alice")) 
 bob_invite = Mapper.enlist_ticket(Model.TicketID("Bob")) 
 eve_invite = Mapper.enlist_ticket(Model.TicketID("Eve")) 
+david_invite = Mapper.enlist_ticket(Model.TicketID("David")) 
 
 # If ticketid is already is registered and is unadmitted the same invite shall be returned (unless token have expired)
 @test alice_invite == Mapper.enlist_ticket(Model.TicketID("Alice")) 
@@ -49,6 +50,19 @@ Client.enroll!(bob, bob_invite; server = SERVER, key = 3)
 eve = Client.DemeClient()
 Client.enroll!(eve, eve_invite; server = SERVER, key = 4)
 
+david = Client.DemeClient()
+Client.enroll!(david, david_invite; server = SERVER, key = 5)
+
+# Termination
+
+account = get(david, DEMESPEC.uuid) do
+    error("Can't find an account")
+end
+N = Model.index(account)
+david_id = Model.id(account)
+
+termination = Termination(N, david_id) |> approve(Mapper.REGISTRAR[].signer)
+Mapper.submit_chain_record!(termination)
 
 # Braiding 
 input_generator = Mapper.get_generator()
@@ -79,7 +93,7 @@ ack = Client.enlist_proposal(SERVER, proposal)
 Client.update_deme!(alice, DEMESPEC.uuid)
 Client.update_deme!(bob, DEMESPEC.uuid)
 Client.update_deme!(eve, DEMESPEC.uuid)
-
+Client.update_deme!(david, DEMESPEC.uuid)
 
 uuid = alice.accounts[1].deme.uuid
 instances = Client.list_proposal_instances(alice, uuid)
@@ -90,6 +104,7 @@ Schedulers.waituntil(proposal.open + Dates.Millisecond(1000))
 Client.cast_vote!(alice, uuid, index, Selection(2))
 Client.cast_vote!(bob, uuid, index, Selection(1))
 Client.cast_vote!(eve, uuid, index, Selection(2))
+@test_throws AssertionError Client.cast_vote!(david, uuid, index, Selection(1))
 
 Client.check_vote!(alice, uuid, index) # asks for consistency proof that previous commitment still holds. 
 

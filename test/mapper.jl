@@ -2,7 +2,7 @@ using Test
 
 using Dates: Dates, Date, UTC
 
-import PeaceFounder.Core.Model: Model, CryptoSpec, pseudonym, TicketID, Membership, Admission, Proposal, Ballot, Selection, generator, state, id, vote, seed, tally, approve, istallied, DemeSpec, hasher, HMAC, isbinding, Generator, generate, Signer
+import PeaceFounder.Core.Model: Model, CryptoSpec, pseudonym, TicketID, Membership, Termination, Admission, Proposal, Ballot, Selection, generator, state, id, vote, seed, tally, approve, istallied, DemeSpec, hasher, HMAC, isbinding, Generator, generate, Signer
 import PeaceFounder.Core.ProtocolSchema: tokenid, Invite, TicketStatus
 import PeaceFounder.Server.Mapper
 import PeaceFounder.Core.AuditTools
@@ -14,7 +14,6 @@ function reboot()
     Mapper.load_system()
 
 end
-
 
 Mapper.DATA_DIR = joinpath(tempdir(), "peacefounder")
 rm(Mapper.DATA_DIR, force=true, recursive=true)
@@ -69,6 +68,9 @@ invite_alice = Mapper.enlist_ticket(ticketid_alice)
 ticketid_bob = TicketID("Bob")
 invite_bob = Mapper.enlist_ticket(ticketid_bob)
 
+ticketid_david = TicketID("Dilan")
+invite_david = Mapper.enlist_ticket(ticketid_david)
+
 ticketid_eve = TicketID("Eve")
 invite_eve = Mapper.enlist_ticket(ticketid_eve)
 
@@ -78,6 +80,9 @@ access_alice, ack = enroll(alice, invite_alice)
 
 bob = Signer(crypto, 3)
 access_bob, ack = enroll(bob, invite_bob)
+
+david = Signer(crypto, 5)
+david_access, david_ack = enroll(david, invite_david)
 
 eve = Signer(crypto, 4)
 access_eve, ack = enroll(eve, invite_eve)
@@ -93,6 +98,25 @@ input_members = Mapper.get_members()
 braidwork = Model.braid(input_generator, input_members, DEMESPEC.crypto, DEMESPEC, Mapper.BRAIDER[]) 
 Mapper.submit_chain_record!(braidwork)
 
+### Terminating
+
+N = Model.index(david_ack)
+david_id = id(david_access)
+
+termination = Termination(N, david_id) |> approve(Mapper.REGISTRAR[].signer)
+
+Mapper.submit_chain_record!(termination)
+
+reboot()
+
+### Braid reset
+
+input_generator = Mapper.get_generator(reset=true)
+input_members = Mapper.get_members(reset=true)
+
+braidwork = Model.braid(input_generator, input_members, DEMESPEC.crypto, DEMESPEC, Mapper.BRAIDER[]; reset=true) 
+Mapper.submit_chain_record!(braidwork)
+
 ### 
 
 reboot()
@@ -106,8 +130,6 @@ proposal = Proposal(
     ballot = Ballot(["yes", "no"]),
     open = Dates.now(UTC),
     closed = Dates.now(UTC) + Dates.Second(2),
-    # this supports a need to support also termination of proposal record to issue new one
-    # in situations where server key needs to be reset the proposal records could be reissued.
     collector = id(Mapper.COLLECTOR[]), 
     state = state(commit)
 ) |> approve(PROPOSER)
@@ -143,9 +165,7 @@ reboot()
 v = vote(proposal, _seed, Selection(1), eve)
 ack = Mapper.cast_vote(proposal.uuid, v)
 
-
 spine = Mapper.get_ballotbox_spine(proposal.uuid)
-
 #Mapper.tally_votes!(proposal.uuid)
 
 ballotbox = Mapper.get_ballotbox(proposal.uuid)

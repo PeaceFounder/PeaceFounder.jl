@@ -10,7 +10,7 @@ import .Model: CryptoSpec, pseudonym, TicketID, id, commit, verify, generator, M
 
 import .Controllers: Registrar, admit!, enlist!, set_demehash!, Ticket, tokenid
 import .Controllers: record!, commit!, ack_leaf
-import .Controllers: BraidChainController, roll, constituents, state, ledger
+import .Controllers: BraidChainController, roll, state, ledger
 import .Controllers: BallotBoxController, PollingStation, init!, ack_cast, set_seed!, spine
 
 
