@@ -1,5 +1,7 @@
 module Core
 
+import ..BitSaver
+
 include("Model/Model.jl") # Client, Server, Audit
 import .Model
 

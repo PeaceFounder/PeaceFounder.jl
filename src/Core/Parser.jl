@@ -3,6 +3,7 @@ module Parser
 using ..Model: TicketID, Digest, Pseudonym, Signature, Seal, Membership, Proposal, Vote, ChainState, Digest, Ballot, BallotBoxState, CastReceipt, CastRecord, Model, bytes, Admission, DemeSpec, CryptoSpec, Commit, Generator, CryptoSpec, DemeSpec, HashSpec, parse_groupspec, lower_groupspec, Signer, Termination
 
 using ..ProtocolSchema: TicketStatus, Invite, AckInclusion #, AckConsistency 
+using ..BitSaver: BitMask
 using HistoryTrees: InclusionProof, ConsistencyProof
 
 using Dates: DateTime
@@ -66,6 +67,9 @@ StructTypes.omitempties(::Type{Admission}) = (:approval,)
 StructTypes.StructType(::Type{Termination}) = StructTypes.Struct()
 StructTypes.omitempties(::Type{Termination}) = (:approval,)
 
+StructTypes.StructType(::Type{BitMask}) = StructTypes.StringType()
+Base.string(x::BitMask) = base64encode(convert(Vector{UInt8}, x))
+StructTypes.construct(::Type{BitMask}, s::AbstractString) = convert(BitMask, base64decode(s))
 
 function marshal(x) 
     io = IOBuffer()
@@ -128,7 +132,6 @@ StructTypes.omitempties(::Type{Membership}) = (:approval,)
 
 StructTypes.StructType(::Type{Commit}) = StructTypes.Struct()
 StructTypes.StructType(::Type{AckInclusion}) = StructTypes.Struct()
-
 
 StructTypes.StructType(::Type{ChainState}) = StructTypes.Struct()
 

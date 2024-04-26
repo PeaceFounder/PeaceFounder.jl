@@ -8,6 +8,9 @@ Base.split_sign(x::BigInt) = (x, x<0)
 
 # The Core is a module that the minimum to be able to audit the evidence. The Server on the other hand is concerned with serving a service and recording new transactions which maintain integrity specified within the Model. The Client depends only on the Core and Authorization.
 
+include("Utils/BitSaver.jl") # 
+import .BitSaver
+
 include("Core/Core.jl")
 import .Core
 

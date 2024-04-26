@@ -1,5 +1,6 @@
 using HistoryTrees: HistoryTrees, HistoryTree
 using Base: UUID, @kwdef
+using ..BitSaver: BitMask
 
 """
     Transaction
@@ -176,6 +177,7 @@ verify(x, y, z, w, spec::DemeSpec) = verify(x, y, z, w, spec.crypto)
         root::Digest
         generator::Generator
         member_count::Int
+        termination_bitmask::BitMask
     end
 
 Represents a chain state metadata which is sufficient for integrity checks.
@@ -187,12 +189,11 @@ struct ChainState
     root::Digest
     generator::Generator
     member_count::Int
-    termination_bitmask::BitVector # there is genrally no issue on running through the whoole array
+    termination_bitmask::BitMask
     #proot::Digest # Noinvasive way to make sure that every member get's the latest set of proposals.
 end
 
-# Seems unused
-#ChainState(index::Int, root::Nothing, generator::Generator) = ChainState(index, Digest(), generator)
+ChainState(index::Int, root::Digest, generator::Generator, member_count::Int, termination_bitmask::BitVector) = ChainState(index, root, generator, member_count, BitMask(termination_bitmask))
 
 @batteries ChainState
 
@@ -442,22 +443,5 @@ function blacklist(ledger::BraidChainLedger, N::Int = length(ledger))
     return list
 end
 
-
-# function termination(ledger::BraidChainLedger, N::Int, registrar::Signer)
-
-#     record = ledger[N]
-
-#     @assert record isa Membership
-#     @assert termination_bitmask(ledger)[N] == false
-
-#     trecord = Termination(N, id(record))
-
-#     return approve(trecord, registrar)
-# end
-
-
-# function termination(ledger::BraidChainLedger, registrar::Signer)
-    
-    
 
 # end

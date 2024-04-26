@@ -290,12 +290,16 @@ struct BallotBoxState
     index::Int
     root::Digest
     tally::Union{Nothing, Tally} 
-    view::Union{Nothing, BitVector} # 
+    #view::Union{Nothing, BitVector} # 
+    view::Union{Nothing, BitMask} # 
 end 
 
 @batteries BallotBoxState
 
 BallotBoxState(proposal::Digest, seed::Digest, index::Int, root::Nothing, tally::Nothing, view::Nothing) = BallotBoxState(proposal, seed, index, Digest(), tally, view)
+
+BallotBoxState(proposal::Digest, seed::Digest, index::Int, root::Digest, tally::Tally, view::BitVector) = BallotBoxState(proposal, seed, index, root, tally, BitMask(view))
+
 
 """
     index(state::BallotBoxState)
@@ -573,9 +577,3 @@ function cast_record_status(bbox::BallotBoxLedger, N::Int)
         return :malformed
     end    
 end
-
-
-
-# N = length(ledger)
-# TODO: Implement state for arbitrary index
-# function state(ledger::BallotBoxLedger, N::Int; seed::Digest, root::Digest, with_tally::Union{Nothing, Bool} = nothing) end
