@@ -1,21 +1,78 @@
 module BitSaver
 
+include("BitCompressor.jl")
+import .BitCompressor 
+
 struct BitMask
     bits::BitVector
-    BitMask(bits::BitVector) = new(copy(bits)) # BitMask is used for transportation and storage
+    function BitMask(bits::BitVector; internal=false)
+        if internal # Assume 
+            return new(bits)
+        else
+            if count(bits) < div(length(bits), 2) # ones are sparse
+                compr_bits = BitCompressor.compress(bits)
+                
+                if length(compr_bits) < length(bits)
+                    #@info "BitMask compressed in sparsity in ones"
+                    pushfirst!(compr_bits, true) # sparsity between ones
+                    pushfirst!(compr_bits, true)
+                    return new(compr_bits)
+                end
+
+            else
+                compr_bits = BitCompressor.compress(.!bits)
+
+                if length(compr_bits) < length(bits)
+                    #@info "BitMask compressed in sparsity in zeros"
+                    pushfirst!(compr_bits, false) # sparsity between zeroes
+                    pushfirst!(compr_bits, true)
+                    return new(compr_bits)
+                end
+            end
+        end
+
+        #@info "BitMask uncompressed"
+        _bits = copy(bits)
+        pushfirst!(_bits, false) 
+        return new(_bits)
+    end
 end
+
+
+iscompressed(mask::BitMask) = mask.bits[1]
+
+function is_sparse_ones(mask::BitMask) 
+    @assert iscompressed(mask)
+    return mask.bits[2]
+end
+
+function bits(mask::BitMask)
+    if iscompressed(mask)
+        bits = BitCompressor.decompress(mask.bits[3:end])
+        if is_sparse_ones(mask)
+            return bits
+        else
+            return .!bits
+        end
+    else
+        #return mask.bits[2:end]
+        return view(mask.bits, 2:length(mask.bits))
+    end
+end
+
 
 # It may become useful to define equality between BitMask and BitVector
 # This is equal in the same sense as In32(1) == Int64(1)
-Base.:(==)(x::BitMask, y::BitMask) = x.bits == y.bits
-Base.:(==)(x::BitVector, y::BitMask) = x == y.bits
-Base.:(==)(x::BitMask, y::BitVector) = x.bits == y
+Base.:(==)(x::BitMask, y::BitMask) = x.bits == y.bits # comparing compressed bits
+Base.:(==)(x::BitVector, y::BitMask) = x == bits(y)
+Base.:(==)(x::BitMask, y::BitVector) = bits(x) == y
 
-Base.length(mask::BitMask) = length(mask.bits)
-Base.getindex(mask::BitMask, N::Int) = mask.bits[N]
+# While compression algorithm evolves we shall rely on bits
+Base.length(mask::BitMask) = length(bits(mask))
+Base.getindex(mask::BitMask, N::Int) = bits(mask)[N]
 
 function Base.show(io::IO, mask::BitMask)
-    str = join([ i ? '0' : '1' for i in mask.bits])
+    str = join([ i ? '0' : '1' for i in bits(mask)])
     print(io, str)
     print(io, " \033[90m(BitMask)\033[0m")
 end
@@ -60,17 +117,14 @@ function bytes2bits(bytes::Vector{UInt8})
     return bits
 end
 
-
 function Base.convert(::Type{BitMask}, bytes::Vector{UInt8})
     bits = bytes2bits(bytes)
-    return BitMask(bits)
+    return BitMask(bits; internal=true)
 end
 
 function Base.convert(::Type{Vector{UInt8}}, mask::BitMask)
     bytes = bits2bytes(mask.bits)
     return bytes
 end
-
-
 
 end
