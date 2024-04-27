@@ -10,6 +10,27 @@ module BitCompressor
 # ...
 # 16: 10 1111
 # 17: 110 0001 0000
+#
+# One of the issues with this encoding is that there is a substatntial gap in transition from 1 -> 2. To adrees this a more 
+# cmopactified encoding like as follows may be interesting to explore:
+# 0: 00 (-1 bit)
+# 1: 01 (equal)
+# 2: 100 (equal)
+# 3: 101 (+1 bit)
+# 4: 110 00 (equal)
+# 5: 110 01 (+1 bit)
+# 6: 110 10 (+2 bits)
+# 7: 110 11 (+3 bits)
+# 8: 1110 0000 (+1 bit)
+# 9: 1110 0001 (+2 bits)
+# 10: 1110 0010 (+3 bits)
+# ...
+# 23: 1110 1111 (+16 bits)
+# 24: 11110 0000 0000 (+12 bits)
+# 
+# This bitencoding would be rather interesting as the worst case for it would be 111111110000000 which has a very low probabiliy to happen. 
+
+# TODO: refactor using `encode_gap(gap_length::Int)::BitVector` and `decode_gap(bv::BitVector)::Tuple{Int, Int}`
 
 export compress, decompress
 
