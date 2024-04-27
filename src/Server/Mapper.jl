@@ -73,11 +73,12 @@ function load_chain_commit()
 end
 
 
-function store(commit::Commit{BallotBoxState}, uuid::UUID)
+function store(commit::Commit{BallotBoxState}, uuid::UUID; public) # may need an update for Julia 1.11
 
     !isempty(DATA_DIR) || return
 
-    if ispublic(uuid)
+    #if ispublic(uuid)
+    if public
         commit_path = joinpath(DATA_DIR, "public", "ballotboxes", string(uuid), "commit.json")
     else
         commit_path = joinpath(DATA_DIR, "private", "ballotboxes", string(uuid), "commit.json")
@@ -137,7 +138,7 @@ end
 
 # This will be moved in a stored vector type;
 # Path will be adjusted of the ledger manually so that it would always point to the right place.
-function store(record::CastRecord, uuid::UUID, index::Int)
+function store(record::CastRecord, uuid::UUID, index::Int; public)
 
     !isempty(DATA_DIR) || return
 
@@ -146,7 +147,7 @@ function store(record::CastRecord, uuid::UUID, index::Int)
 
     # Note that this would not make issues because storage operation are on a single main thread
     # Unfortunatelly hardlinks on folders are not supported. I could do that recursivelly though on files
-    if ispublic(uuid)
+    if public
         mkpath(public_bbox_dir)
         Store.save(record, public_bbox_dir, index)
     else
@@ -157,6 +158,7 @@ function store(record::CastRecord, uuid::UUID, index::Int)
     return
 end
 
+using Infiltrator
 
 function make_bbox_store_public(uuid::UUID)
     
@@ -165,8 +167,11 @@ function make_bbox_store_public(uuid::UUID)
     public_bbox_dir = joinpath(DATA_DIR, "public", "ballotboxes", string(uuid)) # when votes are released
     private_bbox_dir = joinpath(DATA_DIR, "private", "ballotboxes", string(uuid)) # before the release
 
+    # if public direcotry alredy exists does nothing
+    ( !isdir(public_bbox_dir) || isempty(readdir(public_bbox_dir)) ) || return 
+
     if isfile(joinpath(public_bbox_dir, "commit.json"))
-        @warn "A commit shall not be within a public ballotbox before it is made public. Perhaps "
+        @warn "A commit shall not be within a public ballotbox before it is made public."
     end
 
     if isdir(private_bbox_dir)
@@ -205,7 +210,7 @@ function entropy_process_loop()
         _seed = Model.digest(rand(UInt8, 16), Model.hasher(spec))
         Controllers.set_seed!(bbox, _seed)
         Controllers.commit!(bbox, COLLECTOR[]; with_tally = false)
-        store(Model.commit(bbox), uuid) # how did it work without this
+        store(Model.commit(bbox), uuid; public=false) # how did it work without this
 
     end
 
@@ -244,7 +249,7 @@ function tally_process_loop()
     
     uuid = wait(TALLY_SCHEDULER)
 
-    tally_votes!(uuid)
+    tally_votes!(uuid; public=true)
 
     return
 end
@@ -462,22 +467,20 @@ function authorized_roles(demespec::DemeSpec)
     return roles
 end
 
-function tally_votes!(uuid::UUID)
+function tally_votes!(uuid::UUID; public = ispublic(uuid)) 
 
-    _ispublic = ispublic(uuid)
-
-    if !_ispublic
+    if public
         try
-            make_bbox_store_public(uuid)
+            make_bbox_store_public(uuid) # returns if a public ballotbox directory or if the direcotry is empty
         catch err
             @warn "Failing to make balltobox with $uuid public"
             @error "ERROR: " exception=(err, catch_backtrace())
         end
     end
-
+    
     bbox = get(POLLING_STATION[], uuid)
     Controllers.commit!(bbox, COLLECTOR[]; with_tally = true)
-    store(Model.commit(bbox), uuid)
+    store(Model.commit(bbox), uuid; public)
 
     return
 end
@@ -626,9 +629,10 @@ function cast_vote(uuid::UUID, vote::Vote; late_votes = false)
 
         # the disk storage will happen with the vector, thus commit would not be anounced before
         # it would be backed by a persitent disk record.
-        store(bbox[N], uuid, N)
-        store(Model.commit(bbox), uuid)
-        
+        #public = !isnothing(bbox.commit.state.tally) # only tally_votes can make bbox public
+        public = Model.istallied(bbox) # only tally_votes can make bbox public
+        store(bbox[N], uuid, N; public)
+        store(Model.commit(bbox), uuid; public)
 
         ack = Controllers.ack_cast(POLLING_STATION[], uuid, N)
         return ack

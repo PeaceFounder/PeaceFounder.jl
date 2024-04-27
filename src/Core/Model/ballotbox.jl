@@ -337,9 +337,8 @@ function Base.show(io::IO, state::BallotBoxState)
     println(io, "  index : $(state.index)")
     println(io, "  root : $(string(state.root))")
     println(io, "  tally : $(tally(state))")
-
-    view_str = isnothing(state.view) ? nothing : bitstring(state.view)
-    print(io, "  view : $(view_str)")
+    #view_str = isnothing(state.view) ? nothing : state.view
+    print(io, "  view : $(state.view)")
 end
 
 """
