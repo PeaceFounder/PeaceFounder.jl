@@ -179,7 +179,8 @@ roll(chain::BraidChainController) = chain.roll
 
 blacklist(chain::BraidChainController) = chain.blacklist
 
-termination_bitmask(chain::BraidChainController) = copy(chain.termination_bitmask) # An alternative is to copy it at push which may be better
+termination_bitmask(chain::BraidChainController) = copy(chain.termination_bitmask) 
+termination_bitmask(chain::BraidChainController, N::Int) = termination_bitmask(chain.ledger, N)
 
 """
     generator(ledger::BraidChainController)
@@ -410,8 +411,13 @@ function Base.push!(chain::BraidChainController, termination::Termination)
     push!(chain.blacklist, termination.identity)
 
     if termination.index != 0
-          chain.termination_bitmask[termination.index] = true
-          pop!(chain.roll, termination.identity)
+        chain.termination_bitmask[termination.index] = true
+        pop!(chain.roll, termination.identity)
+
+        member_cert = chain[termination.index]
+        if generator(member_cert) == generator(chain)
+            pop!(chain.members, pseudonym(member_cert)) # immediate termination
+        end
     end
 
     unsafe_push!(chain, termination)

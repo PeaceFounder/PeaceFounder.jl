@@ -157,6 +157,22 @@ g = generator(BRAID_CHAIN)
 access = Membership(admission, g, pseudonym(fiona, g)) |> approve(fiona)
 @test_throws AssertionError record!(BRAID_CHAIN, access)
 
+# Imediate termination after registration
+
+ticketid_lucy = TicketID("Lucy")
+invite_lucy = enlist(ticketid_lucy)
+lucy = Signer(crypto, 7)
+lucy_access, lucy_ack = enroll(lucy, invite_lucy)
+
+@test id(lucy) in roll(BRAID_CHAIN)
+@test pseudonym(lucy, BRAID_CHAIN.generator) in members(BRAID_CHAIN)
+
+termination = Termination(Model.index(lucy_ack), id(lucy)) |> approve(REGISTRAR.signer)
+record!(BRAID_CHAIN, termination)
+
+@test !(id(lucy) in roll(BRAID_CHAIN))
+@test !(pseudonym(lucy, BRAID_CHAIN.generator) in members(BRAID_CHAIN)) # reverse needs to be true
+
 # Termination with braid reset
 
 N = Model.index(david_ack)
@@ -180,6 +196,9 @@ record!(BRAID_CHAIN, termination)
 @test david_id in blacklist(BRAID_CHAIN)
 @test termination_bitmask(BRAID_CHAIN)[N]
 @test pseudonym(david, BRAID_CHAIN.generator) in members(BRAID_CHAIN)
+
+braidwork = braid(generator(BRAID_CHAIN), members(BRAID_CHAIN), demespec.crypto, demespec, BRAIDER; reset = false) 
+record!(BRAID_CHAIN, braidwork)
 
 braidwork = braid(generator(BRAID_CHAIN.spec), roll(BRAID_CHAIN), demespec.crypto, demespec, BRAIDER; reset = true) 
 record!(BRAID_CHAIN, braidwork)

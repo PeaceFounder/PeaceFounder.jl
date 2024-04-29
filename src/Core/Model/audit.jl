@@ -169,6 +169,9 @@ function audit_members(ledger::BraidChainLedger)
                 id(member_cert) == id(record) || return false # must be consistent
                 pop!(identities, id(member_cert))
 
+                if generator(member_cert) == g # immediate termination
+                    pop!(members, pseudonym(member_cert))
+                end
             end
         end
     end
