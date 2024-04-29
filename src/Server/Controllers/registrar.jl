@@ -78,7 +78,7 @@ Represents a state for token registrar service. To initialize the service it's n
 
 Metadata is used as means to securelly deliver to the client most recent server specification. 
 
-**Interface:** [`hmac`](@ref), [`hasher`](@ref), [`key`](@ref), [`id`](@ref), [`tickets`](@ref), [`in`](@ref), [`enlist!`](@ref), [`admit!`](@ref), [`isadmitted`](@ref), [`ticket_status`](@ref)
+**Interface:** [`hmac`](@ref), [`hasher`](@ref), [`key`](@ref), [`id`](@ref), [`tickets`](@ref), [`in`](@ref), [`enlist!`](@ref), [`admit!`](@ref), [`isadmitted`](@ref)
 """
 mutable struct Registrar
     demehash::Digest 
