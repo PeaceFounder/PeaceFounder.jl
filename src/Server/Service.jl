@@ -214,7 +214,7 @@ end
     
     uuid = UUID(uuid_hex)
 
-    proposal = Mapper.get_ballotbox_proposal(uuid)
+    proposal = Mapper.get_proposal(uuid)
     
     return proposal |> json
 end
