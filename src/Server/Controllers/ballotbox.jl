@@ -447,12 +447,8 @@ init!(station::PollingStation, spec::DemeSpec, proposal::Proposal, voters::Vecto
 
 init!(station::PollingStation, bbox::BallotBoxController) = push!(station.halls, bbox)
 
-"""
-    get(station::PollingStation, uuid::UUID)::BallotBoxController
 
-Return a ballotbox ledger with a provided UUID. If none is found throws an error.
-"""
-function Base.get(station::PollingStation, _uuid::UUID) 
+function Base.get(null::Function, station::PollingStation, _uuid::UUID)
 
     for hall in station.halls
         if uuid(hall) == _uuid
@@ -460,8 +456,19 @@ function Base.get(station::PollingStation, _uuid::UUID)
         end
     end
 
-    error("BallotBoxController with uuid = $(_uuid) not found")
-    return
+    return null()
+end
+
+"""
+    get(station::PollingStation, uuid::UUID)::BallotBoxController
+
+Return a ballotbox ledger with a provided UUID. If none is found throws an error.
+"""
+function Base.get(station::PollingStation, _uuid::UUID) 
+    #@warn "May be deprecated in the future"
+    return get(station, _uuid) do
+        error("BallotBoxController with uuid = $(_uuid) not found")
+    end
 end
 
 Base.get(station::PollingStation, proposal::Proposal) = get(station, uuid(proposal))

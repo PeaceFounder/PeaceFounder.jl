@@ -26,14 +26,12 @@ function body(proposal::Proposal)
     return proposal
 end
 
-
 body(member::Membership) = @set member.approval = nothing
 
-function sign(member::Membership, signer::Signer)
+function seal(member::Membership, signer::Signer)
     @assert id(signer) == id(member)
-    return sign(canonicalize(body(member)), signer)
+    return seal(canonicalize(body(member)), signer)
 end
-
 
 # The body method is actually pretty interesting 
 body(admission::Admission) = @set admission.seal = nothing
@@ -92,11 +90,9 @@ function verify(admission::Admission, crypto::CryptoSpec)
     return verify(bytes, admission.seal, crypto)
 end
 
-
-function verify(member::Membership, crypto::CryptoSpec)
-    return verify(member.admission, crypto) && verify(canonicalize(body(member)), id(member.admission), member.approval, crypto)
+function verify(member::Membership, crypto::CryptoSpec) # id(member.admission)
+    return verify(member.admission, crypto) && verify(canonicalize(body(member)), member.approval, crypto) && id(member.admission) == issuer(member.approval)
 end
-
 
 body(record::Termination) = Termination(record.index, record.identity)
 verify(record::Termination, crypto::CryptoSpec) = verify(canonicalize(body(record)), record.seal, crypto)

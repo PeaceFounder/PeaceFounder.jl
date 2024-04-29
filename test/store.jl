@@ -53,7 +53,10 @@ function enroll(signer, invite)
     # The authorization is being put within a service layer which exposes the API
 
     _tokenid = tokenid(invite.token, invite.hasher)
-    ticket = select(Ticket, _tokenid, REGISTRAR)
+    #ticket = select(Ticket, _tokenid, REGISTRAR)
+    ticket = get(REGISTRAR, _tokenid) do
+        error("Ticket $_tokenid not found")
+    end
 
     admission = admit!(REGISTRAR, id(signer), ticket.ticketid) #, auth_code)
 

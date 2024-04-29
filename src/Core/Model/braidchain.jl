@@ -318,7 +318,7 @@ struct Membership <: Transaction
     admission::Admission
     generator::Generator
     pseudonym::Pseudonym
-    approval::Union{Signature, Nothing} # In principle it could also be a proof log_G(A) == log_Y(B)
+    approval::Union{Seal, Nothing}
 end
 
 Membership(admission::Admission, generator::Generator, pseudonym::Pseudonym) = Membership(admission, generator, pseudonym, nothing)
@@ -331,7 +331,8 @@ Base.:(==)(x::Membership, y::Membership) = x.admission == y.admission && x.gener
 
 Sign a member certificate and return it with `approval` field filled.
 """
-approve(member::Membership, signer::Signer) = @set member.approval = sign(member, signer)
+#approve(member::Membership, signer::Signer) = @set member.approval = sign(member, signer)
+approve(member::Membership, signer::Signer) = @set member.approval = seal(member, signer)
 
 """
     issuer(member::Membership)::Pseudonym

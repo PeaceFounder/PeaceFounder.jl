@@ -53,7 +53,9 @@ function enroll(signer, invite)
     # The authorization is being put within a service layer which exposes the API
 
     _tokenid = tokenid(invite.token, invite.hasher)
-    ticket = select(Ticket, _tokenid, REGISTRAR)
+    ticket = get(REGISTRAR, _tokenid) do
+        error("Ticket with $_tokenid not found")
+    end
 
     admission = admit!(REGISTRAR, id(signer), ticket.ticketid) #, auth_code)
 
@@ -142,8 +144,9 @@ commit!(BRAID_CHAIN, BRAID_CHAIN_RECORDER)
 ticketid_fiona = TicketID("Fiona")
 invite_fiona = enlist(ticketid_fiona)
 fiona = Signer(crypto, 6)
-
-ticket = select(Ticket, tokenid(invite_fiona.token, invite_fiona.hasher), REGISTRAR)
+ticket = get(REGISTRAR, tokenid(invite_fiona.token, invite_fiona.hasher)) do
+    error("Ticket for Fiona not found ")
+end
 admission = admit!(REGISTRAR, id(fiona), ticket.ticketid)
 
 termination = Termination(id(admission)) |> approve(REGISTRAR.signer)

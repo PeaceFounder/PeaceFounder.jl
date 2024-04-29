@@ -27,8 +27,8 @@ authorized_roles = Mapper.setup(crypto.group, crypto.generator) do pbkeys
 
 end
 
-PROPOSER = Mapper.PROPOSER[]
-DEMESPEC = Mapper.BRAID_CHAIN[].spec
+PROPOSER = Mapper.PROPOSER
+DEMESPEC = Mapper.BRAID_CHAIN.spec
 SERVER = Client.route(Service.ROUTER)
 
 
@@ -61,14 +61,14 @@ end
 N = Model.index(account)
 david_id = Model.id(account)
 
-termination = Termination(N, david_id) |> approve(Mapper.REGISTRAR[].signer)
+termination = Termination(N, david_id) |> approve(Mapper.REGISTRAR.signer)
 Mapper.submit_chain_record!(termination)
 
 # Braiding 
 input_generator = Mapper.get_generator()
 input_members = Mapper.get_members()
 
-braidwork = Model.braid(input_generator, input_members, DEMESPEC.crypto, DEMESPEC, Mapper.BRAIDER[]) 
+braidwork = Model.braid(input_generator, input_members, DEMESPEC.crypto, DEMESPEC, Mapper.BRAIDER) 
 Mapper.submit_chain_record!(braidwork)
 
 # As the ticket is already expired there is no valid invite available and this should throw an error

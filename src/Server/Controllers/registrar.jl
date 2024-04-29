@@ -62,8 +62,9 @@ function reset!(ticket::Ticket, timestamp::DateTime, hmac::HMAC; nlen=length(tic
     return
 end
 
-
 isadmitted(ticket::Ticket) = !isnothing(ticket.admission)
+
+ticket_status(ticket::Ticket) = TicketStatus(ticket.ticketid, ticket.timestamp, ticket.admission)
 
 """
     struct Registrar
@@ -77,7 +78,7 @@ Represents a state for token registrar service. To initialize the service it's n
 
 Metadata is used as means to securelly deliver to the client most recent server specification. 
 
-**Interface:** [`select`](@ref), [`hmac`](@ref), [`hasher`](@ref), [`key`](@ref), [`id`](@ref), [`tickets`](@ref), [`in`](@ref), [`enlist!`](@ref), [`admit!`](@ref), [`isadmitted`](@ref), [`ticket_status`](@ref)
+**Interface:** [`hmac`](@ref), [`hasher`](@ref), [`key`](@ref), [`id`](@ref), [`tickets`](@ref), [`in`](@ref), [`enlist!`](@ref), [`admit!`](@ref), [`isadmitted`](@ref), [`ticket_status`](@ref)
 """
 mutable struct Registrar
     demehash::Digest 
@@ -90,7 +91,6 @@ end
 
 Registrar(signer::Signer, hmac::HMAC) = Registrar(Digest(), Ticket[], signer, hmac, URI(), 8)
 Registrar(signer::Signer, key::Vector{UInt8}) = Registrar(Digest(), Ticket[], signer, HMAC(key, hasher(signer)), URI(), 8)
-
 
 """
     generate(Registrar, spec::CryptoSpec)
@@ -116,43 +116,20 @@ key(registrar::Registrar) = key(hmac(registrar))
 id(registrar::Registrar) = id(registrar.signer)
 
 
-"""
-    select(T, predicate::Function, registrar::Registrar)::Union{T, Nothing}
-
-From a list of all `registrar` tickets return `T <: Union{Ticket, Admission}` for which predicate is true. If none succeds returns nothing.
-"""
-function select(::Type{Ticket}, f::Function, registrar::Registrar)
+function Base.get(null::Function, registrar::Registrar, predicate::Function)
     
     for i in registrar.tickets
-        if f(i) == true
+        if predicate(i) 
             return i
         end
     end
-    
-    return nothing
+
+    return null()
 end
 
-select(::Type{Ticket}, ticketid::TicketID, registrar::Registrar) = select(Ticket, i -> i.ticketid == ticketid, registrar)
-
-select(::Type{Admission}, f::Function, registrar::Registrar) = select(Ticket, f, registrar).admission
-
-"""
-    select(Admission, ticketid::TicketID, registrar::Registrar)::Union{Admission, Nothing}
-
-Return admission for a ticket with given `ticketid` from `registrar`. If no ticket with given `ticketid` is found OR ticket is not yet admitted returns nothing.
-"""
-select(::Type{Admission}, ticketid::TicketID, registrar::Registrar) = select(Admission, i -> i.ticketid == ticketid, registrar)
-
-"""
-    select(Admission, ticketid::TicketID, registrar::Registrar)::Union{Admission, Nothing}
-
-Return admission for a ticket with given a given identity pseudonym from `registrar`. If no ticket with given `id` is found OR ticket is not yet admitted returns nothing.
-"""
-select(::Type{Admission}, id::Pseudonym, registrar::Registrar) = select(Admission, i -> isnothing(i) ? false : i.admission.id == id, registrar::Registrar)
-
-
-select(::Type{Ticket}, tokenid::AbstractString, registrar::Registrar) = select(Ticket, i -> i.tokenid == tokenid, registrar)
-
+Base.get(null::Function, registrar::Registrar, ticketid::TicketID) = get(null, registrar, x -> x.ticketid == ticketid)
+Base.get(null::Function, registrar::Registrar, identity::Pseudonym) = get(null, registrar, x -> isnothing(x.admission) ? false : id(x.admission) == identity)
+Base.get(null::Function, registrar::Registrar, tokenid::AbstractString) = get(null, registrar, x -> x.tokenid == tokenid)
 
 ticket_ids(registrar::Registrar) = tickets(registrar)
 
@@ -169,7 +146,6 @@ tickets(registrar::Registrar) = (i.ticketid for i in registrar.tickets)
 Return true if there already is a ticket with `ticketid`.
 """
 Base.in(ticketid::TicketID, registrar::Registrar) = ticketid in ticket_ids(registrar)
-
 
 """
     token(ticketid::TicketID, hmac::HMAC)
@@ -250,10 +226,10 @@ Attempt to admit an identity pseudonym `id` for ticket `ticketid`. Authorization
 """
 function admit!(registrar::Registrar, id::Pseudonym, ticketid::TicketID) # ticketid is the authorization
     
-    N = findfirst(x -> x.ticketid == ticketid, registrar.tickets)
-    isnothing(N) && error("Ticket not found")
-
-    ticket = registrar.tickets[N]
+    # May be better 
+    ticket = get(registrar, ticketid) do
+        error("Ticket with $ticketid can't be found")
+    end
 
     if isnothing(ticket.admission)
 
@@ -276,7 +252,9 @@ Check whether a ticket is already admitted. Returns false when either ticket is 
 """
 function isadmitted(ticketid::TicketID, registrar::Registrar)
 
-    admission = select(Admission, ticketid, registrar)
+    admission = get(registrar, ticketid) do
+        return nothing
+    end
 
     if isnothing(admission)
         return false
@@ -287,25 +265,6 @@ end
 
 unpack(x::Vector) = length(x) == 0 ? nothing : x[1]
 unpack(x::Nothing) = nothing
-
-
-
-"""
-    ticket_status(ticketid::TicketID, registrar::Registrar)::Union{TicketStatus, Nothing}
-
-Return a ticket status for a ticketid. In case ticket is not found return nothing.
-"""
-function ticket_status(ticketid::TicketID, registrar::Registrar)
-
-    ticket = select(Ticket, ticketid, registrar)
-    
-    if isnothing(ticket)
-        return nothing
-    else
-        return TicketStatus(ticketid, ticket.timestamp, ticket.admission)
-    end
-end
-
 
 
 #end

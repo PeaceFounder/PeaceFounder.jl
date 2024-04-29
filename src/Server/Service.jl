@@ -89,12 +89,20 @@ end
     
     local tokenid, ticket
 
+    tokenid = try credential(request) catch
+        return Response(401, "Can't parse credential")
+    end
+
     try
-        tokenid = credential(request)
-        ticket = Mapper.get_ticket(tokenid)
-        @assert !isnothing(ticket)
-    catch
-        return Response(401, "Invalid Credential")
+        ticket = Mapper.get_ticket(tokenid) do
+            throw(Response(401, "Invalid Credential"))
+        end
+    catch error
+        if error isa Response
+            return error
+        else
+            rethrow(error)
+        end
     end
     
     handler = AuthServerMiddleware(tokenid, ticket.token) do req
@@ -113,7 +121,9 @@ end
 
     ticketid = TicketID(hex2bytes(tid))
 
-    status = Mapper.get_ticket_status(ticketid)
+    status = Mapper.get_ticket_status(ticketid) do
+        error("Ticket $tid not found")
+    end
     
     return status |> json
 end

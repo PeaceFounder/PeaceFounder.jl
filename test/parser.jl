@@ -44,7 +44,7 @@ event = DemeSpec(;
 ) |> Model.approve(SIGNER) 
 @test isconsistent(event)
 
-event = Membership(admission, Generator(UInt8[1, 2, 3, 4]), Pseudonym(UInt8[1, 2, 3, 4]), Signature(123, 4242))
+event = Membership(admission, Generator(UInt8[1, 2, 3, 4]), Pseudonym(UInt8[1, 2, 3, 4]), Seal(Pseudonym(UInt8[1, 2, 3, 4]), now(), Signature(123, 4242)))
 @test isconsistent(event)
 
 event = Pseudonym(UInt8[1, 2, 3, 4])

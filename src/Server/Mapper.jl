@@ -11,28 +11,28 @@ using ..Core: Store, Parser
 using ..Core.Parser: marshal
 
 
-const RECORDER = Ref{Union{Signer, Nothing}}(nothing)
-const REGISTRAR = Ref{Union{Registrar, Nothing}}(nothing)
-const BRAIDER = Ref{Union{Signer, Nothing}}(nothing)
-const COLLECTOR = Ref{Union{Signer, Nothing}}(nothing)
-const PROPOSER = Ref{Union{Signer, Nothing}}(nothing)
+global RECORDER::Union{Signer, Nothing}
+global REGISTRAR::Union{Registrar, Nothing}
+global BRAIDER::Union{Signer, Nothing}
+global COLLECTOR::Union{Signer, Nothing}
+global PROPOSER::Union{Signer, Nothing}
 
 # to prevent members registering while braiding happens and other way around.
 # islocked() == false => lock else error in the case for a member
 # wheras for braiding imediately lock is being waited for
 const MEMBER_LOCK = ReentrantLock()
-const BRAID_CHAIN = Ref{Union{BraidChainController, Nothing}}(nothing)
+global BRAID_CHAIN::Union{BraidChainController, Nothing}
 
-const POLLING_STATION = Ref{Union{PollingStation, Nothing}}(nothing)
+global POLLING_STATION::Union{PollingStation, Nothing}
 const TALLY_SCHEDULER = Scheduler(UUID, retry_interval = 5) 
-const TALLY_PROCESS = Ref{Task}()
+global TALLY_PROCESS::Task
 
 const ENTROPY_SCHEDULER = Scheduler(retry_interval = 1)
-const ENTROPY_PROCESS = Ref{Task}()
+global ENTROPY_PROCESS::Task
 
-#const BRAID_BROKER = Ref{BraidBroker}
+# global BRAID_BROKER::BraidBroker
 const BRAID_BROKER_SCHEDULER = Scheduler(retry_interval = 5)
-const BRAID_BROKER_PROCESS = Ref{Task}()
+global BRAID_BROKER_PROCESS::Task
 
 global DATA_DIR::String = ""
 
@@ -54,7 +54,7 @@ function store(commit::Commit{ChainState})
 
     commit_path = joinpath(DATA_DIR, "public", "braidchain", "commit.json")
     #Store.save(commit, chain_dir)
-    
+
     rm(commit_path, force=true)
     write(commit_path, Parser.marshal(commit))
 
@@ -77,14 +77,12 @@ function store(commit::Commit{BallotBoxState}, uuid::UUID; public) # may need an
 
     !isempty(DATA_DIR) || return
 
-    #if ispublic(uuid)
     if public
         commit_path = joinpath(DATA_DIR, "public", "ballotboxes", string(uuid), "commit.json")
     else
         commit_path = joinpath(DATA_DIR, "private", "ballotboxes", string(uuid), "commit.json")
     end
 
-    #_ispublic || mkpath(dirname(commit_path)) # Perhaps this will block operations
     rm(commit_path, force=true)
     write(commit_path, Parser.marshal(commit))
 
@@ -158,8 +156,6 @@ function store(record::CastRecord, uuid::UUID, index::Int; public)
     return
 end
 
-using Infiltrator
-
 function make_bbox_store_public(uuid::UUID)
     
     !isempty(DATA_DIR) || return
@@ -202,14 +198,14 @@ end
 function entropy_process_loop()
     
     uuid = wait(ENTROPY_SCHEDULER)
-    bbox = get(POLLING_STATION[], uuid) # bbox = Model.ballotbox(POLLING_STATION[], uuid)
+    bbox = get(POLLING_STATION, uuid) 
 
     if isnothing(bbox.commit)
 
         spec = bbox.ledger.spec
         _seed = Model.digest(rand(UInt8, 16), Model.hasher(spec))
         Controllers.set_seed!(bbox, _seed)
-        Controllers.commit!(bbox, COLLECTOR[]; with_tally = false)
+        Controllers.commit!(bbox, COLLECTOR; with_tally = false)
         store(Model.commit(bbox), uuid; public=false) # how did it work without this
 
     end
@@ -229,17 +225,16 @@ function broker_process_loop(; force = false)
     lock(MEMBER_LOCK)
 
     try
-        _members = members(BRAID_CHAIN[])
-        _braid = braid(BRAIDER_BROKER[], _members) # one is selected at random from all available options
+        _members = members(BRAID_CHAIN)
+        _braid = braid(BRAIDER_BROKER, _members) # one is selected at random from all available options
     catch
         retry!(BRAID_BROKER_SCHEDULER)
     finally
         unlock(MEMBER_LOCK)
     end
 
-
-    Controllers.record!(BRAID_CHAIN[], _braid)
-    Controllers.commit!(BRAID_CHAIN[], RECORDER[])
+    Controllers.record!(BRAID_CHAIN, _braid)
+    Controllers.commit!(BRAID_CHAIN, RECORDER[])
 
     return
 end
@@ -256,13 +251,13 @@ end
 
 function reset_system()
 
-    BRAID_CHAIN[] = nothing # The braidchain needs to be loaded within a setup
-    POLLING_STATION[] = nothing
-    RECORDER[] = nothing
-    REGISTRAR[] = nothing
-    BRAIDER[] = nothing
-    PROPOSER[] = nothing
-    COLLECTOR[] = nothing
+    global BRAID_CHAIN = nothing # The braidchain needs to be loaded within a setup
+    global POLLING_STATION = nothing
+    global RECORDER = nothing
+    global REGISTRAR = nothing
+    global BRAIDER = nothing
+    global PROPOSER = nothing
+    global COLLECTOR = nothing
 
     # I need a way to kill a task that waits on condition
     #ENTROPY_SCHEDULER.condition = Condition()
@@ -282,11 +277,11 @@ function load_system() # a kwarg could be passed on whether to audit the system
     chain_ledger = Store.load(joinpath(DATA_DIR, "public", "braidchain"))
     chain_commit = load_chain_commit()
     
-    BRAID_CHAIN[] = BraidChainController(chain_ledger, commit = chain_commit)
+    global BRAID_CHAIN = BraidChainController(chain_ledger, commit = chain_commit)
 
     # I should iterate over all BRAID_CHAIN records and find a proposal
     
-    POLLING_STATION[] = PollingStation()
+    global POLLING_STATION = PollingStation()
 
     for record in chain_ledger
         
@@ -321,37 +316,37 @@ function load_system() # a kwarg could be passed on whether to audit the system
                 @warn "BallotBox commit not found. A new seed will be set."
             end
             
-            Controllers.init!(POLLING_STATION[], bbox)
+            Controllers.init!(POLLING_STATION, bbox)
 
             Schedulers.schedule!(ENTROPY_SCHEDULER, proposal.open, proposal.uuid)
             Schedulers.schedule!(TALLY_SCHEDULER, proposal.closed, proposal.uuid)
         end
     end
 
-    RECORDER[] = load_signer(:recorder)
+    global RECORDER = load_signer(:recorder)
     
     registrar = load_signer(:registrar)
     hmac_key = Model.bytes(Model.digest(Vector{UInt8}(string(registrar.key)), registrar.spec)) # 
-    REGISTRAR[] = Registrar(registrar, hmac_key)
-    Controllers.set_demehash!(REGISTRAR[], BRAID_CHAIN[].spec) 
+    global REGISTRAR = Registrar(registrar, hmac_key)
+    Controllers.set_demehash!(REGISTRAR, BRAID_CHAIN.spec) 
 
-    BRAIDER[] = load_signer(:braider)
+    global BRAIDER = load_signer(:braider)
 
-    PROPOSER[] = load_signer(:proposer)
+    global PROPOSER = load_signer(:proposer)
 
-    COLLECTOR[] = load_signer(:collector)
+    global COLLECTOR = load_signer(:collector)
 
-    if !isnothing(COLLECTOR[])
-        ENTROPY_PROCESS[] = @async while true
+    if !isnothing(COLLECTOR)
+        global ENTROPY_PROCESS = @async while true
             entropy_process_loop()
         end
 
-        TALLY_PROCESS[] = @async while true
+        global TALLY_PROCESS = @async while true
             tally_process_loop()
         end
     end
 
-    return authorized_roles(BRAID_CHAIN[].spec)
+    return authorized_roles(BRAID_CHAIN.spec)
 end
 
 
@@ -375,29 +370,29 @@ function setup(demefunc::Function, groupspec::GroupSpec, generator::Generator)
 
     # This covers a situation where braidchain is initialized externally
     # more work would need to be put to actually support that though
-    if isnothing(BRAID_CHAIN[])
-        BRAID_CHAIN[] = BraidChainController(demespec)
+    if isnothing(BRAID_CHAIN)
+        global BRAID_CHAIN = BraidChainController(demespec)
     end
 
     if !isempty(DATA_DIR)
-        Store.save(BRAID_CHAIN[].ledger, joinpath(DATA_DIR, "public",  "braidchain"))
+        Store.save(BRAID_CHAIN.ledger, joinpath(DATA_DIR, "public",  "braidchain"))
     end
 
-    if isnothing(POLLING_STATION[])
-        POLLING_STATION[] = PollingStation()
+    if isnothing(POLLING_STATION)
+        global POLLING_STATION = PollingStation()
     end
 
     N = findfirst(x->x==demespec.recorder, pseudonym_list)
     if !isnothing(N)
-        RECORDER[] = Signer(demespec.crypto, generator, key_list[N])
-        store(RECORDER[], :recorder)
+        global RECORDER = Signer(demespec.crypto, generator, key_list[N])
+        store(RECORDER, :recorder)
         
-        N = Controllers.record!(BRAID_CHAIN[], demespec)
+        N = Controllers.record!(BRAID_CHAIN, demespec)
         store(demespec, N)
-        Controllers.commit!(BRAID_CHAIN[], RECORDER[]) 
-        store(Model.commit(BRAID_CHAIN[]))
+        Controllers.commit!(BRAID_CHAIN, RECORDER) 
+        store(Model.commit(BRAID_CHAIN))
 
-        BRAID_BROKER_PROCESS[] = @async while true
+        global BRAID_BROKER_PROCESS = @async while true
             broker_process_loop()
         end
     end
@@ -407,32 +402,32 @@ function setup(demefunc::Function, groupspec::GroupSpec, generator::Generator)
         signer = Signer(demespec.crypto, generator, key_list[N])
         store(signer, :registrar)
         hmac_key = Model.bytes(Model.digest(Vector{UInt8}(string(key_list[N])), demespec.crypto)) # 
-        REGISTRAR[] = Registrar(signer, hmac_key)
-        Controllers.set_demehash!(REGISTRAR[], demespec) 
+        global REGISTRAR = Registrar(signer, hmac_key)
+        Controllers.set_demehash!(REGISTRAR, demespec) 
     end
 
     N = findfirst(x->x==demespec.braider, pseudonym_list)
     if !isnothing(N)
-        BRAIDER[] = Signer(demespec.crypto, generator, key_list[N])
-        store(BRAIDER[], :braider)
+        global BRAIDER = Signer(demespec.crypto, generator, key_list[N])
+        store(BRAIDER, :braider)
     end
 
     N = findfirst(x->x==demespec.proposer, pseudonym_list)
     if !isnothing(N)
-        PROPOSER[] = Signer(demespec.crypto, generator, key_list[N])
-        store(PROPOSER[], :proposer)
+        global PROPOSER = Signer(demespec.crypto, generator, key_list[N])
+        store(PROPOSER, :proposer)
     end    
 
     N = findfirst(x->x==demespec.collector, pseudonym_list)
     if !isnothing(N)
-        COLLECTOR[] = Signer(demespec.crypto, generator, key_list[N])
-        store(COLLECTOR[], :collector)
+        global COLLECTOR = Signer(demespec.crypto, generator, key_list[N])
+        store(COLLECTOR, :collector)
 
-        ENTROPY_PROCESS[] = @async while true
+        global ENTROPY_PROCESS = @async while true
             entropy_process_loop()
         end
 
-        TALLY_PROCESS[] = @async while true
+        global TALLY_PROCESS = @async while true
             tally_process_loop()
         end
     end    
@@ -444,23 +439,23 @@ function authorized_roles(demespec::DemeSpec)
 
     roles = []
 
-    if !isnothing(RECORDER[]) && id(RECORDER[]) == demespec.recorder
+    if !isnothing(RECORDER) && id(RECORDER) == demespec.recorder
         push!(roles, :recorder)
     end
 
-    if !isnothing(REGISTRAR[]) && id(REGISTRAR[]) == demespec.registrar
+    if !isnothing(REGISTRAR) && id(REGISTRAR) == demespec.registrar
         push!(roles, :registrar)
     end
 
-    if !isnothing(BRAIDER[]) && id(BRAIDER[]) == demespec.braider
+    if !isnothing(BRAIDER) && id(BRAIDER) == demespec.braider
         push!(roles, :braider)
     end
 
-    if !isnothing(COLLECTOR[]) && id(COLLECTOR[]) == demespec.collector
+    if !isnothing(COLLECTOR) && id(COLLECTOR) == demespec.collector
         push!(roles, :collector)
     end
 
-    if !isnothing(PROPOSER[]) && id(PROPOSER[]) == demespec.proposer
+    if !isnothing(PROPOSER) && id(PROPOSER) == demespec.proposer
         push!(roles, :proposer)
     end
 
@@ -478,62 +473,56 @@ function tally_votes!(uuid::UUID; public = ispublic(uuid))
         end
     end
     
-    bbox = get(POLLING_STATION[], uuid)
-    Controllers.commit!(bbox, COLLECTOR[]; with_tally = true)
+    bbox = get(POLLING_STATION, uuid)
+    Controllers.commit!(bbox, COLLECTOR; with_tally = true)
     store(Model.commit(bbox), uuid; public)
 
     return
 end
 
-set_demehash(spec::DemeSpec) = Controllers.set_demehash!(REGISTRAR[], spec)
-set_route(route::Union{URI, String}) = Controllers.set_route!(REGISTRAR[], route)
-get_route() = REGISTRAR[].route
+set_demehash(spec::DemeSpec) = Controllers.set_demehash!(REGISTRAR, spec)
+set_route(route::Union{URI, String}) = Controllers.set_route!(REGISTRAR, route)
+get_route() = REGISTRAR.route
 
-get_recruit_key() = Model.key(REGISTRAR[])
+get_recruit_key() = Model.key(REGISTRAR)
 
-#get_deme() = BRAID_CHAIN[].spec
-get_demespec() = BRAID_CHAIN[].spec
+get_demespec() = BRAID_CHAIN.spec
 
-enlist_ticket(ticketid::TicketID, timestamp::DateTime; expiration_time = nothing, reset=false) = Controllers.enlist!(REGISTRAR[], ticketid, timestamp; reset)
+enlist_ticket(ticketid::TicketID, timestamp::DateTime; expiration_time = nothing, reset=false) = Controllers.enlist!(REGISTRAR, ticketid, timestamp; reset)
 enlist_ticket(ticketid::TicketID; expiration_time = nothing, reset=false) = enlist_ticket(ticketid, Dates.now(UTC); expiration_time, reset)
 
-# Useful for an admin
-#delete_ticket!(ticketid::TicketID) = Model.remove!(REGISTRAR[], ticketid) # 
+get_ticket_ids() = Controllers.ticket_ids(REGISTRAR)
 
-get_ticket_ids() = Controllers.ticket_ids(REGISTRAR[])
+get_ticket_status(null::Function, ticketid::TicketID) = Controllers.ticket_status(get(null, REGISTRAR, ticketid))
+get_ticket_admission(null::Function, ticketid::TicketID) = get(null, REGISTRAR, ticketid).admission # This is a good example for null
 
-get_ticket_status(ticketid::TicketID) = Controllers.ticket_status(ticketid, REGISTRAR[])
-get_ticket_admission(ticketid::TicketID) = Model.select(Admission, ticketid, REGISTRAR[]) # TODO: use get instead
-get_ticket_timestamp(ticketid::TicketID) = Model.select(Ticket, ticketid, REGISTRAR[]).timestamp
+get_ticket(null::Function, tokenid::AbstractString) = get(null, REGISTRAR, tokenid)
+get_ticket(null::Function, ticketid::TicketID) = get(null, REGISTRAR, ticketid)
 
-get_ticket(tokenid::AbstractString) = Model.select(Ticket, tokenid, REGISTRAR[]) 
-get_ticket(ticketid::TicketID) = Model.select(Ticket, ticketid, REGISTRAR[])
-
-function delete_ticket(ticketid::TicketID)
+function delete_ticket(null::Function, ticketid::TicketID)
     
-    ticket_index = findfirst(x -> x.ticketid == ticketid, REGISTRAR[].tickets)
-    ticket = REGISTRAR[].tickets[ticket_index]
-
-    @assert isnothing(ticket.admission) "Ticket's can't be removed after admitted. May be allowed in the future with membership termination."
-
-    deleteat!(Mapper.REGISTRAR[].tickets, ticket_index)
+    ticket_index = findfirst(x -> x.ticketid == ticketid, REGISTRAR.tickets) # I could use a get_index(null, collection, predicate)
+    if isnothing(ticket_index)
+        null()
+    else
+        deleteat!(Mapper.REGISTRAR.tickets, ticket_index)
+    end
 
     return
 end
 
-token_key() = Controllers.token_key(REGISTRAR[])
-token_nlen() = REGISTRAR[].nlen
+token_key() = Controllers.token_key(REGISTRAR)
+token_nlen() = REGISTRAR.nlen
 
 
 # The benfit of refering to a single ticketid is that it is long lasting
-seek_admission(id::Pseudonym, ticketid::TicketID) = Controllers.admit!(REGISTRAR[], id, ticketid) 
-get_admission(id::Pseudonym) = Model.select(Admission, id, REGISTRAR[])
-list_admissions() = [i.admission for i in REGISTRAR[].tickets]
+seek_admission(id::Pseudonym, ticketid::TicketID) = Controllers.admit!(REGISTRAR, id, ticketid) 
+list_admissions() = [i.admission for i in REGISTRAR.tickets]
 
-get_chain_roll() = Controllers.roll(BRAID_CHAIN[])
-get_member(_id::Pseudonym) = filter(x -> Model.id(x) == _id, list_members())[1] # Model.select
+get_chain_roll() = Controllers.roll(BRAID_CHAIN)
+get_member(null::Function, id::Pseudonym) = get(null, BRAID_CHAIN, x -> x isa Membership && Model.id(x) == id)
 
-get_chain_commit() = Model.commit(BRAID_CHAIN[])
+get_chain_commit() = Model.commit(BRAID_CHAIN)
 
 function submit_chain_record!(transaction::Transaction) 
 
@@ -543,38 +532,37 @@ function submit_chain_record!(transaction::Transaction)
     # Change of DemeSpec record requires shutdown of the service. I could have a semaphore to detect that 
     # and a state variable which indicates closing of the service in which case all records are dropped.
     
-    N = Controllers.record!(BRAID_CHAIN[], transaction)
+    N = Controllers.record!(BRAID_CHAIN, transaction)
     store(transaction, N)
-    Controllers.commit!(BRAID_CHAIN[], RECORDER[])
-    store(Model.commit(BRAID_CHAIN[]))
+    Controllers.commit!(BRAID_CHAIN, RECORDER)
+    store(Model.commit(BRAID_CHAIN))
 
-    ack = Controllers.ack_leaf(BRAID_CHAIN[], N)
+    ack = Controllers.ack_leaf(BRAID_CHAIN, N)
     return ack
 end
 
-get_chain_record(N::Int) = BRAID_CHAIN[][N]
-get_chain_ack_leaf(N::Int) = Controllers.ack_leaf(BRAID_CHAIN[], N)
-get_chain_ack_root(N::Int) = Controllers.ack_root(BRAID_CHAIN[], N)
+get_chain_record(N::Int) = BRAID_CHAIN[N]
+get_chain_ack_leaf(N::Int) = Controllers.ack_leaf(BRAID_CHAIN, N)
+get_chain_ack_root(N::Int) = Controllers.ack_root(BRAID_CHAIN, N)
 
 enroll_member(member::Membership) = submit_chain_record!(member)
 enlist_proposal(proposal::Proposal) = submit_chain_record!(proposal)
 
-get_roll() = Controllers.roll(BRAID_CHAIN[])
+get_roll() = Controllers.roll(BRAID_CHAIN)
 
-get_peers() = Controllers.peers(BRAID_CHAIN[])
+get_peers() = Controllers.peers(BRAID_CHAIN)
 
-get_constituents() = Controllers.constituents(BRAID_CHAIN[])
+get_constituents() = Controllers.constituents(BRAID_CHAIN)
 
-reset_tree() = Controllers.reset_tree!(BRAID_CHAIN[])
+reset_tree() = Controllers.reset_tree!(BRAID_CHAIN)
 
-get_members(N::Int) = Model.members(BRAID_CHAIN[], N)
-get_members(; reset=false) = reset ? Model.roll(BRAID_CHAIN[]) : Model.members(BRAID_CHAIN[])
+get_members(N::Int) = Model.members(BRAID_CHAIN, N)
+get_members(; reset=false) = reset ? Model.roll(BRAID_CHAIN) : Model.members(BRAID_CHAIN)
 
-get_generator(N::Int) = Model.generator(BRAID_CHAIN[], N)
-get_generator(; reset=false) = reset ? Model.generator(BRAID_CHAIN[].spec) : Model.generator(BRAID_CHAIN[])
+get_generator(N::Int) = Model.generator(BRAID_CHAIN, N)
+get_generator(; reset=false) = reset ? Model.generator(BRAID_CHAIN.spec) : Model.generator(BRAID_CHAIN)
 
-get_chain_proposal_list() = collect(Controllers.list(Proposal, BRAID_CHAIN[]))
-
+get_chain_proposal_list() = collect(Controllers.list(Proposal, BRAID_CHAIN))
 
 # function schedule_pulse!(uuid::UUID, timestamp, nonceid)
     
@@ -586,21 +574,21 @@ get_chain_proposal_list() = collect(Controllers.list(Proposal, BRAID_CHAIN[]))
 
 function submit_chain_record!(proposal::Proposal)
 
-    N = Controllers.record!(BRAID_CHAIN[], proposal)
+    N = Controllers.record!(BRAID_CHAIN, proposal)
     store(proposal, N)
-    Controllers.commit!(BRAID_CHAIN[], RECORDER[])
-    store(Model.commit(BRAID_CHAIN[]))
+    Controllers.commit!(BRAID_CHAIN, RECORDER)
+    store(Model.commit(BRAID_CHAIN))
 
     spec = get_demespec()
-    anchored_members = Model.voters(BRAID_CHAIN[], proposal) # I could get a braid output_members
-    Controllers.init!(POLLING_STATION[], spec, proposal, anchored_members)
+    anchored_members = Model.voters(BRAID_CHAIN, proposal) # I could get a braid output_members
+    Controllers.init!(POLLING_STATION, spec, proposal, anchored_members)
 
-    init_bbox_store(Controllers.ledger(get(POLLING_STATION[], proposal)))
+    init_bbox_store(Controllers.ledger(get(POLLING_STATION, proposal)))
 
     Schedulers.schedule!(ENTROPY_SCHEDULER, proposal.open, proposal.uuid)
     Schedulers.schedule!(TALLY_SCHEDULER, proposal.closed, proposal.uuid)
 
-    ack = Controllers.ack_leaf(BRAID_CHAIN[], N)
+    ack = Controllers.ack_leaf(BRAID_CHAIN, N)
     return ack
 end
 
@@ -619,13 +607,13 @@ function cast_vote(uuid::UUID, vote::Vote; late_votes = false)
         # Concurency can be used with a following API but it requires defining 
         # a new vector type which has a write lock.
 
-        bbox = get(POLLING_STATION[], uuid)        
+        bbox = get(POLLING_STATION, uuid)        
         N = Controllers.record!(bbox, vote)
 
         # commit! may make dublicates in cases when record! executed async
         # this is not a big issue. We are mainly concerned with validating records fast
         # and selecting needles from a haystack
-        Controllers.commit!(bbox, COLLECTOR[])
+        Controllers.commit!(bbox, COLLECTOR)
 
         # the disk storage will happen with the vector, thus commit would not be anounced before
         # it would be backed by a persitent disk record.
@@ -634,28 +622,27 @@ function cast_vote(uuid::UUID, vote::Vote; late_votes = false)
         store(bbox[N], uuid, N; public)
         store(Model.commit(bbox), uuid; public)
 
-        ack = Controllers.ack_cast(POLLING_STATION[], uuid, N)
+        ack = Controllers.ack_cast(POLLING_STATION, uuid, N)
         return ack
     end
 end
 
-
-get_ballotbox(uuid::UUID) = get(POLLING_STATION[], uuid)
+get_ballotbox(uuid::UUID) = get(POLLING_STATION, uuid)
 
 get_proposal(uuid::UUID) = get_ballotbox(uuid).ledger.proposal 
 
 get_tally(uuid::UUID) = ballotbox(uuid).tally
 
-get_ballotbox_commit(uuid::UUID) = Model.commit(POLLING_STATION[], uuid)
+get_ballotbox_commit(uuid::UUID) = Model.commit(POLLING_STATION, uuid)
 
-get_ballotbox_ack_leaf(uuid::UUID, N::Int) = Controllers.ack_leaf(POLLING_STATION[], uuid, N)
-get_ballotbox_ack_root(uuid::UUID, N::Int) = Controllers.ack_root(POLLING_STATION[], uuid, N)
+get_ballotbox_ack_leaf(uuid::UUID, N::Int) = Controllers.ack_leaf(POLLING_STATION, uuid, N)
+get_ballotbox_ack_root(uuid::UUID, N::Int) = Controllers.ack_root(POLLING_STATION, uuid, N)
 
-get_ballotbox_spine(uuid::UUID) = Controllers.spine(POLLING_STATION[], uuid)
+get_ballotbox_spine(uuid::UUID) = Controllers.spine(POLLING_STATION, uuid)
 
 function get_ballotbox_record(uuid::UUID, N::Int; fairness::Bool = true)
    
-    bbox = Controllers.ballotbox(PollingStation[], uuid)        
+    bbox = Controllers.ballotbox(PollingStation, uuid)        
     
     # If fair then only when the tally is published the vote can be accessed
     if fairness && isnothing(bbox.tally) || !fairness
@@ -666,14 +653,14 @@ function get_ballotbox_record(uuid::UUID, N::Int; fairness::Bool = true)
 
 end
 
-get_ballotbox_receipt(uuid::UUID, N::Int) = Model.receipt(POOLING_STATION[], uuid, N)
+get_ballotbox_receipt(uuid::UUID, N::Int) = Model.receipt(POOLING_STATION, uuid, N)
 
 get_cast_record_status(uuid::UUID, N::Int) = Model.cast_record_status(get_ballotbox(uuid), N)
 
 # The access seems better to be dealt at the topmost level
 function get_ballotbox_ledger(uuid::UUID; fairness::Bool = true, tally_trigger_delay::Union{Nothing, Int} = nothing)
 
-    bbox = Controllers.ballotbox(PollingStation[], uuid)        
+    bbox = Controllers.ballotbox(PollingStation, uuid)        
 
     # trigger_tally!(uuid; tally_trigger_delay)
     # If fair then only when the tally is published the vote can be accessed

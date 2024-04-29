@@ -28,8 +28,8 @@ authorized_roles = Mapper.setup(crypto.group, crypto.generator) do pbkeys
 
 end
 
-PROPOSER = Mapper.PROPOSER[]
-DEMESPEC = Mapper.BRAID_CHAIN[].spec
+PROPOSER = Mapper.PROPOSER
+DEMESPEC = Mapper.BRAID_CHAIN.spec
 
 # I may need to implement a custom request method to support middleware in the Context
 # or build a handler instance here. For now though I can use middleware explicitly in the code
@@ -55,7 +55,7 @@ bob = Client.enroll!(bob_invite; server = SERVER, key = 3)
 input_generator = Mapper.get_generator()
 input_members = Mapper.get_members()
 
-braidwork = Model.braid(input_generator, input_members, DEMESPEC.crypto, DEMESPEC, Mapper.BRAIDER[]) 
+braidwork = Model.braid(input_generator, input_members, DEMESPEC.crypto, DEMESPEC, Mapper.BRAIDER) 
 Mapper.submit_chain_record!(braidwork)
 
 ### 
@@ -67,7 +67,7 @@ eve = Client.enroll!(eve_invite; server = SERVER, key = 4) # Works as expected!
 input_generator = Mapper.get_generator()
 input_members = Mapper.get_members()
 
-braidwork = Model.braid(input_generator, input_members, DEMESPEC.crypto, DEMESPEC, Mapper.BRAIDER[]) 
+braidwork = Model.braid(input_generator, input_members, DEMESPEC.crypto, DEMESPEC, Mapper.BRAIDER) 
 Mapper.submit_chain_record!(braidwork)
 
 ###
@@ -123,7 +123,7 @@ cast_record = Client.track_vote(SERVER, proposal.uuid, Client.tracking_code(guar
 ballotbox = Mapper.get_ballotbox(proposal.uuid)
 deleteat!(ballotbox.ledger.records, 1) # deleting alice's vote
 Controllers.reset_tree!(ballotbox) 
-Controllers.commit!(Mapper.POLLING_STATION[], proposal.uuid, Mapper.COLLECTOR[])
+Controllers.commit!(Mapper.POLLING_STATION, proposal.uuid, Mapper.COLLECTOR)
 
 @test_throws ErrorException Client.check_vote!(bob, proposal.uuid) # bob finds out about misconduct
 
@@ -141,4 +141,4 @@ for i in 1:commit.state.index
     push!(chain, record)
 end
 
-@test Controllers.ledger(Mapper.BRAID_CHAIN[]) == chain
+@test Controllers.ledger(Mapper.BRAID_CHAIN) == chain
