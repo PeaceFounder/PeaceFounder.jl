@@ -134,6 +134,7 @@ function audit_members(ledger::BraidChainLedger)
             id(record) in identities && return false
             id(record) in blacklist && return false # to prevent reissuing of membership
             pseudonym(record) in members && return false
+            # also need to check that generator is correct
             
             push!(tickets, ticket(record))
             push!(identities, id(record))

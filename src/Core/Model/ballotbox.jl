@@ -148,9 +148,9 @@ uuid(proposal::Proposal) = proposal.uuid
 
 
 
-isdone(proposal::Proposal; time) = proposal.closed < time
-isopen(proposal::Proposal; time) = proposal.open < time && proposal.closed > time
-isstarted(proposal::Proposal; time) = proposal.open < time
+isdone(proposal::Proposal; time) = proposal.closed <= time
+isopen(proposal::Proposal; time) = proposal.open <= time && proposal.closed > time
+isstarted(proposal::Proposal; time) = proposal.open <= time
 
 """
     issuer(proposal::Proposal)

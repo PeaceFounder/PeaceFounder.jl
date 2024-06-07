@@ -135,8 +135,8 @@ proposal = Proposal(
     summary = "Should the city ban all personal vehicle usage and invest in alternative forms of transportation such as public transit, biking and walking infrastructure?",
     description = "",
     ballot = Ballot(["yes", "no"]),
-    open = Dates.now(UTC),
-    closed = Dates.now(UTC) + Dates.Second(2),
+    open = Dates.now(UTC) + Dates.Second(10),
+    closed = Dates.now(UTC) + Dates.Second(20),
     collector = id(Mapper.COLLECTOR), 
     state = state(commit)
 ) |> approve(PROPOSER)
@@ -153,31 +153,47 @@ ack_root = Mapper.get_chain_ack_root(2)
 proposal_list = Mapper.get_chain_proposal_list()
 N, proposal = proposal_list[1]
 
-@test Model.isopen(proposal; time = proposal.open + Dates.Millisecond(100)) # Need to implement. Checks whether proposal is open
+@test Model.isopen(proposal; time = proposal.open) == true # inclusive
+@test Model.isopen(proposal; time = proposal.closed) == false # exclusive
 
-Mapper.entropy_process_loop() # sleeping a second also works
+# replaces sleep
+task = Task() do
+    wait(Mapper.ENTROPY_CONDITION)
+end
+yield(task)
+notify(Mapper.ENTROPY_SCHEDULER, ctime = proposal.open)
+wait(task)
+
 
 commit = Mapper.get_ballotbox_commit(proposal.uuid)
 _seed = seed(commit)
 
 v = vote(proposal, _seed, Selection(2), alice)
 
-ack = Mapper.cast_vote(proposal.uuid, v)
+ack = Mapper.cast_vote(proposal.uuid, v; ctime = proposal.open)
 
 v = vote(proposal, _seed, Selection(1), bob)
-ack = Mapper.cast_vote(proposal.uuid, v)
+ack = Mapper.cast_vote(proposal.uuid, v; ctime = proposal.open)
 
 reboot()
 
 v = vote(proposal, _seed, Selection(1), eve)
-ack = Mapper.cast_vote(proposal.uuid, v)
+ack = Mapper.cast_vote(proposal.uuid, v; ctime = proposal.open)
 
 spine = Mapper.get_ballotbox_spine(proposal.uuid)
-#Mapper.tally_votes!(proposal.uuid)
 
 ballotbox = Mapper.get_ballotbox(proposal.uuid)
 @test istallied(ballotbox) == false
-Schedulers.waituntil(proposal.closed + Dates.Millisecond(1000))
+
+# replaces waituntil
+task = Task() do
+    wait(Mapper.TALLY_CONDITION)
+end
+yield(task)
+notify(Mapper.TALLY_SCHEDULER, ctime = proposal.closed) # Notified but the task is not yet started
+wait(task)
+
+
 @test istallied(ballotbox) == true
 
 # Test For AuditTools

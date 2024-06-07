@@ -331,10 +331,8 @@ Model.commit(guard::CastGuard) = isempty(guard.ack_integrity) ? commit(guard.ack
 
 Model.index(guard::CastGuard) = index(guard.ack_cast)
 
-
 Model.isbinding(guard::CastGuard, ack::AckConsistency{BallotBoxState}) = isbinding(commit(guard), ack)
 Model.isconsistent(guard::CastGuard, ack::AckConsistency{BallotBoxState}) = isconsistent(commit(guard), ack)
-#ProtocolSchema.tracking_code(guard::CastGuard, spec::DemeSpec) = tracking_code(guard.vote, spec)
 
 tracking_code(guard::CastGuard, spec::DemeSpec) = ProtocolSchema.tracking_code(guard.vote, spec) |> encode_crockford_base32
 
@@ -512,9 +510,7 @@ function Base.show(io::IO, voter::DemeAccount)
 end
 
 
-#function enroll!(voter::DemeAccount, router, ticketid, token) # EnrollGuard 
-
-function enroll!(voter::DemeAccount, router, invite::Invite) # EnrollGuard 
+function enroll!(voter::DemeAccount, router, invite::Invite; skip_registration = false) # EnrollGuard 
 
     if !isadmitted(voter)
         admission = seek_admission(router, id(voter), invite)
@@ -523,7 +519,7 @@ function enroll!(voter::DemeAccount, router, invite::Invite) # EnrollGuard
         voter.guard = EnrollGuard(admission)
     end
 
-    enroll!(voter, router)
+    skip_registration || enroll!(voter, router)
 
     return
 end
@@ -554,8 +550,6 @@ function enroll!(voter::DemeAccount, route::Route) # For continuing from the las
     # commit = get_chain_commit(router)
     # @assert isbinding(commit, voter.deme)
     # @assert verify(commit, crypto(voter.deme))
-
-    # voter.commit = commit
     
     g = generator(voter.commit)
 
@@ -780,7 +774,7 @@ end
 # Parser.marshal, Parser.unmarshal ; Client.enroll method seems like a good fit where to do parsing 
 
 
-function enroll!(invite::Invite; server::Route = route(invite.route), key::Union{Integer, Nothing} = nothing)
+function enroll!(invite::Invite; server::Route = route(invite.route), key::Union{Integer, Nothing} = nothing, skip_registration = false)
     
     spec = get_deme(server)
 
@@ -792,8 +786,7 @@ function enroll!(invite::Invite; server::Route = route(invite.route), key::Union
         account = DemeAccount(spec, key, server)
     end
 
-    #enroll!(account, server, invite.ticketid, invite.token)
-    enroll!(account, server, invite)
+    enroll!(account, server, invite; skip_registration)
     
     return account
 end

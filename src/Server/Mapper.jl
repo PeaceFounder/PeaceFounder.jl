@@ -24,11 +24,14 @@ const MEMBER_LOCK = ReentrantLock()
 global BRAID_CHAIN::Union{BraidChainController, Nothing}
 
 global POLLING_STATION::Union{PollingStation, Nothing}
-const TALLY_SCHEDULER = Scheduler(UUID, retry_interval = 5) 
-global TALLY_PROCESS::Task
 
-const ENTROPY_SCHEDULER = Scheduler(retry_interval = 1)
+global TALLY_SCHEDULER::Scheduler
+global TALLY_PROCESS::Task
+const TALLY_CONDITION = Condition()
+
+global ENTROPY_SCHEDULER::Scheduler
 global ENTROPY_PROCESS::Task
+const ENTROPY_CONDITION = Condition() # Used to inform that event loop had finished
 
 # global BRAID_BROKER::BraidBroker
 const BRAID_BROKER_SCHEDULER = Scheduler(retry_interval = 5)
@@ -210,41 +213,42 @@ function entropy_process_loop()
 
     end
 
-    # It is initialized with recording of proposal
-    #init_bbox_store(Controllers.ledger(bbox))
+    # BallotBox is initialized with recording of proposal to the BraidChain
+    # init_bbox_store(Controllers.ledger(bbox))
+
+    notify(ENTROPY_CONDITION, uuid)
 
     return
 end
 
+# function broker_process_loop(; force = false)
 
-function broker_process_loop(; force = false)
+#     force || wait(BRAID_BROKER_SCHEDULER)
+#     # no pooling thus no false triggers are expected here
 
-    force || wait(BRAID_BROKER_SCHEDULER)
-    # no pooling thus no false triggers are expected here
+#     lock(MEMBER_LOCK)
 
-    lock(MEMBER_LOCK)
+#     try
+#         _members = members(BRAID_CHAIN)
+#         _braid = braid(BRAIDER_BROKER, _members) # one is selected at random from all available options
+#     catch
+#         retry!(BRAID_BROKER_SCHEDULER)
+#     finally
+#         unlock(MEMBER_LOCK)
+#     end
 
-    try
-        _members = members(BRAID_CHAIN)
-        _braid = braid(BRAIDER_BROKER, _members) # one is selected at random from all available options
-    catch
-        retry!(BRAID_BROKER_SCHEDULER)
-    finally
-        unlock(MEMBER_LOCK)
-    end
+#     Controllers.record!(BRAID_CHAIN, _braid)
+#     Controllers.commit!(BRAID_CHAIN, RECORDER[])
 
-    Controllers.record!(BRAID_CHAIN, _braid)
-    Controllers.commit!(BRAID_CHAIN, RECORDER[])
-
-    return
-end
-
+#     return
+# end
 
 function tally_process_loop()
-    
-    uuid = wait(TALLY_SCHEDULER)
 
+    uuid = wait(TALLY_SCHEDULER)
     tally_votes!(uuid; public=true)
+
+    notify(TALLY_CONDITION, uuid)
 
     return
 end
@@ -282,6 +286,9 @@ function load_system() # a kwarg could be passed on whether to audit the system
     # I should iterate over all BRAID_CHAIN records and find a proposal
     
     global POLLING_STATION = PollingStation()
+
+    global TALLY_SCHEDULER = Scheduler(UUID, retry_interval = 5)
+    global ENTROPY_SCHEDULER = Scheduler(UUID, retry_interval = 1)
 
     for record in chain_ledger
         
@@ -337,13 +344,22 @@ function load_system() # a kwarg could be passed on whether to audit the system
     global COLLECTOR = load_signer(:collector)
 
     if !isnothing(COLLECTOR)
-        global ENTROPY_PROCESS = @async while true
-            entropy_process_loop()
-        end
 
-        global TALLY_PROCESS = @async while true
-            tally_process_loop()
+        global ENTROPY_PROCESS = Task() do
+            while true
+                entropy_process_loop()
+            end
         end
+        yield(ENTROPY_PROCESS)
+
+
+        global TALLY_PROCESS = Task() do
+            while true
+                tally_process_loop() 
+            end
+        end
+        yield(TALLY_PROCESS)
+
     end
 
     return authorized_roles(BRAID_CHAIN.spec)
@@ -423,13 +439,26 @@ function setup(demefunc::Function, groupspec::GroupSpec, generator::Generator)
         global COLLECTOR = Signer(demespec.crypto, generator, key_list[N])
         store(COLLECTOR, :collector)
 
-        global ENTROPY_PROCESS = @async while true
-            entropy_process_loop()
-        end
+        # I may create SchedulerActor and constructors here EntropyActor, TallyActor
+        # to make the process more streamlined
+        global ENTROPY_SCHEDULER = Scheduler(UUID, retry_interval = 1)
 
-        global TALLY_PROCESS = @async while true
-            tally_process_loop()
+        global ENTROPY_PROCESS = Task() do
+            while true
+                entropy_process_loop()
+            end
         end
+        yield(ENTROPY_PROCESS)
+
+
+        global TALLY_SCHEDULER = Scheduler(UUID, retry_interval = 5)
+        
+        global TALLY_PROCESS = Task() do
+            while true
+                tally_process_loop()
+            end
+        end
+        yield(TALLY_PROCESS)
     end    
 
     return authorized_roles(demespec) # I may deprecate this in favour of a method.
@@ -593,13 +622,13 @@ function submit_chain_record!(proposal::Proposal)
 end
 
 
-function cast_vote(uuid::UUID, vote::Vote; late_votes = false)
+function cast_vote(uuid::UUID, vote::Vote; late_votes = false, ctime = Dates.now(UTC))
 
-    if !(Model.isstarted(get_proposal(uuid); time = Dates.now(UTC)))
+    if !(Model.isstarted(get_proposal(uuid); time = ctime))
 
         error("Voting have not yet started")
 
-    elseif !late_votes && Model.isdone(get_proposal(uuid); time = Dates.now(UTC))
+    elseif !late_votes && Model.isdone(get_proposal(uuid); time = ctime)
 
         error("Vote received for proposal too late")
         

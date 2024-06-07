@@ -18,9 +18,7 @@ is in the event loop like:
 
     scheduler = Scheduler(; retry_interval = 1)
 
-    lock(scheduler) do 
-        schedule!(scheduler, now() + Second(1), value)
-    end
+    schedule!(scheduler, now() + Second(1), value)
 
     while true
         value = wait(scheduler)
@@ -51,19 +49,7 @@ Scheduler(; pool_interval=nothing, retry_interval=nothing, delay=0) = Scheduler(
 
 Notify a scheduler with a value which is returned at `wait`.
 """
-Base.notify(scheduler::Scheduler) = notify(scheduler.condition)
-Base.notify(scheduler::Scheduler, value) = notify(scheduler.condition, value)
-
-"""
-    lock(scheduler::Scheduler)
-
-Lock a scheduler. This is necessary to avoid simultanous modifications of the `schedule` field.
-Note that other `Scheduler` fields are not protected with the lock as thoose are considered
-internal. 
-"""
-Base.lock(scheduler::Scheduler) = lock(scheduler.condition)
-Base.unlock(scheduler::Scheduler) = unlock(scheduler.condition)
-
+Base.notify(scheduler::Scheduler; ctime::DateTime = now(UTC)) = notify(scheduler.condition, ctime)
 
 """
     waituntil(time::DateTime)
@@ -93,7 +79,7 @@ no events are scheduled.
 """
 function next_event(scheduler::Scheduler; ctime = now(UTC))
 
-    length(scheduler.schedule) == 0 && return nothing
+    isempty(scheduler) && return nothing
 
     timestamp, value = scheduler.schedule[1]
 
@@ -104,6 +90,8 @@ function next_event(scheduler::Scheduler; ctime = now(UTC))
 end
 
 
+Base.isempty(scheduler::Scheduler) = length(scheduler.schedule) == 0
+
 isstarted(scheduler::Scheduler) = scheduler.started
 isfinished(scheduler::Scheduler) = scheduler.finished
 
@@ -113,25 +101,20 @@ isfinished(scheduler::Scheduler) = scheduler.finished
 Wait until next event is reached and return it's value. In the case event have run through 
 smoothelly the scheduler event is droped with the next `wait` call. See also [`retry!`](@ref) method.
 """
-function Base.wait(scheduler::Scheduler) 
+function Base.wait(scheduler::Scheduler; ctime::DateTime = now(UTC)) 
 
     if isstarted(scheduler) && isfinished(scheduler)
         
-        # Need to test this
-        #lock(scheduler) do 
+        # The lock is unnecessary as long as we limit ourselves to a single thread
         popfirst!(scheduler.schedule)
-        #end
-
         scheduler.started = false
         scheduler.finished = false
 
     end
 
-    if isnothing(next_event(scheduler))
-        wait(scheduler.condition) # It should be here
+    while isempty(scheduler)
+        ctime = wait(scheduler.condition) # It should be here
     end
-
-    time, value = next_event(scheduler)
 
     if isstarted(scheduler) && !isfinished(scheduler)
 
@@ -142,37 +125,35 @@ function Base.wait(scheduler::Scheduler)
             error("Retry interval not set")
         else
             Timer(timer -> notify(scheduler), scheduler.retry_interval)
-            wait(scheduler.condition)
+            wait(scheduler.condition) # An external wakeup would simply retry. A new value inserted preceding would be treated first
         end
 
     elseif !isstarted(scheduler)
 
         scheduler.started = true
         scheduler.finished = true
-        
-        if time > 0
-        
-            Timer(timer -> notify(scheduler), time) 
-            wait(scheduler.condition) 
 
+        while (time = next_event(scheduler; ctime) |> first) > 0
+            Timer(timer -> notify(scheduler), time) # If waiting happens here 
+            ctime = wait(scheduler.condition) 
         end
+
     else
         error("Impossible scheduler state")
     end
 
-    return value
+    # next_event is called also here to ensure that latest event that could have been scheduled along others is treated first
+    return next_event(scheduler) |> last
 end
 
 
 """
     schedule!(scheduler::Scheduler, timestamp::DateTime[, value])
 
-Schedule an event at `timestamp` with a provided `value`. To avoid messing up a schedule acquire 
-a scheduler's lock before adding the event as:
+Schedule an event at `timestamp` with a provided `value`. 
 
-    lock(scheduler) do
-        schedule!(scheduler, now() + Second(1), value)
-    end
+    schedule!(scheduler, now() + Second(1), value)
+
 """
 function schedule!(scheduler::Scheduler, timestamp::DateTime, value)
     
