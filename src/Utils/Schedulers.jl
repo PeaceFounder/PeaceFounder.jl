@@ -5,7 +5,6 @@ using Dates
 """
     mutable struct Scheduler
         condition::Condition
-        pool_interval::Union{Int, Nothing}
         retry_interval::Union{Int, Nothing}
         delay::Int
         started::Bool
@@ -33,16 +32,14 @@ In the event loop one manages a state machine which can succed and fail. If it s
 """
 mutable struct Scheduler
     condition::Condition
-    pool_interval::Union{Int, Nothing}
     retry_interval::Union{Int, Nothing}
-    delay::Int
     started::Bool
     finished::Bool
     schedule::Vector{Tuple{DateTime, <:Any}}
 end
 
-Scheduler(T; pool_interval=nothing, retry_interval=nothing, delay=0) = Scheduler(Condition(), pool_interval, retry_interval, delay, false, false, Tuple{DateTime, T}[])
-Scheduler(; pool_interval=nothing, retry_interval=nothing, delay=0) = Scheduler(Nothing; pool_interval, retry_interval, delay)
+Scheduler(T; retry_interval=nothing) = Scheduler(Condition(), retry_interval, false, false, Tuple{DateTime, T}[])
+Scheduler(; retry_interval=nothing) = Scheduler(Nothing; retry_interval)
 
 """
     notify(scheduler::Scheduler[, value])
@@ -175,6 +172,76 @@ Notifies the scheduler that event have run unsucesfully which reschedules it aft
 retry!(scheduler::Scheduler) = scheduler.finished = false;
 
 
-export Scheduler, schedule!, retry!, wait, notify # wait and notify as extension from base
+struct SchedulerActor
+    scheduler::Scheduler
+    loop::Task
+    finish::Condition
+end
+
+function SchedulerActor(loop::Function, type::DataType; retry_interval = 1)
+    
+    scheduler = Scheduler(type; retry_interval)
+    finish = Condition()
+
+    task = Task() do 
+        while true
+
+            local value
+
+            try
+                value = wait(scheduler)
+                loop(value)
+                success = true
+            catch error
+                if error isa InterruptException
+                    @info "Stoping scheduler actor"
+                    break
+                else
+                    @error "ERROR: " exception=(error, catch_backtrace())
+                    retry!(scheduler)
+                    success = false
+                end
+            end
+            notify(finish, (value, success))
+        end
+    end
+    yield(task)
+
+    return SchedulerActor(scheduler, task, finish)
+end
+
+# It is important that scheduling is executed at the same thread as the task itself. To achieve that tasks can be pinned 
+# via ThreadPinning with `@spawnat 3 f()`. 
+schedule!(actor::SchedulerActor, timestamp::DateTime, value = nothing) = schedule!(actor.scheduler, timestamp, value)
+
+function Base.notify(actor::SchedulerActor; ctime::DateTime = now(UTC), wait_loop = false) # wait_exec
+
+    if wait_loop == true
+        task = Task() do
+            wait(actor.finish)
+        end
+        yield(task)
+
+        task_count = notify(actor.scheduler; ctime)        
+        wait(task)
+    else
+        task_count = notify(actor.scheduler; ctime)        
+    end
+        
+    return task_count
+end
+
+function Base.close(actor::SchedulerActor)
+
+    task_count = notify(actor.scheduler.condition, InterruptException(), error=true)
+
+    # if task_count == 0
+    #     @warn "No tasks have been interupted" # Need to test this more
+    # end
+
+    return
+end
+
+export Scheduler, SchedulerActor, schedule!, wait, notify, retry! # wait and notify as extension from base
 
 end

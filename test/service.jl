@@ -77,8 +77,8 @@ proposal = Model.Proposal(
     summary = "Should the city ban all personal vehicle usage and invest in alternative forms of transportation such as public transit, biking and walking infrastructure?",
     description = "",
     ballot = Model.Ballot(["yes", "no"]),
-    open = Dates.now(UTC) + Dates.Millisecond(100),
-    closed = Dates.now(UTC) + Dates.Second(7)
+    open = Dates.now(UTC) + Dates.Second(10),
+    closed = Dates.now(UTC) + Dates.Second(60),
 ) |> Client.configure(SERVER) |> approve(PROPOSER)
 
 
@@ -91,18 +91,23 @@ Client.update_proposal_cache!(alice)
 Client.update_proposal_cache!(bob)
 Client.update_proposal_cache!(eve)
 
-Schedulers.waituntil(proposal.open + Dates.Millisecond(1500))
+notify(Mapper.ENTROPY_SCHEDULER, ctime = proposal.open, wait_loop = true)
 
-Client.cast_vote!(alice, proposal.uuid, Model.Selection(2))
-Client.cast_vote!(bob, proposal.uuid, Model.Selection(1))
-Client.cast_vote!(eve, proposal.uuid, Model.Selection(2))
+Mapper.with_ctime(proposal.open) do
+
+    Client.cast_vote!(alice, proposal.uuid, Model.Selection(2))
+    Client.cast_vote!(bob, proposal.uuid, Model.Selection(1))
+    Client.cast_vote!(eve, proposal.uuid, Model.Selection(2))
+
+end
+
 
 Client.check_vote!(alice, proposal.uuid) 
 
 Client.get_ballotbox_commit!(alice, proposal.uuid)
 @test !Client.istallied(alice, proposal.uuid)
 
-Schedulers.waituntil(proposal.closed + Dates.Millisecond(1500))
+notify(Mapper.TALLY_SCHEDULER, ctime = proposal.closed, wait_loop = true)
 
 Client.get_ballotbox_commit!(alice, proposal.uuid)
 @test Client.istallied(alice, proposal.uuid)

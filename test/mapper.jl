@@ -136,7 +136,7 @@ proposal = Proposal(
     description = "",
     ballot = Ballot(["yes", "no"]),
     open = Dates.now(UTC) + Dates.Second(10),
-    closed = Dates.now(UTC) + Dates.Second(20),
+    closed = Dates.now(UTC) + Dates.Second(60),
     collector = id(Mapper.COLLECTOR), 
     state = state(commit)
 ) |> approve(PROPOSER)
@@ -157,13 +157,12 @@ N, proposal = proposal_list[1]
 @test Model.isopen(proposal; time = proposal.closed) == false # exclusive
 
 # replaces sleep
-task = Task() do
-    wait(Mapper.ENTROPY_CONDITION)
-end
-yield(task)
-notify(Mapper.ENTROPY_SCHEDULER, ctime = proposal.open)
-wait(task)
-
+# task = Task() do
+#     wait(Mapper.ENTROPY_CONDITION)
+# end
+# yield(task)
+notify(Mapper.ENTROPY_SCHEDULER, ctime = proposal.open, wait_loop = true)
+# wait(task)
 
 commit = Mapper.get_ballotbox_commit(proposal.uuid)
 _seed = seed(commit)
@@ -186,12 +185,12 @@ ballotbox = Mapper.get_ballotbox(proposal.uuid)
 @test istallied(ballotbox) == false
 
 # replaces waituntil
-task = Task() do
-    wait(Mapper.TALLY_CONDITION)
-end
-yield(task)
-notify(Mapper.TALLY_SCHEDULER, ctime = proposal.closed) # Notified but the task is not yet started
-wait(task)
+# task = Task() do
+#     wait(Mapper.TALLY_CONDITION)
+# end
+# yield(task)
+notify(Mapper.TALLY_SCHEDULER, ctime = proposal.closed, wait_loop = true) # Notified but the task is not yet started
+# wait(task)
 
 
 @test istallied(ballotbox) == true

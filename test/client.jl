@@ -81,8 +81,8 @@ proposal = Model.Proposal(
     summary = "Should the city ban all personal vehicle usage and invest in alternative forms of transportation such as public transit, biking and walking infrastructure?",
     description = "",
     ballot = Model.Ballot(["yes", "no"]),
-    open = Dates.now(UTC) + Dates.Millisecond(100),
-    closed = Dates.now(UTC) + Dates.Second(5)
+    open = Dates.now(UTC) + Dates.Second(10),
+    closed = Dates.now(UTC) + Dates.Second(60)
 ) |> Client.configure(SERVER) |> approve(PROPOSER)
 
 
@@ -99,19 +99,23 @@ uuid = alice.accounts[1].deme.uuid
 instances = Client.list_proposal_instances(alice, uuid)
 (; index, proposal) = instances[1]
 
-Schedulers.waituntil(proposal.open + Dates.Millisecond(1000))
+notify(Mapper.ENTROPY_SCHEDULER, ctime = proposal.open, wait_loop = true)
 
-Client.cast_vote!(alice, uuid, index, Selection(2))
-Client.cast_vote!(bob, uuid, index, Selection(1))
-Client.cast_vote!(eve, uuid, index, Selection(2))
-@test_throws AssertionError Client.cast_vote!(david, uuid, index, Selection(1))
+Mapper.with_ctime(proposal.open) do
+
+    Client.cast_vote!(alice, uuid, index, Selection(2))
+    Client.cast_vote!(bob, uuid, index, Selection(1))
+    Client.cast_vote!(eve, uuid, index, Selection(2))
+    @test_throws AssertionError Client.cast_vote!(david, uuid, index, Selection(1))
+
+end
 
 Client.check_vote!(alice, uuid, index) # asks for consistency proof that previous commitment still holds. 
 
 Client.get_ballotbox_commit!(alice, uuid, index)
 @test Client.istallied(alice, uuid, index) == false
 
-sleep(5)
+notify(Mapper.TALLY_SCHEDULER, ctime = proposal.closed, wait_loop = true)
 
 Client.get_ballotbox_commit!(alice, uuid, index)
 @test Client.istallied(alice, uuid, index) == true

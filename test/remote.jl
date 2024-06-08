@@ -69,10 +69,9 @@ try
  A very long description
     """,
         ballot = Model.Ballot(["yes", "no"]),
-        open = Dates.now(UTC) + Dates.Millisecond(200),
-        closed = Dates.now(UTC) + Dates.Second(10)
+        open = Dates.now(UTC) + Dates.Second(10),
+        closed = Dates.now(UTC) + Dates.Second(60)
     ) |> Client.configure(SERVER) |> approve(PROPOSER)
-
 
     ack = Client.enlist_proposal(SERVER, proposal)
 
@@ -87,18 +86,22 @@ try
     instances = Client.list_proposal_instances(alice, uuid)
     (; index, proposal) = instances[1]
 
-    Schedulers.waituntil(proposal.open + Dates.Millisecond(4000))
+    notify(Mapper.ENTROPY_SCHEDULER, ctime = proposal.open, wait_loop = true)
 
-    Client.cast_vote!(alice, uuid, index, Selection(2))
-    Client.cast_vote!(bob, uuid, index, Selection(1))
-    Client.cast_vote!(eve, uuid, index, Selection(2))
+    Mapper.with_ctime(proposal.open) do
+
+        Client.cast_vote!(alice, uuid, index, Selection(2))
+        Client.cast_vote!(bob, uuid, index, Selection(1))
+        Client.cast_vote!(eve, uuid, index, Selection(2))
+
+    end
 
     Client.check_vote!(alice, uuid, index) # asks for consistency proof that previous commitment still holds. 
 
     Client.get_ballotbox_commit!(alice, uuid, index)
     @test Client.istallied(alice, uuid, index) == false
 
-    Schedulers.waituntil(proposal.closed + Dates.Millisecond(200))
+    notify(Mapper.TALLY_SCHEDULER, ctime = proposal.closed, wait_loop = true)
 
     Client.get_ballotbox_commit!(alice, uuid, index)
     @test Client.istallied(alice, uuid, index) == true

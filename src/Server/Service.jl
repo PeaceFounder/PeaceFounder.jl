@@ -8,7 +8,7 @@ using ..Core.Model: TicketID, Digest, Pseudonym, Digest, Membership, Proposal, V
 using ..Authorization: Authorization, AuthServerMiddleware, timestamp, credential
 using ..Mapper
 
-using Dates: DateTime, Second, now, UTC
+using Dates: DateTime, Second
 using Base: UUID
 using SwaggerMarkdown
 
@@ -83,7 +83,7 @@ end
 """
 @put "/tickets" function(request::Request)
 
-    if now(UTC) - timestamp(request) > Second(60)
+    if Mapper.now() - timestamp(request) > Second(60)
         return Response(401, "Old request")
     end
     
@@ -278,7 +278,7 @@ end
 
 @get "/poolingstation/{uuid_hex}/track" function(req::Request, uuid_hex::String)
 
-    if now(UTC) - Authorization.timestamp(req) > Second(60)
+    if Mapper.now() - Authorization.timestamp(req) > Second(60)
         return Response(401, "Request Rejected: The timestamp associated with this request is outdated and cannot be processed. Please ensure your device's clock is correctly set and resend your request.")
     end
 
@@ -318,7 +318,6 @@ end
     return handler(req)
 end
 
-
 # title and version are required
 info = Dict("title" => "PeaceFounder API", "version" => "0.4.0")
 openApi = OpenAPI("3.0", info)
@@ -326,8 +325,5 @@ swagger_document = build(openApi)
   
 # # merge the SwaggerMarkdown schema with the internal schema
 OxygenInstance.mergeschema(swagger_document)
-
-
-
 
 end

@@ -4,7 +4,7 @@ import Dates: Dates, DateTime, UTC
 using Base: UUID
 using URIs: URI
 
-using ..Schedulers: Schedulers, Scheduler, next_event
+using ..Schedulers: Schedulers, SchedulerActor
 using ..Core.Model: Model, CryptoSpec, pseudonym, TicketID, Membership, Proposal, Ballot, Selection, Transaction, Signer, Pseudonym, Vote, id, DemeSpec, Digest, Admission, Generator, GroupSpec, Commit, ChainState, BallotBoxState, CastRecord, BallotBoxLedger
 using ..Controllers: Controllers, Registrar, Ticket, BraidChainController, PollingStation, BallotBoxController
 using ..Core: Store, Parser
@@ -25,17 +25,23 @@ global BRAID_CHAIN::Union{BraidChainController, Nothing}
 
 global POLLING_STATION::Union{PollingStation, Nothing}
 
-global TALLY_SCHEDULER::Scheduler
-global TALLY_PROCESS::Task
-const TALLY_CONDITION = Condition()
+global TALLY_SCHEDULER::SchedulerActor
+global ENTROPY_SCHEDULER::SchedulerActor
 
-global ENTROPY_SCHEDULER::Scheduler
-global ENTROPY_PROCESS::Task
-const ENTROPY_CONDITION = Condition() # Used to inform that event loop had finished
 
-# global BRAID_BROKER::BraidBroker
-const BRAID_BROKER_SCHEDULER = Scheduler(retry_interval = 5)
-global BRAID_BROKER_PROCESS::Task
+global CTIME::Union{DateTime, Nothing} = nothing
+
+function with_ctime(f::Function, ctime::DateTime)
+    global CTIME = ctime
+    try
+        f()
+    finally
+        global CTIME = nothing
+    end
+end
+
+now() = isnothing(CTIME) ? Dates.now(UTC) : CTIME # Necessary for mocking purposes
+
 
 global DATA_DIR::String = ""
 
@@ -198,9 +204,8 @@ function init_bbox_store(ledger::BallotBoxLedger)
 end
 
 
-function entropy_process_loop()
+function entropy_process_loop(uuid)
     
-    uuid = wait(ENTROPY_SCHEDULER)
     bbox = get(POLLING_STATION, uuid) 
 
     if isnothing(bbox.commit)
@@ -212,11 +217,6 @@ function entropy_process_loop()
         store(Model.commit(bbox), uuid; public=false) # how did it work without this
 
     end
-
-    # BallotBox is initialized with recording of proposal to the BraidChain
-    # init_bbox_store(Controllers.ledger(bbox))
-
-    notify(ENTROPY_CONDITION, uuid)
 
     return
 end
@@ -243,17 +243,17 @@ end
 #     return
 # end
 
-function tally_process_loop()
+function tally_process_loop(uuid)
 
-    uuid = wait(TALLY_SCHEDULER)
     tally_votes!(uuid; public=true)
-
-    notify(TALLY_CONDITION, uuid)
 
     return
 end
 
 function reset_system()
+
+    isdefined(@__MODULE__, :ENTROPY_SCHEDULER) && close(ENTROPY_SCHEDULER)
+    isdefined(@__MODULE__, :TALLY_SCHEDULER) && close(TALLY_SCHEDULER)
 
     global BRAID_CHAIN = nothing # The braidchain needs to be loaded within a setup
     global POLLING_STATION = nothing
@@ -263,15 +263,14 @@ function reset_system()
     global PROPOSER = nothing
     global COLLECTOR = nothing
 
-    # I need a way to kill a task that waits on condition
-    #ENTROPY_SCHEDULER.condition = Condition()
-    #TALLY_SCHEDULER.condition = Condition()
-
     return
 end
 
 # Note that preferences would be stored and loaded by PeaceFounderAdmin instead
+# It could make sense to make data_dir as keyword argument
 function load_system() # a kwarg could be passed on whether to audit the system
+
+    reset_system()
 
     @assert !isempty(readdir(DATA_DIR)) "State can't be loaded, data direcotry is empty."
 
@@ -286,9 +285,22 @@ function load_system() # a kwarg could be passed on whether to audit the system
     # I should iterate over all BRAID_CHAIN records and find a proposal
     
     global POLLING_STATION = PollingStation()
+    global TALLY_SCHEDULER = SchedulerActor(tally_process_loop, UUID, retry_interval = 5)
+    global ENTROPY_SCHEDULER = SchedulerActor(entropy_process_loop, UUID, retry_interval = 1)
 
-    global TALLY_SCHEDULER = Scheduler(UUID, retry_interval = 5)
-    global ENTROPY_SCHEDULER = Scheduler(UUID, retry_interval = 1)
+    global RECORDER = load_signer(:recorder)
+    
+    registrar = load_signer(:registrar)
+    hmac_key = Model.bytes(Model.digest(Vector{UInt8}(string(registrar.key)), registrar.spec)) # 
+    global REGISTRAR = Registrar(registrar, hmac_key)
+    Controllers.set_demehash!(REGISTRAR, BRAID_CHAIN.spec) 
+
+    global BRAIDER = load_signer(:braider)
+
+    global PROPOSER = load_signer(:proposer)
+
+    global COLLECTOR = load_signer(:collector)
+
 
     for record in chain_ledger
         
@@ -324,42 +336,14 @@ function load_system() # a kwarg could be passed on whether to audit the system
             end
             
             Controllers.init!(POLLING_STATION, bbox)
-
-            Schedulers.schedule!(ENTROPY_SCHEDULER, proposal.open, proposal.uuid)
-            Schedulers.schedule!(TALLY_SCHEDULER, proposal.closed, proposal.uuid)
-        end
-    end
-
-    global RECORDER = load_signer(:recorder)
-    
-    registrar = load_signer(:registrar)
-    hmac_key = Model.bytes(Model.digest(Vector{UInt8}(string(registrar.key)), registrar.spec)) # 
-    global REGISTRAR = Registrar(registrar, hmac_key)
-    Controllers.set_demehash!(REGISTRAR, BRAID_CHAIN.spec) 
-
-    global BRAIDER = load_signer(:braider)
-
-    global PROPOSER = load_signer(:proposer)
-
-    global COLLECTOR = load_signer(:collector)
-
-    if !isnothing(COLLECTOR)
-
-        global ENTROPY_PROCESS = Task() do
-            while true
-                entropy_process_loop()
+            
+            if !isnothing(COLLECTOR)
+                # Checking that COLLECTOR matches that of the proposal is needed when it can change
+                # Also multiple keys can be kept simultenously and thus COLLECTOR would be more like an vector
+                Schedulers.schedule!(ENTROPY_SCHEDULER, proposal.open, proposal.uuid)
+                Schedulers.schedule!(TALLY_SCHEDULER, proposal.closed, proposal.uuid)
             end
         end
-        yield(ENTROPY_PROCESS)
-
-
-        global TALLY_PROCESS = Task() do
-            while true
-                tally_process_loop() 
-            end
-        end
-        yield(TALLY_PROCESS)
-
     end
 
     return authorized_roles(BRAID_CHAIN.spec)
@@ -441,24 +425,22 @@ function setup(demefunc::Function, groupspec::GroupSpec, generator::Generator)
 
         # I may create SchedulerActor and constructors here EntropyActor, TallyActor
         # to make the process more streamlined
-        global ENTROPY_SCHEDULER = Scheduler(UUID, retry_interval = 1)
+        global ENTROPY_SCHEDULER = SchedulerActor(entropy_process_loop, UUID, retry_interval = 1)
 
-        global ENTROPY_PROCESS = Task() do
-            while true
-                entropy_process_loop()
-            end
-        end
-        yield(ENTROPY_PROCESS)
-
-
-        global TALLY_SCHEDULER = Scheduler(UUID, retry_interval = 5)
+        # global ENTROPY_PROCESS = Task() do
+        #     while true
+        #         entropy_process_loop()
+        #     end
+        # end
+        # yield(ENTROPY_PROCESS)
+        global TALLY_SCHEDULER = SchedulerActor(tally_process_loop, UUID, retry_interval = 5)
         
-        global TALLY_PROCESS = Task() do
-            while true
-                tally_process_loop()
-            end
-        end
-        yield(TALLY_PROCESS)
+        # global TALLY_PROCESS = Task() do
+        #     while true
+        #         tally_process_loop()
+        #     end
+        # end
+        # yield(TALLY_PROCESS)
     end    
 
     return authorized_roles(demespec) # I may deprecate this in favour of a method.
@@ -518,7 +500,7 @@ get_recruit_key() = Model.key(REGISTRAR)
 get_demespec() = BRAID_CHAIN.spec
 
 enlist_ticket(ticketid::TicketID, timestamp::DateTime; expiration_time = nothing, reset=false) = Controllers.enlist!(REGISTRAR, ticketid, timestamp; reset)
-enlist_ticket(ticketid::TicketID; expiration_time = nothing, reset=false) = enlist_ticket(ticketid, Dates.now(UTC); expiration_time, reset)
+enlist_ticket(ticketid::TicketID; expiration_time = nothing, reset=false) = enlist_ticket(ticketid, now(); expiration_time, reset)
 
 get_ticket_ids() = Controllers.ticket_ids(REGISTRAR)
 
@@ -622,7 +604,7 @@ function submit_chain_record!(proposal::Proposal)
 end
 
 
-function cast_vote(uuid::UUID, vote::Vote; late_votes = false, ctime = Dates.now(UTC))
+function cast_vote(uuid::UUID, vote::Vote; late_votes = false, ctime = now())
 
     if !(Model.isstarted(get_proposal(uuid); time = ctime))
 
