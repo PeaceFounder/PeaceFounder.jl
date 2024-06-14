@@ -19,7 +19,36 @@ using ..Authorization: AuthClientMiddleware
 using ..TempAccessCodes: TempAccessCodes # Needed for track_vote. 
 using ..Base32: encode_crockford_base32, decode_crockford_base32
 
+using HistoryTrees: ConsistencyProof
+
 import ..Core.Model
+
+
+struct DummyStore end
+store!(::DummyStore, args...) = nothing
+Base.joinpath(store::DummyStore, index::Int) = store
+
+struct AccountStore 
+    base::String
+    key::String
+end
+
+AccountStore(dir::String, uuid::UUID) = AccountStore(joinpath(dir, "accounts", string(uuid)), joinpath(dir, "keys", string(uuid)))
+AccountStore(dir::String) = AccountStore(dir, joinpath(dir, "keys"))
+
+struct ProposalStore
+    account::AccountStore # temporary
+    dir::String
+end
+
+function Base.joinpath(store::AccountStore, index::Int)
+
+    index_string(i::Int) = bytes2hex(reinterpret(UInt8, [i])[1:2] |> reverse)
+
+    dir = joinpath(store.base, "proposals", index_string(index))
+    return ProposalStore(store, dir)
+end
+
 
 abstract type Route end
 
@@ -288,6 +317,13 @@ struct Blame
     ack::AckConsistency{BallotBoxState}
 end
 
+# A better schema could be considered
+# perhaps naming: first, last, connection|binding
+# struct Blame
+#     commitA::Commit{BallotBoxState}
+#     commitB::Commit{BallotBoxState}
+#     proof::ConsitencyProof
+# end
 
 Model.issuer(blame::Blame) = issuer(blame.commit)
 
@@ -361,15 +397,16 @@ EnrollGuard(admission::Admission) = EnrollGuard(admission, nothing, nothing)
 Model.index(guard::EnrollGuard) = index(guard.ack)
 
 mutable struct ProposalInstance # ProposalArea, BallotBoxClient?
-    const index::Int
+    const index::Int # redundant
     const proposal::Proposal
     const ack_leaf::AckInclusion{ChainState}
     commit::Union{Nothing, Commit{BallotBoxState}}
     guard::Union{Nothing, CastGuard} 
     seq::Int
+    store::Union{DummyStore, ProposalStore}
 end
 
-ProposalInstance(index::Int, proposal::Proposal, ack_leaf::AckInclusion{ChainState}) = ProposalInstance(index, proposal, ack_leaf, nothing, nothing, 1)
+ProposalInstance(index::Int, proposal::Proposal, ack_leaf::AckInclusion{ChainState}; store = DummyStore()) = ProposalInstance(index, proposal, ack_leaf, nothing, nothing, 1, store)
 
 #Model.istallied(instance::ProposalInstance) = isnothing(instance.commit) ? false : istallied(instance.commit)
 
@@ -418,27 +455,27 @@ function Model.commit(instance::ProposalInstance)
     end
 end
 
-
 mutable struct DemeAccount # mutable because it also needs to deal with storage
     deme::DemeSpec
     signer::Signer
     guard::EnrollGuard
     proposals::Vector{ProposalInstance}
     commit::Union{Commit{ChainState}, Nothing}
-    route # 
+    route::Route
+    store::Union{DummyStore, AccountStore}
 end
 
-DemeAccount(deme::DemeSpec, signer::Signer, route = nothing) = DemeAccount(deme, signer, EnrollGuard(), ProposalInstance[], nothing, route)
+DemeAccount(deme::DemeSpec, signer::Signer, route = nothing; store = DummyStore()) = DemeAccount(deme, signer, EnrollGuard(), ProposalInstance[], nothing, route, store)
 
 
-function DemeAccount(deme::DemeSpec, route = nothing) 
+function DemeAccount(deme::DemeSpec, route = nothing; store = DummyStore()) 
     signer = Model.generate(Signer, crypto(deme))
-    return DemeAccount(deme, signer, route)
+    return DemeAccount(deme, signer, route; store)
 end
 
-function DemeAccount(deme::DemeSpec, key::Integer, route = nothing)
+function DemeAccount(deme::DemeSpec, key::Integer, route = nothing; store = DummyStore())
     signer = Signer(crypto(deme), key)
-    return DemeAccount(deme, signer, route)
+    return DemeAccount(deme, signer, route; store)
 end
 
 
@@ -468,6 +505,7 @@ function get_ballotbox_commit!(account::DemeAccount, identifier::Union{UUID, Int
     @assert verify(commit, crypto(account.deme))
 
     instance.commit = commit
+    store!(instance.store, commit)
 
     return
 end
@@ -513,10 +551,11 @@ end
 function enroll!(voter::DemeAccount, router, invite::Invite; skip_registration = false) # EnrollGuard 
 
     if !isadmitted(voter)
-        admission = seek_admission(router, id(voter), invite)
+        admission = seek_admission(router, id(voter), invite) # Store
         @assert isbinding(admission, voter.deme) # checks the guardian
         @assert verify(admission, crypto(voter.deme))
-        voter.guard = EnrollGuard(admission)
+        voter.guard = EnrollGuard(admission) 
+        store!(voter.store, admission)
     end
 
     skip_registration || enroll!(voter, router)
@@ -531,6 +570,8 @@ function update_commit!(voter::DemeAccount, router)
 
     @assert isbinding(commit, voter.deme)
     @assert verify(commit, crypto(voter.deme))
+
+    store!(voter.store, commit)
     
     voter.commit = commit
     
@@ -545,7 +586,7 @@ function enroll!(voter::DemeAccount, route::Route) # For continuing from the las
     @assert isadmitted(voter)
     admission = voter.guard.admission
 
-    update_commit!(voter, route)
+    update_commit!(voter, route) # Store
 
     # commit = get_chain_commit(router)
     # @assert isbinding(commit, voter.deme)
@@ -553,7 +594,11 @@ function enroll!(voter::DemeAccount, route::Route) # For continuing from the las
     
     g = generator(voter.commit)
 
-    enrollee = Model.approve(Membership(admission, g, pseudonym(voter, g)), voter.signer)
+    # A new cerificate is can be generated only for a new generator
+    # Old certeficates need to be stored in case an acknowledgement reply can not reach the client
+    # Acknowldgment is sent for this or previously attempted certificates
+    enrollee = Model.approve(Membership(admission, g, pseudonym(voter, g)), voter.signer) # Store
+    store!(voter.store, enrollee) 
 
     ack = enroll_member(route, enrollee)
 
@@ -561,6 +606,7 @@ function enroll!(voter::DemeAccount, route::Route) # For continuing from the las
     @assert verify(enrollee, crypto(voter.deme))
     
     voter.guard = EnrollGuard(admission, enrollee, ack)
+    store!(voter.store, ack)
 
     return
 end
@@ -569,23 +615,27 @@ end
 function update_proposal_cache!(voter::DemeAccount, route::Route)
 
     proposal_list = get_proposal_list(route)
-    
+
     for (index, proposal) in proposal_list
 
         location = findfirst(instance -> instance.index == index, voter.proposals)
-
+        
         if isnothing(location)
 
             # In future ack_leafs would be retrieved together with proposal_list
             # as asking them seperatelly gives away local state to the server
             ack_leaf = get_chain_leaf(route, index)
 
+            @assert ack_leaf.proof.index == index
             @assert isbinding(proposal, ack_leaf, voter.deme)
             @assert verify(ack_leaf, voter.deme.crypto)
 
             voter.commit = ack_leaf.commit
 
-            push!(voter.proposals, ProposalInstance(index, proposal, ack_leaf))
+            instance = ProposalInstance(index, proposal, ack_leaf; store = joinpath(voter.store, index))
+            push!(voter.proposals, instance)
+            store!(instance.store, proposal)
+            store!(instance.store, ack_leaf)
 
         else
 
@@ -668,11 +718,15 @@ function cast_vote!(instance::ProposalInstance, deme::DemeSpec, selection, signe
 
     instance.seq += 1 
     vote = Model.vote(proposal, Model.seed(commit), selection, signer; force = true, seq)
+    store!(instance.store, vote)
+
     ack = cast_vote(server, proposal.uuid, vote)
 
     @assert isbinding(ack, proposal, hasher(deme))
     @assert isbinding(ack, vote, hasher(deme))
     @assert verify(ack, crypto(deme))
+
+    store!(instance.store, vote.seq, ack)
 
     guard = CastGuard(proposal, vote, ack)
     instance.guard = guard
@@ -710,8 +764,9 @@ function check_vote!(instance::ProposalInstance; deme::DemeSpec, server::Route)
     ack = get_ballotbox_root(server, instance.proposal.uuid, index(current_commit))
 
     @assert isbinding(ack, current_commit) "Received acknowledgment is not binding to request."
-    
     @assert verify(ack, crypto(deme)) "Received acknowledgemnt is not genuine."
+
+    store!(instance.store, ack)
 
     if isconsistent(ack, current_commit)
         push!(guard.ack_integrity, ack)
@@ -774,17 +829,27 @@ end
 # Parser.marshal, Parser.unmarshal ; Client.enroll method seems like a good fit where to do parsing 
 
 
-function enroll!(invite::Invite; server::Route = route(invite.route), key::Union{Integer, Nothing} = nothing, skip_registration = false)
+function enroll!(invite::Invite; server::Route = route(invite.route), key::Union{Integer, Nothing} = nothing, skip_registration = false, dir = "")
     
-    spec = get_deme(server)
-
+    spec = get_deme(server) # Store
     @assert isbinding(spec, invite)
+    
+    if isempty(dir)
+        store = DummyStore()
+    else
+        store = AccountStore(dir, spec.uuid)
+    end
+
+    store!(store, spec)
+    store!(store, invite)
 
     if isnothing(key)
-        account = DemeAccount(spec, server)
+        account = DemeAccount(spec, server; store) # Store key
     else
-        account = DemeAccount(spec, key, server)
+        account = DemeAccount(spec, key, server; store)
     end
+
+    store!(store, account.signer)
 
     enroll!(account, server, invite; skip_registration)
     
@@ -794,15 +859,16 @@ end
 
 struct DemeClient
     accounts::Vector{DemeAccount}
+    dir::String
 end
 
 
-DemeClient() = DemeClient(DemeAccount[])
+DemeClient(; dir = "") = DemeClient(DemeAccount[], dir)
 
 
 function enroll!(client::DemeClient, invite::Invite; server::Route = route(invite.route), key = nothing) 
 
-    account = enroll!(invite; server, key)
+    account = enroll!(invite; server, key, dir = client.dir)
     push!(client.accounts, account)
 
     return account
@@ -860,5 +926,8 @@ get_proposal_instance(client::DemeClient, uuid::UUID, proposal::UUID) = get_ball
 
 
 reset!(client::DemeClient) = empty!(client.accounts)
+
+# Contains also loading primitives and etc.
+include("store.jl")
 
 end

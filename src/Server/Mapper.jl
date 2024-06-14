@@ -473,6 +473,7 @@ function authorized_roles(demespec::DemeSpec)
     return roles
 end
 
+
 function tally_votes!(uuid::UUID; public = ispublic(uuid)) 
 
     if public

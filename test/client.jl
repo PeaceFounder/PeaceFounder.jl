@@ -7,9 +7,13 @@ import PeaceFounder: Client, Schedulers
 import PeaceFounder.Core.Model: Model, CryptoSpec, DemeSpec, Termination, Selection, Signer, id, approve
 import PeaceFounder.Core.Parser
 
+CLIENT_STORE = joinpath(tempdir(), "peacefounderclient")
+rm(CLIENT_STORE, force=true, recursive=true)
+
 #crypto = CryptoSpec("sha256", "MODP: 23, 11, 2")
 crypto = CryptoSpec("sha256", "EC: P_192")
 GUARDIAN = Model.generate(Signer, crypto)
+
 
 authorized_roles = Mapper.setup(crypto.group, crypto.generator) do pbkeys
 
@@ -31,6 +35,7 @@ PROPOSER = Mapper.PROPOSER
 DEMESPEC = Mapper.BRAID_CHAIN.spec
 SERVER = Client.route(Service.ROUTER)
 
+reboot(client) = Client.load_client(client.dir; server = SERVER)
 
 alice_invite = Mapper.enlist_ticket(Model.TicketID("Alice")) 
 bob_invite = Mapper.enlist_ticket(Model.TicketID("Bob")) 
@@ -41,8 +46,9 @@ david_invite = Mapper.enlist_ticket(Model.TicketID("David"))
 @test alice_invite == Mapper.enlist_ticket(Model.TicketID("Alice")) 
 @test Parser.unmarshal(Parser.marshal(eve_invite), Client.Invite) == eve_invite
 
-alice = Client.DemeClient()
+alice = Client.DemeClient(dir = CLIENT_STORE)
 Client.enroll!(alice, alice_invite; server = SERVER, key = 2)
+alice = reboot(alice)
 
 bob = Client.DemeClient()
 Client.enroll!(bob, bob_invite; server = SERVER, key = 3)
@@ -95,6 +101,8 @@ Client.update_deme!(bob, DEMESPEC.uuid)
 Client.update_deme!(eve, DEMESPEC.uuid)
 Client.update_deme!(david, DEMESPEC.uuid)
 
+alice = reboot(alice)
+
 uuid = alice.accounts[1].deme.uuid
 instances = Client.list_proposal_instances(alice, uuid)
 (; index, proposal) = instances[1]
@@ -105,17 +113,21 @@ Mapper.with_ctime(proposal.open) do
 
     Client.cast_vote!(alice, uuid, index, Selection(2))
     Client.cast_vote!(bob, uuid, index, Selection(1))
+    global alice = reboot(alice)
+    Client.cast_vote!(alice, uuid, index, Selection(1))
     Client.cast_vote!(eve, uuid, index, Selection(2))
     @test_throws AssertionError Client.cast_vote!(david, uuid, index, Selection(1))
 
 end
 
 Client.check_vote!(alice, uuid, index) # asks for consistency proof that previous commitment still holds. 
+alice = reboot(alice)
 
 Client.get_ballotbox_commit!(alice, uuid, index)
 @test Client.istallied(alice, uuid, index) == false
 
 notify(Mapper.TALLY_SCHEDULER, ctime = proposal.closed, wait_loop = true)
+alice = reboot(alice)
 
 Client.get_ballotbox_commit!(alice, uuid, index)
 @test Client.istallied(alice, uuid, index) == true

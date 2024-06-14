@@ -32,7 +32,7 @@ import .Base32
 include("Server/Server.jl")
 import .Server
 
-include("Client.jl") # Note that Client only depends on the Core and Authorization
+include("Client/Client.jl") # Note that Client only depends on the Core and Authorization
 import .Client
 
 

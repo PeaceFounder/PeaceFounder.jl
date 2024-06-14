@@ -297,6 +297,7 @@ end
 @batteries BallotBoxState
 
 BallotBoxState(proposal::Digest, seed::Digest, index::Int, root::Nothing, tally::Nothing, view::Nothing) = BallotBoxState(proposal, seed, index, Digest(), tally, view)
+BallotBoxState(proposal::Digest, seed::Digest, index::Int, root::Nothing, tally::Tally, view::BitVector) = BallotBoxState(proposal, seed, index, Digest(), tally, BitMask(view))
 
 BallotBoxState(proposal::Digest, seed::Digest, index::Int, root::Digest, tally::Tally, view::BitVector) = BallotBoxState(proposal, seed, index, root, tally, BitMask(view))
 
@@ -545,7 +546,6 @@ function state(ledger::BallotBoxLedger, N = length(ledger); seed::Digest, root::
     end
 
     proposal = digest(ledger.proposal, ledger.spec)
-
     return BallotBoxState(proposal, seed, length(ledger), root, _tally, _view)
 end
 
