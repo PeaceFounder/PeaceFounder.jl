@@ -428,11 +428,12 @@ function load(store::ProposalStore, ::Type{ConsistencyProof}, index::Int)
     return proof, next_index
 end
 
+
 function load(store::ProposalStore)
 
     proposal = load(store, Proposal)
     ack = load(store, AckInclusion{ChainState})
-    index = ack.commit.state.index
+    index = ack.proof.index
 
     commit = load(store, Commit{BallotBoxState})
 
