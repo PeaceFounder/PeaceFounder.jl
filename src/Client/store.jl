@@ -20,7 +20,8 @@ end
 
 function store!(store::AccountStore, spec::DemeSpec) 
 
-    tstamp = Dates.format(spec.seal.timestamp, "yyyy-mm-ddTHH:MM")    
+    #tstamp = Dates.format(spec.seal.timestamp, "yyyy-mm-ddTHH:MM")    
+    tstamp = Dates.format(spec.seal.timestamp, "yyyy-mm-dd_HH-MM")    
     
     path = joinpath(base_path(store), "demespec_$tstamp.json")
 
@@ -112,7 +113,8 @@ end
 
 function store!(store::AccountStore, membership::Membership)
 
-    tstamp = Dates.format(membership.approval.timestamp, "yyyy-mm-ddTHH:MM")    
+    #tstamp = Dates.format(membership.approval.timestamp, "yyyy-mm-ddTHH:MM")    
+    tstamp = Dates.format(membership.approval.timestamp, "yyyy-mm-dd_HH-MM")    
 
     path = joinpath(base_path(store), "registration", "membership_$tstamp.json")
 
@@ -161,7 +163,8 @@ end
 function store!(store::AccountStore, commit::Commit{ChainState})
 
     index = index_string(commit.state.index)
-    tstamp = Dates.format(commit.seal.timestamp, "yyyy-mm-ddTHH:MM")
+    #tstamp = Dates.format(commit.seal.timestamp, "yyyy-mm-ddTHH:MM")
+    tstamp = Dates.format(commit.seal.timestamp, "yyyy-mm-dd_HH-MM")
 
     path = joinpath(base_path(store), "commits", "$(index)_$tstamp.json")
 
@@ -323,7 +326,8 @@ end
 function store!(store::ProposalStore, commit::Commit{BallotBoxState})
 
     index = index_string(commit.state.index)
-    tstamp = Dates.format(commit.seal.timestamp, "yyyy-mm-ddTHH:MM")
+    #tstamp = Dates.format(commit.seal.timestamp, "yyyy-mm-ddTHH:MM")
+    tstamp = Dates.format(commit.seal.timestamp, "yyyy-mm-dd_HH-MM")
 
     path = joinpath(store.dir, "commits", "$(index)_$tstamp.json")
 
