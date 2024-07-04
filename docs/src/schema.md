@@ -2,7 +2,7 @@
 
 ```@raw html
 <div style="display: flex; justify-content: flex-end; margin-bottom: 20px; margin-top: -52px; margin-right: 0px;">
-   <input type="text" class="input" style="width: 250px" id="base-url-input" placeholder="http://" value="http://0.0.0.0:4584" />
+   <input type="text" class="input" style="width: 250px" id="base-url-input" placeholder="http://" value="http://127.0.0.1:4584" />
    <button id="load-schema-button">Set</button>
 </div>
 
