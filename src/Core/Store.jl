@@ -303,12 +303,13 @@ function load_ballotbox(dir::String)
 
     vote_keys = readkeys(joinpath(dir, CASTRECORD_DIR))
 
-    N = maximum(vote_keys)
-
     demespec = unmarshal(read(joinpath(dir, "demespec.json")), DemeSpec)
     proposal = unmarshal(read(joinpath(dir, "proposal.json")), Proposal)
 
     ledger = BallotBoxLedger(CastRecord[], proposal, demespec)
+    isempty(vote_keys) && return ledger
+
+    N = maximum(vote_keys)
 
     for i::UInt16 in 1:N
         

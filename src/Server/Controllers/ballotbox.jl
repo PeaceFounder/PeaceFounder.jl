@@ -78,8 +78,12 @@ for loading the ledger all at once.
 """
 function reset_tree!(ballotbox::BallotBoxController)
 
-    d = Digest[digest(i, hasher(ballotbox.ledger.spec)) for i in ballotbox.ledger]
-    tree = HistoryTree(d, hasher(ballotbox.ledger.spec))
+    if isempty(ballotbox.ledger)
+        tree = HistoryTree(Digest, hasher(ballotbox.ledger.spec))
+    else
+        d = Digest[digest(i, hasher(ballotbox.ledger.spec)) for i in ballotbox.ledger]
+        tree = HistoryTree(d, hasher(ballotbox.ledger.spec))
+    end
 
     ballotbox.tree = tree
 

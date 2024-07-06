@@ -277,7 +277,7 @@ end
 end
 
 #@get "/poolingstation/{uuid_hex}/track" function(req::Request, uuid_hex::String)
-@get "/poolingstation/{N}/track" function(req::Request, N::Int) # A dirty hack 
+@get "/poolingstation/{N}/track" function(req::Request, N::Int) # A dirty hack (to be refactored)
 
     if Mapper.now() - Authorization.timestamp(req) > Second(60)
         return Response(401, "Request Rejected: The timestamp associated with this request is outdated and cannot be processed. Please ensure your device's clock is correctly set and resend your request.")
