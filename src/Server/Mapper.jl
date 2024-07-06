@@ -641,7 +641,8 @@ end
 
 get_ballotbox(uuid::UUID) = get(POLLING_STATION, uuid)
 
-get_proposal(uuid::UUID) = get_ballotbox(uuid).ledger.proposal 
+get_proposal(uuid::UUID) = get_ballotbox(uuid).ledger.proposal
+get_proposal(index::Int) =  BRAID_CHAIN[index]::Proposal
 
 get_tally(uuid::UUID) = ballotbox(uuid).tally
 

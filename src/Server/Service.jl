@@ -276,13 +276,17 @@ end
     return ack |> json
 end
 
-@get "/poolingstation/{uuid_hex}/track" function(req::Request, uuid_hex::String)
+#@get "/poolingstation/{uuid_hex}/track" function(req::Request, uuid_hex::String)
+@get "/poolingstation/{N}/track" function(req::Request, N::Int) # A dirty hack 
 
     if Mapper.now() - Authorization.timestamp(req) > Second(60)
         return Response(401, "Request Rejected: The timestamp associated with this request is outdated and cannot be processed. Please ensure your device's clock is correctly set and resend your request.")
     end
 
-    uuid = UUID(uuid_hex)
+    #uuid = UUID(uuid_hex)
+    #bbox = Mapper.get_ballotbox(uuid)
+    proposal = Mapper.get_proposal(N)
+    uuid = proposal.uuid
     bbox = Mapper.get_ballotbox(uuid)
 
     credential = Authorization.credential(req)
@@ -291,7 +295,6 @@ end
     #     # the return is unfortunatelly for this scope only; perhaps there is an macro for that
     #     @parent return Response(401, "No tracking number with credential $credential found")
     # end
-
 
     value = get(bbox.access, credential, nothing) 
     isnothing(value) && return Response(401, "No tracking number with credential $credential found")
