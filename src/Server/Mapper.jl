@@ -270,10 +270,10 @@ function load_registrar_token(registrar::Signer)
 
     if haskey(ENV, "REGISTRAR_TOKEN")
         @info "Using environemnt registrar token key"
-        hmac_key = ENV["REGISTRAR_TOKEN"] |> bytes2hex
+        hmac_key = ENV["REGISTRAR_TOKEN"] |> hex2bytes
     elseif isfile("/run/secrets/registrar_token") # consider adding && isfile("/run/.containerenv")
         @info "Loading registrar token from /run/secrets/registrar_token"
-        hmac_key = read("/run/secrets/registrar_token") |> bytes2hex
+        hmac_key = read("/run/secrets/registrar_token") |> hex2bytes
     else
         @info "Computing registrar token deterministaclly from the private key"
         hmac_key = Model.bytes(Model.digest(Vector{UInt8}(string(registrar.key)), registrar.spec)) # 
