@@ -1,5 +1,6 @@
 import HistoryTrees: leaf, root, HistoryTree
-using CryptoGroups: CryptoGroups, ECP, EC2N, Koblitz, MODP, GroupSpec, HashSpec
+using CryptoGroups: CryptoGroups, ECP, EC2N, Koblitz, MODP, GroupSpec
+using CryptoPRG: HashSpec
 using Dates: DateTime
 
 import CryptoSignatures

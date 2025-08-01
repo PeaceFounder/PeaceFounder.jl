@@ -2,7 +2,7 @@
 
 julia_version = "1.11.0-rc1"
 manifest_format = "2.0"
-project_hash = "885ddb6d4d56a6f0cf67acf0050c12b0780e4065"
+project_hash = "e220a9723b196f9c26b61fa4c173ab7c10029e0d"
 
 [[deps.ArgParse]]
 deps = ["Logging", "TextWrap"]
@@ -138,12 +138,6 @@ version = "1.10.8"
 git-tree-sha1 = "5e0e766befebd2108cef8e3a14cf715c8496cb2e"
 uuid = "6629d18c-a67a-486a-9b40-962f9d752038"
 version = "0.2.0"
-
-[[deps.Infiltrator]]
-deps = ["InteractiveUtils", "Markdown", "REPL", "UUIDs"]
-git-tree-sha1 = "38298a8eabe09e49e6f60927c9e1ca3481688ba0"
-uuid = "5903a43b-9cc3-4c30-8d17-598619ec4e9b"
-version = "1.8.3"
 
 [[deps.IntegerMathUtils]]
 git-tree-sha1 = "b8ffb903da9f7b8cf695a8bead8e01814aa24b30"
@@ -310,9 +304,9 @@ version = "1.6.3"
 
 [[deps.Oxygen]]
 deps = ["DataStructures", "Dates", "HTTP", "JSON3", "MIMEs", "Reexport", "RelocatableFolders", "Requires", "Sockets", "Statistics", "StructTypes"]
-git-tree-sha1 = "79c718eb17b6afc983ceed2688562764d90538be"
+git-tree-sha1 = "965ffdb3a6f54d8b33695da1401a29344bc6cc7b"
 uuid = "df9a0d86-3283-4920-82dc-4555fc0d1d8b"
-version = "1.5.6"
+version = "1.5.12"
 
 [[deps.Parsers]]
 deps = ["Dates", "PrecompileTools", "UUIDs"]
@@ -341,11 +335,6 @@ version = "0.5.6"
 [[deps.Printf]]
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
-version = "1.11.0"
-
-[[deps.REPL]]
-deps = ["InteractiveUtils", "Markdown", "Sockets", "StyledStrings", "Unicode"]
-uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 version = "1.11.0"
 
 [[deps.Random]]
@@ -439,10 +428,6 @@ deps = ["Dates", "UUIDs"]
 git-tree-sha1 = "ca4bccb03acf9faaf4137a9abc1881ed1841aa70"
 uuid = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
 version = "1.10.0"
-
-[[deps.StyledStrings]]
-uuid = "f489334b-da3d-4c2e-b8f0-e476e12c162b"
-version = "1.11.0"
 
 [[deps.SwaggerMarkdown]]
 deps = ["JSON", "JSONSchema", "Test", "UUIDs", "YAML"]

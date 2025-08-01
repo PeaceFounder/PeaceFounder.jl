@@ -266,6 +266,22 @@ function reset_system()
     return
 end
 
+function load_registrar_token(registrar::Signer)
+
+    if haskey(ENV, "REGISTRAR_TOKEN")
+        @info "Using environemnt registrar token key"
+        hmac_key = ENV["REGISTRAR_TOKEN"] |> bytes2hex
+    elseif isfile("/run/secrets/registrar_token") # consider adding && isfile("/run/.containerenv")
+        @info "Loading registrar token from /run/secrets/registrar_token"
+        hmac_key = read("/run/secrets/registrar_token") |> bytes2hex
+    else
+        @info "Computing registrar token deterministaclly from the private key"
+        hmac_key = Model.bytes(Model.digest(Vector{UInt8}(string(registrar.key)), registrar.spec)) # 
+    end
+
+    return hmac_key
+end
+
 # Note that preferences would be stored and loaded by PeaceFounderAdmin instead
 # It could make sense to make data_dir as keyword argument
 function load_system() # a kwarg could be passed on whether to audit the system
@@ -291,7 +307,8 @@ function load_system() # a kwarg could be passed on whether to audit the system
     global RECORDER = load_signer(:recorder)
     
     registrar = load_signer(:registrar)
-    hmac_key = Model.bytes(Model.digest(Vector{UInt8}(string(registrar.key)), registrar.spec)) # 
+    hamc_key = load_registrar_token(registrar)
+
     global REGISTRAR = Registrar(registrar, hmac_key)
     Controllers.set_demehash!(REGISTRAR, BRAID_CHAIN.spec) 
 
@@ -401,7 +418,9 @@ function setup(demefunc::Function, groupspec::GroupSpec, generator::Generator)
     if !isnothing(N)
         signer = Signer(demespec.crypto, generator, key_list[N])
         store(signer, :registrar)
-        hmac_key = Model.bytes(Model.digest(Vector{UInt8}(string(key_list[N])), demespec.crypto)) # 
+
+        hmac_key = load_registrar_token(signer)
+
         global REGISTRAR = Registrar(signer, hmac_key)
         Controllers.set_demehash!(REGISTRAR, demespec) 
     end

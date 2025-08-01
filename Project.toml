@@ -12,7 +12,6 @@ Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
 HistoryTrees = "6629d18c-a67a-486a-9b40-962f9d752038"
-Infiltrator = "5903a43b-9cc3-4c30-8d17-598619ec4e9b"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 Nettle = "49dea1ee-f6fa-5aa6-9a11-8816cee7d4b9"
 Oxygen = "df9a0d86-3283-4920-82dc-4555fc0d1d8b"
@@ -23,11 +22,11 @@ StructHelpers = "4093c41a-2008-41fd-82b8-e3f9d02b504f"
 StructTypes = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
 SwaggerMarkdown = "1b6eb727-ad4b-44eb-9669-b9596a6e760f"
 Tar = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 URIs = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
+CryptoPRG = "d846c407-34c1-46cb-aa27-d51818cc05e2"
 
 [compat]
-CryptoGroups = "0.4"
+CryptoGroups = "0.5"
 CryptoSignatures = "0.3"
 HTTP = "1"
 HistoryTrees = "0.2"
@@ -40,3 +39,9 @@ StructHelpers = "1.1"
 StructTypes = "1"
 URIs = "1.4"
 julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
