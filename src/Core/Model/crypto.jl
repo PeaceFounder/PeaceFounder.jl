@@ -78,16 +78,18 @@ Return a generator of `spec`.
 """
 function generator(spec::Union{ECP, EC2N, Koblitz})
 
-    x, y = CryptoGroups.generator(spec)
-    octet = CryptoGroups.octet(x, y, spec)
+    G = CryptoGroups.concretize_type(CryptoGroups.ECGroup, spec)
+    p = G(CryptoGroups.generator(spec))
+    octet = CryptoGroups.octet(p)
 
     return Generator(octet)
 end
 
 function generator(spec::MODP)
 
-    g = CryptoGroups.generator(spec)
-    octet = CryptoGroups.octet(g, spec)
+    G = CryptoGroups.concretize_type(PGroup, spec)
+    g = G(CryptoGroups.generator(spec))
+    octet = CryptoGroups.octet(g)
 
     return Generator(octet)
 end
@@ -238,7 +240,7 @@ base16decode(s::String, ::Type{Pseudonym}) = Pseudonym(base16decode(s))
 attest(statement, witness) = isbinding(statement, witness) && verify(witness)
 
 pseudonym(ctx::CryptoSignatures.DSAContext, generator::Generator, private_key::Integer) = Pseudonym(CryptoSignatures.public_key(ctx, generator.data, BigInt(private_key)))
-pseudonym(ctx::CryptoSignatures.ECDSAContext, generator::Generator, private_key::Integer) = Pseudonym(CryptoSignatures.public_key(ctx, generator.data, BigInt(private_key); mode = :compressed))
+#pseudonym(ctx::CryptoSignatures.ECDSAContext, generator::Generator, private_key::Integer) = Pseudonym(CryptoSignatures.public_key(ctx, generator.data, BigInt(private_key); mode = :compressed))
 
 pseudonym(p::CryptoGroups.PGroup) = Pseudonym(CryptoGroups.octet(p))
 pseudonym(p::CryptoGroups.ECGroup) = Pseudonym(CryptoGroups.octet(p; mode = :compressed))
@@ -277,8 +279,8 @@ pseudonym(signer::Signer, generator::Generator) = pseudonym(signer.spec, generat
 crypto(signer::Signer) = signer.spec
 hasher(signer::Signer) = hasher(crypto(signer))
 
-_dsa_context(spec::MODP, hasher::Union{String, Nothing}) = CryptoSignatures.DSAContext(spec, hasher)
-_dsa_context(spec::Union{ECP, EC2N, Koblitz}, hasher::Union{String, Nothing}) = CryptoSignatures.ECDSAContext(spec, hasher)
+_dsa_context(spec, hasher::Union{String, Nothing}) = CryptoSignatures.DSAContext(spec, hasher)
+#_dsa_context(spec::Union{ECP, EC2N, Koblitz}, hasher::Union{String, Nothing}) = CryptoSignatures.ECDSAContext(spec, hasher)
 _dsa_context(spec::GroupSpec, hasher::HashSpec) = _dsa_context(spec, hasher.spec)
 _dsa_context(spec::CryptoSpec; hasher = spec.hasher) = _dsa_context(spec.group, hasher)
 

@@ -131,7 +131,10 @@ end
 
 #body(record::BraidReceipt) = record.braid
 
-digest(braid::ShuffleProofs.Simulator, hasher::HashSpec) = Digest(ShuffleProofs.digest(braid, hasher))
+#digest(braid::ShuffleProofs.Simulator, hasher::HashSpec) = Digest(ShuffleProofs.digest(braid, hasher))
+
+using SigmaProofs
+digest(braid::ShuffleProofs.Simulator, hasher::HashSpec) = Digest(SigmaProofs.Serializer.digest(braid, hasher))
 
 
 body(braidwork::BraidReceipt) = BraidReceipt(braidwork.braid, braidwork.reset)

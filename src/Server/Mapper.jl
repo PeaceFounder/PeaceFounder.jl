@@ -307,7 +307,7 @@ function load_system() # a kwarg could be passed on whether to audit the system
     global RECORDER = load_signer(:recorder)
     
     registrar = load_signer(:registrar)
-    hamc_key = load_registrar_token(registrar)
+    hmac_key = load_registrar_token(registrar)
 
     global REGISTRAR = Registrar(registrar, hmac_key)
     Controllers.set_demehash!(REGISTRAR, BRAID_CHAIN.spec) 

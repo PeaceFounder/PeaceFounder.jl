@@ -7,8 +7,12 @@ import CryptoGroups: PGroup, ECGroup, ECP, MODP, Group
 _convert(::Type{G}, g::Generator) where G <: Group = G(g.data)
 _convert(::Type{Vector{G}}, vect::Union{Vector{Pseudonym}, Set{Pseudonym}}) where G <: Group = G[G(i.pk) for i in vect]
 
-group(spec::ECP) = CryptoGroups.specialize(ECGroup, spec)
-group(spec::MODP) = CryptoGroups.specialize(PGroup, spec) 
+
+group(spec::ECP) = CryptoGroups.concretize_type(ECGroup, spec)
+group(spec::MODP) = CryptoGroups.concretize_type(PGroup, spec) 
+
+#group(spec::ECP) = CryptoGroups.specialize(ECGroup, spec)
+#group(spec::MODP) = CryptoGroups.specialize(PGroup, spec) 
 
 """
     struct BraidReceipt <: Transaction
@@ -67,7 +71,8 @@ function braid(generator::Generator, members::Union{Vector{Pseudonym}, Set{Pseud
     m = _convert(Vector{G}, members)
 
     spec_g = G(crypto.generator.data)
-    braid = ShuffleProofs.braid(g, m, verifier(spec_g))
+    #braid = ShuffleProofs.braid(g, m, verifier(spec_g))
+    braid = ShuffleProofs.braid(m, g, verifier(spec_g))
 
     return BraidReceipt(braid, reset)#, consumer, producer)
 end
