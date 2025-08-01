@@ -161,10 +161,14 @@ function token(ticketid::TicketID, attempt::UInt8, hash::HashSpec, token_key::Ve
     return _token[1:nlen]
 end
 
-function token_key(hmac::HMAC) 
-    hash = hasher(hmac)
-    return hash(UInt8[0, key(hmac)...])
-end    
+# function token_key(hmac::HMAC) 
+#     hash = hasher(hmac)
+#     return hash(UInt8[0, key(hmac)...])
+# end    
+
+# TODO: need to investigate why I made it so difficult and not simple
+# token=Hash(token_key|attempt|ticketid)
+token_key(hmac::HMAC) = key(hmac)
 
 token_key(registrar::Registrar) = token_key(registrar.hmac)
 

@@ -11,19 +11,19 @@ using ..Core: Store, Parser
 using ..Core.Parser: marshal
 
 
-global RECORDER::Union{Signer, Nothing}
-global REGISTRAR::Union{Registrar, Nothing}
-global BRAIDER::Union{Signer, Nothing}
-global COLLECTOR::Union{Signer, Nothing}
-global PROPOSER::Union{Signer, Nothing}
+global RECORDER::Union{Signer, Nothing} = nothing
+global REGISTRAR::Union{Registrar, Nothing} = nothing
+global BRAIDER::Union{Signer, Nothing} = nothing
+global COLLECTOR::Union{Signer, Nothing} = nothing
+global PROPOSER::Union{Signer, Nothing} = nothing
 
 # to prevent members registering while braiding happens and other way around.
 # islocked() == false => lock else error in the case for a member
 # wheras for braiding imediately lock is being waited for
 const MEMBER_LOCK = ReentrantLock()
-global BRAID_CHAIN::Union{BraidChainController, Nothing}
+global BRAID_CHAIN::Union{BraidChainController, Nothing} = nothing
 
-global POLLING_STATION::Union{PollingStation, Nothing}
+global POLLING_STATION::Union{PollingStation, Nothing} = nothing
 
 global TALLY_SCHEDULER::SchedulerActor
 global ENTROPY_SCHEDULER::SchedulerActor
@@ -268,7 +268,7 @@ end
 
 function load_registrar_token(registrar::Signer)
 
-    if haskey(ENV, "REGISTRAR_TOKEN")
+    if haskey(ENV, "REGISTRAR_TOKEN") # REGISTRAR_TOKEN
         @info "Using environemnt registrar token key"
         hmac_key = ENV["REGISTRAR_TOKEN"] |> hex2bytes
     elseif isfile("/run/secrets/registrar_token") # consider adding && isfile("/run/.containerenv")
@@ -369,6 +369,8 @@ end
 
 function setup(demefunc::Function, groupspec::GroupSpec, generator::Generator)
 
+    @show "HELLO WORLD...................."
+
     reset_system()
 
     key_list = Integer[]
@@ -419,7 +421,7 @@ function setup(demefunc::Function, groupspec::GroupSpec, generator::Generator)
         signer = Signer(demespec.crypto, generator, key_list[N])
         store(signer, :registrar)
 
-        hmac_key = load_registrar_token(signer)
+        @show hmac_key = load_registrar_token(signer)
 
         global REGISTRAR = Registrar(signer, hmac_key)
         Controllers.set_demehash!(REGISTRAR, demespec) 
