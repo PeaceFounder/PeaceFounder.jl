@@ -2,7 +2,7 @@
 
 julia_version = "1.11.5"
 manifest_format = "2.0"
-project_hash = "7867f35225c40f226f1b561859615304acbc9aee"
+project_hash = "4cda84d5f047b23705f2f968c8bed8f6319b63b3"
 
 [[deps.ArgParse]]
 deps = ["Logging", "TextWrap"]
@@ -89,9 +89,9 @@ version = "0.2.0"
 
 [[deps.CryptoSignatures]]
 deps = ["CryptoGroups", "CryptoPRG", "Nettle", "Random"]
-path = "../CryptoSignatures"
+git-tree-sha1 = "0e8f31b12c77ef6613566072b5295ef100fcdfeb"
 uuid = "35cc5888-0c46-470e-89c7-eafcaf79a1aa"
-version = "0.4.0"
+version = "0.4.1"
 
 [[deps.CryptoUtils]]
 deps = ["Primes"]
@@ -304,10 +304,28 @@ uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 version = "1.8.1"
 
 [[deps.Oxygen]]
-deps = ["DataStructures", "Dates", "HTTP", "JSON3", "MIMEs", "Reexport", "RelocatableFolders", "Requires", "Sockets", "Statistics", "StructTypes"]
-git-tree-sha1 = "79c718eb17b6afc983ceed2688562764d90538be"
+deps = ["DataStructures", "Dates", "HTTP", "JSON3", "MIMEs", "Reexport", "RelocatableFolders", "Sockets", "Statistics", "StructTypes"]
+git-tree-sha1 = "7aab89647a9523dc62ac2cc8e844d097b9c1aa47"
 uuid = "df9a0d86-3283-4920-82dc-4555fc0d1d8b"
-version = "1.5.6"
+version = "1.7.2"
+
+    [deps.Oxygen.extensions]
+    BonitoExt = "Bonito"
+    CairoMakieExt = "CairoMakie"
+    MustacheExt = "Mustache"
+    OteraEngineExt = "OteraEngine"
+    ProtoBufExt = "ProtoBuf"
+    TimeZonesExt = "TimeZones"
+    WGLMakieExt = ["WGLMakie", "Bonito"]
+
+    [deps.Oxygen.weakdeps]
+    Bonito = "824d6782-a2ef-11e9-3a09-e5662e0c26f8"
+    CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+    Mustache = "ffc61752-8dc7-55ee-8c37-f3e9cdd09e70"
+    OteraEngine = "b2d7f28f-acd6-4007-8b26-bc27716e5513"
+    ProtoBuf = "3349acd9-ac6a-5e09-bcdb-63829b23a429"
+    TimeZones = "f269a46b-ccf7-5d73-abea-4c690281aa53"
+    WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 
 [[deps.Parsers]]
 deps = ["Dates", "PrecompileTools", "UUIDs"]
@@ -353,12 +371,6 @@ deps = ["SHA", "Scratch"]
 git-tree-sha1 = "ffdaf70d81cf6ff22c2b6e733c900c3321cab864"
 uuid = "05181044-ff0b-4ac5-8273-598c1e38db00"
 version = "1.0.1"
-
-[[deps.Requires]]
-deps = ["UUIDs"]
-git-tree-sha1 = "62389eeff14780bfe55195b7204c0d8738436d64"
-uuid = "ae029012-a4dd-5104-9daa-d747884805df"
-version = "1.3.1"
 
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
