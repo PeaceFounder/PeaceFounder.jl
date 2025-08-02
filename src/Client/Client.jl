@@ -33,8 +33,12 @@ struct AccountStore
     key::String
 end
 
-AccountStore(dir::String, uuid::UUID) = AccountStore(joinpath(dir, "accounts", string(uuid)), joinpath(dir, "keys", string(uuid)))
-AccountStore(dir::String) = AccountStore(dir, joinpath(dir, "keys"))
+function AccountStore(dir::String, uuid::UUID, token::Vector{UInt8})
+    account_name = join([string(uuid), bytes2hex(token)], ":")
+    return AccountStore(joinpath(dir, "accounts", account_name), joinpath(dir, "keys", account_name))
+end
+
+#AccountStore(dir::String) = AccountStore(dir, joinpath(dir, "keys"))
 
 struct ProposalStore
     account::AccountStore # temporary
@@ -837,7 +841,8 @@ function enroll!(invite::Invite; server::Route = route(invite.route), key::Union
     if isempty(dir)
         store = DummyStore()
     else
-        store = AccountStore(dir, spec.uuid)
+        #store = AccountStore(dir, spec.uuid)
+        store = AccountStore(dir, spec.uuid, invite.token)
     end
 
     store!(store, spec)

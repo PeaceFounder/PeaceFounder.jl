@@ -22,7 +22,7 @@ function store!(store::AccountStore, spec::DemeSpec)
 
     #tstamp = Dates.format(spec.seal.timestamp, "yyyy-mm-ddTHH:MM")    
     tstamp = Dates.format(spec.seal.timestamp, "yyyy-mm-dd_HH-MM")    
-    
+
     path = joinpath(base_path(store), "demespec_$tstamp.json")
 
     isfile(path) && return
@@ -477,9 +477,9 @@ function load_client(dir::String; kwargs...)
 
     isdir(accounts) || return client
 
-    for uuid_str in readdir(accounts)
-        base_dir = joinpath(accounts, uuid_str)
-        key_dir = joinpath(keys, uuid_str)
+    for account_name in readdir(accounts)
+        base_dir = joinpath(accounts, account_name)
+        key_dir = joinpath(keys, account_name)
 
         store = AccountStore(base_dir, key_dir)
 
