@@ -133,7 +133,7 @@ function load(store::AccountStore, ::Type{Membership})
     records = filter(startswith("membership_"), readdir(dir))
     sort!(records) # by filename
 
-    return Parser.unmarshal(joinpath(dir, records[end]), Membership)
+    return Parser.unmarshal(read(joinpath(dir, records[end])), Membership)
 end
 
 
@@ -156,7 +156,7 @@ function load(store::AccountStore, ::Type{AckInclusion{ChainState}})
 
     path = joinpath(base_path(store), "registration", "ack.json")
 
-    return Parser.unmarshal(path, AckInclusion{ChainState})
+    return Parser.unmarshal(read(path), AckInclusion{ChainState})
 end
 
 
@@ -425,7 +425,7 @@ function load(store::ProposalStore, ::Type{ConsistencyProof}, index::Int)
 
     path = joinpath(dir, fname)
 
-    proof = Parser.unmarshal(path, ConsistencyProof)
+    proof = Parser.unmarshal(read(path), ConsistencyProof)
 
     next_index = split(first(splitext(fname)), "-") |> last |> string2index
 

@@ -28,6 +28,7 @@ An 8-minute YouTube demonstration is available here:
 
 ## References
 
-- Rolf Haenni and Oliver Spycher. *Secure internet voting on limited devices with anonymized DSA public keys.* 2011
+- Janis Erdmanis. *PeaceFounder: *PeaceFounder: centralised E2E verifiable evoting via pseudonym braiding and history trees.* 2024
+- Rolf Haenni and Oliver Spycher. *Secure internet voting on limited devices with anonymized DSA punnblic keys.* 2011
 - Scott A. Crosby and Dan S. Wallach. *Efficient data structures for tamper-evident logging.* 2009
-- Björn Terelius and Douglas Wikström. *Proofs of restricted shuffles.* 2010.
+- Douglas Wikström. *A Sender Verifiable Mix-Net and a New Proof of a Shuffle.* 2005
